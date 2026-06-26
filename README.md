@@ -8,6 +8,31 @@
 
 ---
 
+## Description
+
+**AI Security Reviewer** is a Cursor and Claude agent skill that turns your AI coding assistant into a senior application security engineer. Instead of running a separate scanner, the agent **is** the scanner — it reads your codebase, traces tainted data from source to sink, validates findings with AI, and produces enterprise-grade security reports.
+
+**What you get:**
+- `security_report.md` + styled `security_report.html` with every finding documented
+- Real **vulnerable code snippets** copied from your repo (not generic examples)
+- Full **data-flow traces** showing how attacker input reaches the dangerous sink
+- **Remediation** with BEFORE/AFTER code fixes for each issue
+- Burp/curl-ready PoC requests for live-verifiable findings
+
+**What it covers:**
+- Injection (SQL, NoSQL, XSS, RCE, CMD, XXE, SSTI, CRLF, log injection)
+- Authentication & authorization (missing auth routes, IDOR, session flaws)
+- Secrets leakage, stack-trace disclosure, crypto weaknesses
+- Exploitable CVEs (only when import + reachability is proven)
+- IaC misconfigs (Docker, K8s, Terraform, Nginx, CI/CD)
+- 109-check coverage matrix + full OWASP/API taxonomy attestation
+
+**How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), and optional live verification. Burp MCP is used when available; otherwise it falls back to curl. Graphify speeds up discovery but is not required.
+
+**Best for:** Developers and security teams who want Checkmarx-quality findings inside Cursor or Claude — without installing Semgrep, Burp plugins, or a separate SAST pipeline.
+
+---
+
 ## Supported AI agents
 
 | Platform | Install path | How to use |
