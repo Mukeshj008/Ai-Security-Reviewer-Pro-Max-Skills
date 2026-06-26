@@ -1,0 +1,19 @@
+# Scan outputs (generated in target projects, not in this skill repo)
+security_report.md
+security_report.html
+security_report.pdf
+sast_scan_results.txt
+burp_hosts.txt
+graphify-out/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Secrets — never commit
+.env
+.env.*
+*.pem
+*.key
