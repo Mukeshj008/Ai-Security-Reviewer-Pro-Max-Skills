@@ -1,6 +1,6 @@
 # SAST Scan Manifest (MANDATORY)
 
-Agent-native static analysis. Run **every section** with `rg` on `src/` (or project source root).  
+**You (the agent)** run each section's `rg` commands below — do **not** use `run_sast_scan.sh`.  
 Taxonomy aligned with [OpenGrep `vulnerability_class`](opengrep-vulnerability-index.md) names.
 
 Replace `[SRC]` with `src` or your source root. Exclude: `node_modules`, `test`, `tests`, `.foundry`.

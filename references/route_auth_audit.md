@@ -81,7 +81,7 @@ Method | Path | Router file:line | Auth present | Bypass notes | Sensitive? (PII
 
 ### Verification request rules
 
-1. **Discover host from code first** — follow **`references/burp-host-discovery.md`** and run `bash scripts/discover_burp_hosts.sh .`
+1. **Discover host from code** — `rg` per **`references/burp-host-discovery.md`** (no scripts)
 2. **Never use localhost** — do not probe `localhost`, `127.0.0.1`, `0.0.0.0`, or `::1`
 3. **Skip if no host** — if `burp_hosts.txt` has no external host → **Not Verified (no target host in code)**; do not guess
 4. **No auth headers** — omit `Cookie`, `Authorization`, `X-SSO-Token`, `X-User-Id`, Basic Auth

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# discover_burp_hosts.sh — extract external hosts from code for Burp MCP (no localhost)
+# DEPRECATED for agent workflow — CI/human optional only. Agents: rg per references/burp-host-discovery.md
 # Usage: bash scripts/discover_burp_hosts.sh [REPO_ROOT]
 # Output: burp_hosts.txt
 

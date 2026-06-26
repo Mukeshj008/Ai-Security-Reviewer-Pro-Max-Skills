@@ -21,10 +21,7 @@ rg -n "https?://[a-zA-Z0-9][-a-zA-Z0-9._]*" src/ --glob "!node_modules" | head -
 rg -n "HOST|BASE_URL|API_URL" .env.example .env.sample 2>/dev/null || true
 ```
 
-```bash
-bash scripts/discover_burp_hosts.sh .
-# Output: burp_hosts.txt
-```
+**Agent:** Run the `rg` commands above directly. Do **not** use `discover_burp_hosts.sh`.
 
 Graphify (optional):
 
@@ -76,6 +73,8 @@ Connection: close
 ```
 
 Set `targetHostname`, `targetPort`, `usesHttps` from discovered URL (443 for https).
+
+**Fallback:** If Burp MCP unavailable, use **`curl-dast-fallback.md`** with the same Host header and paths.
 
 ---
 

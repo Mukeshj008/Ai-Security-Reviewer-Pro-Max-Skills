@@ -1,52 +1,76 @@
-# Master Coverage Checklist — OpenGrep-aligned SAST
+# Master Coverage Checklist — OpenGrep-aligned SAST + Full Review
 
-**Mandatory:** Complete every `SAST-OG-*` row in **Appendix E** of `security_report.md`.
+**Mandatory:** Complete every row in **Appendix E** and **Appendix F** of `security_report.md`.
 
-Status: `PASS` | `FINDING` | `FAIL` | `N/A` | `SKIP`
+**Full template:** [report-coverage-matrix.md](report-coverage-matrix.md)  
+**How to execute:** [agent-execution.md](agent-execution.md) — **you** run manifest `rg` / `graphify` commands; **no scan scripts**.
 
-Source taxonomy: [opengrep-vulnerability-index.md](opengrep-vulnerability-index.md) (from [opengrep/opengrep-rules](https://github.com/opengrep/opengrep-rules) `vulnerability_class` metadata).
+Status (Appendix E): `PASS` | `FINDING` | `FAIL` | `N/A` | `SKIP`  
+Status (Appendix F): `PASS` | `FAIL` | `SKIP` | `PARTIAL`
 
-| ID | OpenGrep `vulnerability_class` | Manifest | Tool |
-|----|-------------------------------|----------|------|
+---
+
+## Quick inventory (109 checks)
+
+| ID range | Count | Manifest |
+|----------|-------|----------|
+| SAST-OG-01 … SAST-OG-28 | 28 | `sast_scan_manifest.md` |
+| SAST-BUS-01 | 1 | `sast_scan_manifest.md` bus § |
+| SAST-LEAK-01 … 08 | 8 | `frontend-stacktrace-leaks.md` |
+| SAST-SECRET-01 … 11 | 11 | `secrets-patterns.md` |
+| SAST-INJ-XSS, RCE, CMD, XXE, XML | 5 | `injection-deep-scan.md` |
+| SAST-EXT-01 … 07 | 7 | `additional_vulns.md` |
+| CVE-DEPS/REACH/CODE | 14 | `cve-exploitability.md` |
+| IAC-DOCKER/K8S/TF/NGINX/CI | 21 | `iac-misconfig-scan.md` |
+| ARCH-01 … 07 | 7 | `security-architect.md` + Appendix G |
+| DAST-HOST-01, DAST-AUTH-PROBE, DAST-INJ-PROBE | 3 | `dast_scan_manifest.md` |
+| DEPS-01 | 1 | `npm audit` (agent-run) |
+| GRAPH-01, 02, 03 | 3 | `graphify_security.md` |
+
+---
+
+## SAST-OG (OpenGrep `vulnerability_class`)
+
+| ID | OpenGrep `vulnerability_class` | Manifest | Agent tool |
+|----|--------------------------------|----------|------------|
 | SAST-OG-01 | Active Debug Code | `sast_scan_manifest.md` §01 | rg |
-| SAST-OG-02 | Code Injection | `sast_scan_manifest.md` §02 | rg |
-| SAST-OG-03 | Command Injection | `sast_scan_manifest.md` §03 | rg |
-| SAST-OG-04 | Cookie Security | `sast_scan_manifest.md` §04 | rg + Read |
-| SAST-OG-05 | Cross-Site Request Forgery (CSRF) | `sast_scan_manifest.md` §05 | rg + Read |
-| SAST-OG-06 | Cross-Site-Scripting (XSS) | `sast_scan_manifest.md` §06 | rg |
-| SAST-OG-07 | Cryptographic Issues | `sast_scan_manifest.md` §07 | rg |
-| SAST-OG-08 | Dangerous Method or Function | `sast_scan_manifest.md` §08 | rg |
-| SAST-OG-09 | Denial-of-Service (DoS) | `sast_scan_manifest.md` §09 + `additional_vulns.md` | rg |
-| SAST-OG-10 | Hard-coded Secrets | `sast_scan_manifest.md` §10 | rg |
-| SAST-OG-11 | Improper Authentication | `route_auth_audit.md` | graphify + Read |
-| SAST-OG-12 | Improper Authorization | `sast_scan_manifest.md` §12 | rg |
-| SAST-OG-13 | Improper Encoding | `sast_scan_manifest.md` §13 | rg |
-| SAST-OG-14 | Improper Validation | `sast_scan_manifest.md` §14 | rg + Read |
-| SAST-OG-15 | Insecure Deserialization | `sast_scan_manifest.md` §15 | rg |
-| SAST-OG-16 | Insecure Hashing Algorithm | `sast_scan_manifest.md` §16 | rg |
-| SAST-OG-17 | Insufficient Logging | `sast_scan_manifest.md` §17 | rg |
-| SAST-OG-18 | LDAP Injection | `sast_scan_manifest.md` §18 | rg |
-| SAST-OG-19 | Mass Assignment | `sast_scan_manifest.md` §19 | rg |
-| SAST-OG-20 | Memory Issues | `sast_scan_manifest.md` §20 | rg |
-| SAST-OG-21 | Mishandled Sensitive Information | `sast_scan_manifest.md` §21 | rg |
-| SAST-OG-22 | Open Redirect | `sast_scan_manifest.md` §22 | rg |
-| SAST-OG-23 | Other Security | `sast_scan_manifest.md` §23 | rg |
-| SAST-OG-24 | Path Traversal | `sast_scan_manifest.md` §24 | rg |
-| SAST-OG-25 | SQL Injection | `sast_scan_manifest.md` §25 | rg + graphify path |
-| SAST-OG-26 | Server-Side Request Forgery (SSRF) | `sast_scan_manifest.md` §26 | rg + graphify path |
-| SAST-OG-27 | XML Injection | `sast_scan_manifest.md` §27 | rg |
-| SAST-OG-28 | XPath Injection | `sast_scan_manifest.md` §28 | rg |
-| SAST-BUS-01 | Message bus trust boundary | `sast_scan_manifest.md` bus § | rg + Read |
-| SAST-LEAK-01…08 | Frontend/API stack trace leaks | `frontend-stacktrace-leaks.md` | rg |
-| SAST-SECRET-01…11 | Hardcoded secrets (full catalog) | `secrets-patterns.md` | rg |
-| SAST-INJ-XSS | XSS (reflected/stored/DOM) | `injection-deep-scan.md` | rg + graphify path |
-| SAST-INJ-RCE | Remote Code Execution | `injection-deep-scan.md` | rg + graphify path |
-| SAST-INJ-CMD | Command Injection | `injection-deep-scan.md` | rg + graphify path |
-| SAST-INJ-XXE | XML External Entity | `injection-deep-scan.md` | rg |
-| SAST-INJ-XML | XML Injection | `injection-deep-scan.md` | rg |
-| DAST-HOST | Burp host from code (no localhost) | `burp-host-discovery.md` | discover_burp_hosts.sh |
+| SAST-OG-02 | Code Injection | §02 | rg + graphify path |
+| SAST-OG-03 | Command Injection | §03 | rg + graphify path |
+| SAST-OG-04 | Cookie Security | §04 | rg + Read |
+| SAST-OG-05 | Cross-Site Request Forgery (CSRF) | §05 | rg + Read |
+| SAST-OG-06 | Cross-Site-Scripting (XSS) | §06 | rg + graphify path |
+| SAST-OG-07 | Cryptographic Issues | §07 | rg |
+| SAST-OG-08 | Dangerous Method or Function | §08 | rg |
+| SAST-OG-09 | Denial-of-Service (DoS) | §09 + `additional_vulns.md` | rg |
+| SAST-OG-10 | Hard-coded Secrets | §10 | rg |
+| SAST-OG-11 | Improper Authentication | `route_auth_audit.md` | graphify + Read + Burp |
+| SAST-OG-12 | Improper Authorization | §12 | rg |
+| SAST-OG-13 | Improper Encoding | §13 | rg |
+| SAST-OG-14 | Improper Validation | §14 | rg + Read |
+| SAST-OG-15 | Insecure Deserialization | §15 | rg + graphify path |
+| SAST-OG-16 | Insecure Hashing Algorithm | §16 | rg |
+| SAST-OG-17 | Insufficient Logging | §17 | rg |
+| SAST-OG-18 | LDAP Injection | §18 | rg |
+| SAST-OG-19 | Mass Assignment | §19 | rg |
+| SAST-OG-20 | Memory Issues | §20 | rg |
+| SAST-OG-21 | Mishandled Sensitive Information | §21 | rg |
+| SAST-OG-22 | Open Redirect | §22 | rg + graphify path |
+| SAST-OG-23 | Other Security | §23 | rg |
+| SAST-OG-24 | Path Traversal | §24 | rg + graphify path |
+| SAST-OG-25 | SQL Injection | §25 | rg + graphify path |
+| SAST-OG-26 | Server-Side Request Forgery (SSRF) | §26 | rg + graphify path |
+| SAST-OG-27 | XML Injection | §27 | rg |
+| SAST-OG-28 | XPath Injection | §28 | rg |
+| SAST-BUS-01 | Message bus trust boundary | bus § | rg + Read |
 
-Deterministic runner: `bash scripts/run_sast_scan.sh .`  
-Burp hosts: `bash scripts/discover_burp_hosts.sh .`
+## SAST-LEAK, SECRET, INJ, EXT, CVE, IAC, ARCH
 
-**Do not run OpenGrep/Semgrep** as part of this skill — agent + rg only.
+See [report-coverage-matrix.md](report-coverage-matrix.md) sections E.2–E.10.
+
+## DAST, DEPS, GRAPH
+
+See [report-coverage-matrix.md](report-coverage-matrix.md) sections E.6–E.7 and [dast_scan_manifest.md](dast_scan_manifest.md).
+
+**Do not run OpenGrep/Semgrep** or skill scan scripts — agent + `rg` + graphify only.
+
+**Completion gate:** No `PENDING` rows in Appendix E/F/G before handoff.

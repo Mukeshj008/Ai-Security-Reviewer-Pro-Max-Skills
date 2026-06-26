@@ -4,14 +4,23 @@ Use these before Read/Grep/Glob. Cap output with `--budget N` (default 2000).
 
 ## Bootstrap
 
-```bash
-# If graphify-out/graph.json missing — build once (user runs /graphify . or):
-graphify extract . --no-cluster          # AST only, no LLM cost
-# or full semantic graph when budget allows:
-graphify extract . --mode deep
+**Native AI policy:** Security semantic work = **Cursor agent (you)**. Graph semantic on docs/images = **`/graphify .`** (IDE model). **Never Ollama** in this skill.
 
-graphify update .                        # after code changes, no LLM
+```bash
+# Preferred — native Cursor AI for semantic extraction:
+# /graphify .
+
+# AST-only headless build (code dirs only; no LLM, no Ollama):
+unset OLLAMA_BASE_URL
+graphify extract src lib api --no-cluster    # substitute your source roots
+
+# NOT recommended for security scans (pulls Assets/images/docs → may invoke Ollama):
+# graphify extract . --no-cluster
+
+graphify update .                            # after code changes, AST-only, no LLM
 ```
+
+`--no-cluster` skips community clustering; it does **not** disable semantic LLM on docs/images. Scope `extract` to **code directories** for pure AST, or use `/graphify .` for full corpus with native AI.
 
 ## Attack surface & entry points
 
@@ -82,6 +91,24 @@ graphify query "Django views HttpResponse ORM raw SQL" --budget 1500
 - Confirming exact line content after graphify identified file:line
 - Scanning for regex secrets (`grep` on small result set from graphify query)
 - Test files / configs not in graph
+
+## CVE reachability (v3.9)
+
+```bash
+graphify query "require import package dependency node_modules vulnerable" --budget 1500
+graphify path "router.post" "require('VULN_PACKAGE')"
+graphify path "req.body" "unserialize"
+graphify path "req.query" "eval"
+graphify affected "require('lodash')" --depth 2
+```
+
+## Security architect recon (v3.9)
+
+```bash
+graphify query "webhook callback third party integration outbound HTTP" --budget 1500
+graphify query "admin internal cron worker queue consumer kafka" --budget 1500
+graphify query "session cookie redis vault secret encrypt decrypt" --budget 1500
+```
 
 ## After fixing code
 

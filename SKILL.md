@@ -1,55 +1,100 @@
 ---
 name: ai-security-reviewer
 description: >-
-  Agent-native SAST+DAST: stack trace leaks, full secrets catalog, XSS/RCE/CMD/XXE/XML
-  injection, OpenGrep taxonomy, code-derived Burp hosts (no localhost). Graphify, AI
-  validation, security_report HTML+PDF.
+  Agent-native SAST+DAST+CVE+IaC: full vulnerability taxonomy (injection, XSS, auth,
+  crypto, file, API, SSRF, session, IaC, framework-specific). Graphify, AI validation,
+  109-check Appendix E + Appendix H taxonomy attestation. Agent runs rg/graphify/npm audit — no scan scripts.
 ---
 
 # AI Security Reviewer
 
-**Version 3.7** — Stack Trace Leaks | Full Secrets | Deep Injection | Code-Derived Burp Hosts
+**Version 4.3** — Full Vulnerability Taxonomy | Agent-Only Execution | Mandatory Remediation | curl DAST Fallback | 109-Check + Appendix H
 
 ## Execution model (read first)
 
-**You are the scanner.** This skill does not delegate analysis to Semgrep, CodeQL, or subagents.
+**You are the scanner.** This skill gives **directions only** — you execute every check with `graphify`, `rg`, `Read`, `npm audit`, and Burp MCP. **Do not run skill scan scripts** (`run_sast_scan.sh`, `run_cve_iac_scan.sh`, `discover_burp_hosts.sh`, `generate_coverage_appendix.py`). See **`references/agent-execution.md`**.
 
 | Layer | Who runs it | What it does |
 |-------|-------------|--------------|
+| **CVE** | **This agent (you)** | `npm audit` + your `rg` imports + `graphify path` → **CVE-NNN** only if exploitable |
+| **IaC** | **This agent (you)** | `rg` per `iac-misconfig-scan.md` + Read → **IAC-NNN** |
+| **ARCH** | **This agent (you)** | Threat model, trust boundaries, STRIDE → **Appendix G** |
 | **SAST** | **This agent (you)** | `graphify query/path` → `rg` per manifest → narrow `Read` → **your** AI validation |
-| **DAST** | **This agent (you)** | Burp MCP `send_http1_request` probes per `dast_scan_manifest.md` |
-| **Report** | **This agent (you)** | Write `security_report.md` → `generate_reports.py` for HTML/PDF |
+| **DAST** | **This agent (you)** | Burp MCP `send_http1_request`; **curl fallback** if MCP unavailable (`curl-dast-fallback.md`) |
+| **Report** | **This agent (you)** | Write `security_report.md` then run `generate_html_report.py` for `security_report.html` |
 
-### Do NOT use subagents
+### Do NOT use scan scripts or subagents
 
-Run the **entire** review in the **current** agent session. Do not spawn `Task` / `explore` / `generalPurpose` subagents.
+- **No skill scripts for analysis** — run manifest `rg` / `graphify` / `npm audit` commands yourself (`references/agent-execution.md`).
+- **No subagents** — `Task` / `explore` / `generalPurpose` break reachability context.
 
 Reasons:
 - Security findings need one continuous context (source → sink → validation → PoC).
 - Subagents cannot reliably complete Appendix E/F coverage matrices.
-- Subagents duplicate Graphify work and miss cross-file trust boundaries.
+- Scripts hide reachability decisions the AI must make per hit.
 
 ### Do NOT require Semgrep
 
 Semgrep is **not** part of this skill. It was listed in v3.5 only as an optional CI companion — **remove it from your workflow**.
 
-Your static analysis stack:
-1. `bash scripts/run_sast_scan.sh` — deterministic `rg` (OpenGrep taxonomy + v3.7 deep scans)
-2. `references/sast_scan_manifest.md` — every `SAST-OG-01`…`28` section
-3. `references/frontend-stacktrace-leaks.md` — **SAST-LEAK-01…08** (errors/stacks to browser)
-4. `references/secrets-patterns.md` — **SAST-SECRET-01…11** (all key/password/token types)
-5. `references/injection-deep-scan.md` — **XSS, RCE, command injection, XXE, XML injection**
-6. `references/opengrep-vulnerability-index.md` — class ↔ check mapping
-7. `graphify path "<source>" "<sink>"` — data-flow tracing for injection findings
-8. **Your AI validation checklist** — true positives only
+Your analysis stack (**you run each step** — manifests are cookbooks, not scripts):
+
+0. **`references/manual-code-review.md`** — senior manual review: context, taint analysis, pre-report gates (G1–G5)
+1. **`references/agent-execution.md`** — agent-only rules (read first)
+2. **`references/sast_scan_manifest.md`** — run each section's `rg` yourself → SAST-OG-01…28
+3. **`references/frontend-stacktrace-leaks.md`** — SAST-LEAK-01…08
+4. **`references/secrets-patterns.md`** — SAST-SECRET-01…11
+5. **`references/injection-deep-scan.md`** — SAST-INJ-* + extended injection (NoSQL, CRLF, SSTI, EL, log)
+6. **`references/extended-category-scans.md`** — supplemental `rg` for taxonomy **Partial** rows
+7. **`references/vulnerability-taxonomy-coverage.md`** — master map of all issue classes → checks
+8. **`references/cve-exploitability.md`** — CVE-DEPS/REACH/CODE + your reachability proof
+9. **`references/iac-misconfig-scan.md`** — IAC-* `rg` on infra/Docker/K8s/TF/Nginx/CI
+10. **`references/security-architect.md`** — ARCH-* → Appendix G
+11. **`references/report-coverage-matrix.md`** — all **109** Appendix E rows you must complete
+12. **`graphify path "<source>" "<sink>"`** — mandatory for injection, CVE, SSRF reachability
+13. **AI validation checklist + pre-report gates (G1–G5)** — true positives only
+14. **`references/report-finding-completeness.md`** — every finding must have **`### Remediation`** (BEFORE/AFTER for code)
 
 **Burp MCP host rule (mandatory):**
-1. Run `bash scripts/discover_burp_hosts.sh .` — read `burp_hosts.txt`
+1. Discover hosts with `rg` per **`references/burp-host-discovery.md`** (do **not** run `discover_burp_hosts.sh`)
 2. **Never probe `localhost` / `127.0.0.1`**
 3. If no external host in code → **skip Burp** → `Not Verified (no target host in code)`
-4. See `references/burp-host-discovery.md`
 
 **Never run OpenGrep/Semgrep CLI** as part of this skill. We only borrow issue **names** from [opengrep/opengrep-rules](https://github.com/opengrep/opengrep-rules).
+
+---
+
+## Senior Manual Code Review Methodology (MANDATORY)
+
+**Role:** Senior Application Security Engineer. **Objective:** Report only **realistic, exploitable** issues with **high confidence** — minimize false positives and speculative findings.
+
+Full methodology: **`references/manual-code-review.md`**. This layers on top of all existing phases, manifests, and 109 checks — **nothing below is removed**.
+
+### Three pillars (execute in order)
+
+| Pillar | When | What |
+|--------|------|------|
+| **1. Application context** | Phase −1 (before or with first graphify query) | Language, framework, architecture, entry points, trust boundaries, auth mechanisms, user-controlled inputs, sensitive assets (tokens, PII, payment, admin) |
+| **2. Taint / data-flow analysis** | Phase 2 + every manifest hit | Trace user input **source → processing → sink** across functions, files, services, APIs, DB; document validation, sanitization, encoding, authorization |
+| **3. Pre-report verification gates** | Phase 3 (mandatory before any FINDING) | All five gates must PASS for TRUE POSITIVE |
+
+### Pre-report verification gates (mandatory)
+
+Before assigning **VULN-NNN**, **AUTH-NNN**, **CVE-NNN**, or **IAC-NNN**:
+
+| Gate | Verify |
+|------|--------|
+| **G1** | Is there an actual **attacker-controlled** input (or missing auth on reachable HTTP route)? |
+| **G2** | Can input **realistically reach** the dangerous sink (or unauthenticated handler run)? — `graphify path` required |
+| **G3** | Is there **existing protection** that blocks exploitation? — if effective → Appendix A, not FINDING |
+| **G4** | Can it be **practically exploited** (not theoretical, dev-only, or test-only)? |
+| **G5** | What **assumptions** are required? — list explicitly; many unlikely assumptions → exclude or downgrade |
+
+**Default:** When in doubt, **do not report**. Filter failures → **Appendix A** with failed gate noted.
+
+### Manual review taxonomy (in addition to manifests)
+
+Review against: **OWASP Top 10**, **OWASP API Top 10**, and the full taxonomy in **`vulnerability-taxonomy-coverage.md`** (injection, XSS, auth/authz, crypto, sensitive data, path/file, deserialization, API, SSRF, XML, session, config, concurrency, mobile, IaC, supply chain, framework-specific). See **`manual-code-review.md`** for checklist mapped to skill phases.
 
 ---
 
@@ -57,6 +102,7 @@ Your static analysis stack:
 
 Enterprise security reviewer — **agent-native analysis** with Checkmarx-quality output:
 
+0. **Senior Manual Review Lens** — Context-first, taint analysis, pre-report gates G1–G5; high-confidence findings only
 1. **Graphify Discovery** — Knowledge-graph queries before broad file reads (saves tokens)
 2. **Unauthenticated Endpoint Audit** — Route auth inventory; Medium if code-only, High if Burp MCP confirms
 3. **Static Analysis** — 750+ pattern signatures across 85+ vulnerability classes
@@ -68,6 +114,10 @@ Enterprise security reviewer — **agent-native analysis** with Checkmarx-qualit
 9. **Burp MCP Live Verification** — `send_http1_request` confirms missing auth when MCP available
 10. **HTML Report Export** — Styled HTML report generated at end of every review
 11. **PDF Export** — Optional PDF from markdown (legacy)
+12. **Full Check Coverage Matrix** — Appendix E lists all **109** checks; Appendix F phase log; Appendix G architecture assessment
+13. **Exploitable CVE Analysis** — Dependency CVEs reported only with import + path reachability proof
+14. **IaC Misconfiguration Detection** — Docker, Kubernetes, Terraform, Nginx, CI/CD security review
+15. **Security Architect Lens** — Attack surface, trust boundaries, STRIDE, control maturity
 
 ---
 
@@ -75,12 +125,35 @@ Enterprise security reviewer — **agent-native analysis** with Checkmarx-qualit
 
 > **Do not** read whole files or run repo-wide Grep until Graphify has oriented you — unless `graphify-out/graph.json` is missing. **Do not spawn subagents** — you run the review directly in this session.
 
+### LLM backend policy (native AI — no Ollama)
+
+| Layer | Who runs it | Backend |
+|-------|-------------|---------|
+| **Security analysis** | **This agent (you)** | **Cursor native AI** — SAST, validation, reachability, report |
+| **Graph semantic (docs/images)** | `/graphify .` in Cursor | **Cursor native AI** via graphify skill subagents |
+| **Graph AST (code)** | `graphify extract` / `graphify update` | **Local tree-sitter only** — no LLM |
+
+**Do NOT use Ollama** (`--backend ollama`, `OLLAMA_BASE_URL`) in this skill. Ollama is slow, often truncates context, and duplicates work the Cursor agent already does better.
+
+**Build `graphify-out/graph.json` (pick one):**
+
+1. **Preferred (native AI):** `/graphify .` — semantic extraction uses the IDE session model, not Ollama.
+2. **AST-only (headless, no LLM):** scope to **source directories only** (excludes `Assets/`, images, unrelated docs):
+   ```bash
+   unset OLLAMA_BASE_URL
+   graphify extract src api lib --no-cluster   # your code roots, not repo root
+   ```
+   Code-only corpora need **no API key**. AST edges are enough for `graphify query` / `graphify path`.
+3. **After code changes:** `graphify update .` (AST-only, no LLM).
+
+If `graphify extract .` (repo root) pulls in images/docs and tries Ollama, **stop** — re-run scoped to code dirs or use `/graphify .`.
+
 ### Prerequisites
 
 | Requirement | Check | Install |
 |-------------|-------|---------|
 | Graphify CLI | `graphify --version` | `pipx install graphifyy` |
-| Project graph | `test -f graphify-out/graph.json` | User runs `/graphify .` or `graphify extract . --no-cluster` |
+| Project graph | `test -f graphify-out/graph.json` | `/graphify .` (native AI) or scoped `graphify extract <src-dirs> --no-cluster` |
 | Burp MCP (optional) | MCP tool `send_http1_request` on `user-burp` | Burp Suite + MCP extension; Cursor MCP config |
 | Cursor rule (optional) | `.cursor/rules/graphify.mdc` | `graphify cursor install` |
 
@@ -97,21 +170,25 @@ Enterprise security reviewer — **agent-native analysis** with Checkmarx-qualit
 
 Always pass `--budget N` on `query` (1200–2000 per query). Batch related questions into one query instead of many small reads.
 
-### Security review sequence
+### Security review sequence (agent executes each step)
 
 ```
-0. discover_burp_hosts.sh  → burp_hosts.txt (skip Burp if no external host)
-1. graphify query         → attack surface (2–3 queries, budget 1500 each)
-1a. run_sast_scan.sh       → sast_scan_results.txt (OG + LEAK + SECRET + INJ)
-1b. sast_scan_manifest + frontend-stacktrace-leaks + secrets-patterns + injection-deep-scan
-1c. route auth audit       → references/route_auth_audit.md → AUTH-NNN
-1d. burp verify            → ONLY hosts from burp_hosts.txt (never localhost)
-2. graphify path           → per injection candidate: source → sink
-3. Read                    → sink/source lines + sanitizers only
-4. AI validate             → Phase 3 checklist
-5. Burp PoC                → per TRUE POSITIVE + AUTH (code-derived host only)
-6. security_report.md      → Appendix D + E (all SAST-OG/LEAK/SECRET/INJ rows)
-7. generate_reports.py     → HTML + PDF
+−1. Application context      → manual-code-review.md Phase −1 → Appendix G inputs
+0. Host discovery            → rg per burp-host-discovery.md (no scripts)
+1. graphify query            → attack surface (2–3 queries, budget 1500 each)
+2. SAST manifests            → you run rg per sast_scan_manifest + LEAK + SECRET + INJ
+2b. Extended taxonomy scans   → extended-category-scans.md (Partial rows) → Appendix H
+3. CVE analysis              → npm audit + cve-exploitability.md + graphify path
+4. IaC scan                  → rg per iac-misconfig-scan.md + Read
+5. Architect review          → security-architect.md → Appendix G
+6. Route auth audit          → route_auth_audit.md → AUTH-NNN
+7. Burp verify               → hosts from step 0 only (never localhost)
+7b. curl verify              → if Burp MCP unavailable: curl-dast-fallback.md (same verdict matrix)
+8. graphify path             → per candidate: source → sink (reachability)
+9. Read + AI validate        → Phase 3 checklist + pre-report gates G1–G5
+10. Burp PoC                 → TRUE POSITIVE + AUTH (code-derived host)
+11. security_report.md       → Appendix D + E + F + G + H; **every finding has ### Remediation**
+12. HTML (mandatory)         → generate_html_report.py → security_report.html
 ```
 
 ### Query templates
@@ -126,8 +203,10 @@ Load **`references/route_auth_audit.md`** for unauthenticated endpoint detection
 
 If `graphify-out/graph.json` does not exist:
 
-1. Ask user to run `/graphify .` or `graphify extract . --no-cluster` (cheap AST-only build)
+1. Ask user to run `/graphify .` (native AI semantic) **or** build AST graph yourself:
+   `unset OLLAMA_BASE_URL && graphify extract <src-dirs> --no-cluster` (code dirs only — **not** repo root if images/docs trigger Ollama)
 2. If declined, proceed with targeted Grep using `references/patterns.md` — **never** read entire codebase
+3. **Never** fall back to `--backend ollama` or wait on local Ollama extraction
 
 ---
 
@@ -363,6 +442,13 @@ See **`references/burp_poc_templates.md`** for class-specific templates (SQLi, X
 │    ├─ Input type: HTTP GET parameter                           │
 │    └─ Can attacker influence value?       ✅ YES               │
 │                                                                 │
+│ 0. Pre-Report Gates (G1–G5)                                     │
+│    ├─ G1 Attacker-controlled input?       ✅ YES               │
+│    ├─ G2 Reaches sink realistically?      ✅ YES               │
+│    ├─ G3 Protection bypassed?             ✅ YES               │
+│    ├─ G4 Practically exploitable?         ✅ YES               │
+│    └─ G5 Assumptions minimal?             ✅ YES               │
+│                                                                 │
 │ 2. Sanitization Check                                           │
 │    ├─ Input validation present?           ⚠️ PARTIAL           │
 │    ├─ Validation type: Null check only                         │
@@ -563,11 +649,98 @@ in OpenAPI and enforce rate limiting + minimal response schema.
 
 ---
 
+## Exploitable CVE Finding Format (CVE-NNN)
+
+Use when a **published CVE** (Critical/High) is **reachable and exploitable** in this codebase — not for unreachable transitive deps.
+
+```markdown
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## [CRITICAL|HIGH] Exploitable CVE — [PACKAGE] [CVE-YYYY-NNNNN]           [CVE-001]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Classification
+| Attribute | Value |
+|-----------|-------|
+| CVE ID | CVE-YYYY-NNNNN |
+| CVSS | X.X (Critical/High) |
+| Package | name@affected_version |
+| Fixed in | name@fixed_version |
+| CWE | CWE-XXX |
+| AI Verdict | ✅ EXPLOITABLE (reachable) |
+
+### Reachability Proof
+| Step | Location | Evidence |
+|------|----------|----------|
+| Advisory | npm audit / NVD | Critical/High |
+| Lockfile | package-lock.json | version X.Y.Z present |
+| Import | routes/foo.js:12 | `require('package')` |
+| Call site | api/bar.js:89 | vulnerable API invoked |
+| User path | GET /api/baz | `graphify path` req → sink |
+
+### Exploit Scenario
+[How attacker triggers vulnerable code — 2-4 sentences]
+
+### Remediation
+1. Upgrade to `package@fixed_version`
+2. `npm ci` / regenerate lockfile
+3. Re-run CVE-REACH checks
+
+**Burp PoC:** N/A unless HTTP-triggered — or include HTTP request if applicable.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Downgrade rules:** CVE in lockfile but **no import** → Appendix A (not reachable), Appendix E = PASS.
+
+---
+
+## IaC Misconfiguration Finding Format (IAC-NNN)
+
+```markdown
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## [HIGH|MEDIUM] IaC Misconfiguration — [TITLE]                            [IAC-001]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Classification
+| Attribute | Value |
+|-----------|-------|
+| Type | Docker / Kubernetes / Terraform / Nginx / CI |
+| Check ID | IAC-DOCKER-01 (etc.) |
+| File | infra/nginx/staging.conf:42 |
+| Severity | High |
+| Exposure | Internet-facing / internal |
+| AI Verdict | ✅ TRUE POSITIVE |
+
+### Description
+The [resource] at line **N** of **[file]** [misconfiguration detail]. In production this 
+[impact: root container, open SG, missing HSTS, etc.].
+
+### Blast Radius (ARCH-07)
+[Can attacker reach secrets, cluster admin, or customer data from this misconfig?]
+
+### Remediation
+**BEFORE:** [snippet]
+**AFTER:** [secure snippet]
+
+**Burp PoC:** N/A — infrastructure finding (unless HTTP header visible at edge).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
 ## Workflow
+
+### Phase −1: Application Context (mandatory — before broad scanning)
+
+Follow **`references/manual-code-review.md`** Phase −1. Record in working notes and feed **Appendix G**:
+
+1. Determine language, framework, architecture, entry points, trust boundaries, authentication mechanisms.
+2. Identify user-controlled inputs and data-flow entry points (HTTP, uploads, WebSocket, callbacks).
+3. Identify sensitive assets: tokens, credentials, PII, payment data, admin functionality.
+4. Use README, architecture docs, and first `graphify query` — do **not** repo-wide Read before this + Phase 0 orient you.
 
 ### Phase 0: Graphify Recon (before any broad file reads)
 
-1. Verify `graphify-out/graph.json` exists; if not, request `/graphify .` or run `graphify extract . --no-cluster`
+1. Verify `graphify-out/graph.json` exists; if not, request `/graphify .` (native AI) or run scoped AST extract (`unset OLLAMA_BASE_URL`; code dirs only — see **LLM backend policy**)
 2. Run 1–3 scoped queries (see `references/graphify_security.md`):
    - Attack surface: routes, handlers, auth
    - User-input entry points
@@ -577,13 +750,46 @@ in OpenAPI and enforce rate limiting + minimal response schema.
 
 ### Phase 1: Static Pattern Detection
 
-Scan **graphify-scoped files/symbols only** using 750+ signatures. For each match, record:
-- Pattern matched
-- File path and line number (confirm with narrow `Read` ±5 lines, not whole file)
-- Code snippet with context (5 lines before/after)
-- Detected language and framework
+Scan **graphify-scoped files/symbols**. For **each** manifest section, **you** run the documented `rg` commands (Shell/Grep tool), then:
 
-Prefer targeted Grep limited to paths from Phase 0 instead of repository-wide search.
+- Record pattern matched, file:line, snippet (Read ±5 lines)
+- On hits: `graphify path` before filing FINDING
+- Mark Appendix E row PASS / FINDING / N/A
+
+Manifests: `sast_scan_manifest.md`, `frontend-stacktrace-leaks.md`, `secrets-patterns.md`, `injection-deep-scan.md`.
+
+### Phase 1f: Extended Taxonomy Scans (mandatory)
+
+After core manifests, cover **Partial** taxonomy rows applicable to the detected stack:
+
+1. Read **`vulnerability-taxonomy-coverage.md`** — identify **Partial** / **Manual** rows for this repo.
+2. Run applicable `rg` blocks from **`extended-category-scans.md`** (§1–§19; skip N/A e.g. §9 memory for Node-only).
+3. Run **`extended-category-scans.md` §19** when Spring/Node/PHP/Python/Java/.NET detected.
+4. On hits: `graphify path` → G1–G5 → VULN-NNN if TRUE POSITIVE.
+5. Fill **Appendix H** (19 domain groups: TAX-INJ … TAX-FW) with PASS / FINDING / N/A.
+
+**Note:** Appendix H attests full taxonomy coverage; **109 core Appendix E rows are unchanged**.
+
+### Phase 1c: CVE Exploitability Analysis (mandatory)
+
+1. Run `npm audit` (or read lockfile) **yourself** — interpret Critical/High advisories.
+2. Follow **`references/cve-exploitability.md`** — run each section's `rg` / `graphify path` **yourself**.
+3. For each CVE: confirm version → `rg` imports (`CVE-REACH-01`) → `graphify path` (`CVE-REACH-02`).
+4. Report **CVE-NNN** only when your checklist verdict = **EXPLOITABLE**.
+5. Update Appendix E rows `CVE-DEPS-*`, `CVE-REACH-*`, `CVE-CODE-*`.
+
+### Phase 1d: IaC Misconfiguration Scan (mandatory)
+
+1. Run `rg` per **`references/iac-misconfig-scan.md`** on `infra/`, `Dockerfile*`, `*.tf`, CI yaml.
+2. AI-validate environment (staging vs prod) and compensating controls.
+3. Report **IAC-NNN** for confirmed misconfigs; link **ARCH-07** blast radius.
+
+### Phase 1e: Security Architect Review (mandatory)
+
+1. Follow **`references/security-architect.md`** — **ARCH-01…07**.
+2. Produce **Appendix G**: attack surface, trust boundaries, STRIDE, control gaps.
+3. Prioritize manual review on high-risk surfaces identified here.
+4. Cross-link structural risks to VULN/CVE/IAC/AUTH findings.
 
 ### Phase 1a: Unauthenticated Endpoint Audit (mandatory)
 
@@ -596,7 +802,7 @@ Prefer targeted Grep limited to paths from Phase 0 instead of repository-wide se
 
 ### Phase 1b: Burp MCP Verification (when MCP available)
 
-**Prerequisite:** `bash scripts/discover_burp_hosts.sh .` — use hosts from `burp_hosts.txt` only.
+**Prerequisite:** Discover hosts with `rg` per **`references/burp-host-discovery.md`** — record in Appendix C. **Do not** use `discover_burp_hosts.sh`.
 
 1. If **no external host** in code → skip all Burp probes; document **Not Verified (no target host in code)**.
 2. **Never** use `localhost`, `127.0.0.1`, `0.0.0.0`, or `::1` as `Host` header.
@@ -606,7 +812,7 @@ Prefer targeted Grep limited to paths from Phase 0 instead of repository-wide se
 6. For XSS/CMD/XXE findings with HTTP surface: use payloads from `references/injection-deep-scan.md` on same host.
 7. Record status + HTTP status in finding and **Appendix C/D**.
 
-If Burp MCP is **not** configured, document `Burp MCP: not available` and leave all AUTH findings at **Medium / Not Verified**.
+If Burp MCP is **not** configured, run **curl** probes per **`references/curl-dast-fallback.md`** (same hosts, same verdict matrix). Document `Verified in curl` in Appendix C (treat as **Verified in Burp** for AUTH severity). If neither Burp nor curl is run, document `Live verification: not run` and leave AUTH at **Medium / Not Verified**.
 
 ### Phase 2: Data Flow Analysis (Graphify-assisted)
 
@@ -625,10 +831,17 @@ Sinks to trace: SQL/NoSQL, command exec, file ops, outbound HTTP (SSRF), templat
 
 ### Phase 3: AI Validation
 
-For EACH finding, validate:
+For EACH candidate finding, apply **`references/manual-code-review.md`** **Pre-Report Verification Gates (G1–G5)** first. If any gate fails → **FALSE POSITIVE** → Appendix A (note failed gate). Only then complete:
 
 ```markdown
 ## AI Validation Checklist
+
+### 0. Pre-Report Gates (mandatory — see manual-code-review.md)
+- [ ] **G1** Attacker-controlled input or missing auth on reachable route?
+- [ ] **G2** Input reaches sink / handler realistically? (`graphify path` if taint)
+- [ ] **G3** Existing protection documented; ineffective if claiming FINDING?
+- [ ] **G4** Practically exploitable (not theoretical / dev-only / test-only)?
+- [ ] **G5** Assumptions listed; minimal and realistic?
 
 ### 1. Source Verification
 - [ ] Confirm input is user-controlled
@@ -653,7 +866,7 @@ For EACH finding, validate:
 - [ ] What is real-world impact?
 
 ### VERDICT: TRUE_POSITIVE / FALSE_POSITIVE
-### REASONING: [Detailed explanation]
+### REASONING: [Detailed explanation — cite failed gate if FALSE POSITIVE]
 ```
 
 ### Phase 3b: Burp PoC Crafting (TRUE POSITIVES + AUTH findings)
@@ -672,33 +885,35 @@ If the finding is not reachable over HTTP (e.g., internal cron, pure code smell)
 
 ### Phase 4: Generate Markdown Report
 
-Write **`security_report.md`** (project root or `docs/security/security_report.md`) using the Report Structure below. Every detailed finding MUST include the **Burp Suite PoC** section. Include **Appendix D** (all AUTH candidates). AUTH findings use **AUTH-NNN** IDs in summary and detail sections.
+Write **`security_report.md`** (project root or `docs/security/security_report.md`) using the Report Structure below.
+
+**Mandatory appendices:**
+- **Appendix D** — every unauthenticated route (`AUTH-NNN`)
+- **Appendix E** — **every check** from `references/report-coverage-matrix.md` (**109 rows**)
+- **Appendix F** — phase execution log
+- **Appendix G** — security architecture assessment (`security-architect.md`)
+- **Appendix H** — vulnerability taxonomy attestation (`vulnerability-taxonomy-coverage.md`, 19 domain groups)
+
+**Appendix E / F:** Copy the 109-row table from `report-coverage-matrix.md` and fill **every row yourself** as you complete checks. No `generate_coverage_appendix.py`. No `PENDING` at handoff.
+
+Finding ID series: **VULN-NNN**, **AUTH-NNN**, **CVE-NNN**, **IAC-NNN**.
+
+**Completion gate:** Appendix E counts match Executive Summary. Appendix F logs what **you** ran (`rg`, `graphify`, `npm audit`, Burp MCP, **curl**).
+
+**Finding completeness gate (mandatory):** Follow **`references/report-finding-completeness.md`**. Count of `## [SEVERITY]` finding headers in Detailed Findings **must equal** count of `### Remediation` sections. Every code finding needs **BEFORE/AFTER** snippets under Remediation. Do not hand off if any finding lacks `### Remediation` — abbreviated table-only entries break HTML export.
 
 If remediation changed source files: `graphify update .`
 
-### Phase 5: Generate HTML Report (MANDATORY)
+### Phase 5: Generate HTML Report (MANDATORY — formatting only)
 
-After `security_report.md` is complete, generate the HTML deliverable:
+After `security_report.md` is complete, **always** run `generate_html_report.py`. It does **not** scan code — it only styles the markdown you wrote. If the script errors, fix the script or report markdown and retry until `security_report.html` is produced.
 
 ```bash
 python ~/.cursor/skills/ai-security-reviewer/scripts/generate_html_report.py security_report.md \
-  -o security_report.html \
-  --project "[Project Name]"
+  -o security_report.html --project "[Project Name]"
 ```
 
-Or from the skill directory:
-
-```bash
-python scripts/generate_html_report.py docs/security/security_report.md -o docs/security/security_report.html
-```
-
-**Agent obligations:**
-1. Write the markdown report first (source of truth).
-2. Run the HTML generator script (or emit equivalent HTML if Python unavailable — use the same sections).
-3. Tell the user both file paths: `security_report.md` and `security_report.html`.
-4. Open HTML in browser for review (optional: `open security_report.html` on macOS).
-
-The HTML report includes: executive summary, severity badges, findings table, data-flow blocks, **Burp request blocks** (syntax-highlighted), remediation, and appendices.
+Deliver **both** `security_report.md` and `security_report.html` at handoff.
 
 ---
 
@@ -720,6 +935,11 @@ The HTML report includes: executive summary, severity badges, findings table, da
 |-----------------------------|-------|
 | Files Analyzed              | X     |
 | Lines of Code               | X     |
+| **Total Security Checks**   | **109** |
+| **Checks Executed**         | X     |
+| **Checks Passed (PASS)**    | X     |
+| **Checks with Findings**    | X     |
+| **Checks N/A / Skipped**    | X     |
 | Static Pattern Matches      | X     |
 | AI-Validated True Positives | X     |
 | Unauthenticated Endpoints   | X     |
@@ -727,6 +947,24 @@ The HTML report includes: executive summary, severity badges, findings table, da
 | Not Verified (Medium)         | X     |
 | False Positives Filtered    | X     |
 | Detection Accuracy          | X%    |
+| **Coverage Rate (Appendix E)** | X% |
+
+### Checks Performed Summary
+
+| Layer | Checks | PASS | FINDING | N/A | SKIP | FAIL |
+|-------|--------|------|---------|-----|------|------|
+| SAST (OG) | 29 | X | X | X | X | X |
+| SAST (LEAK) | 8 | X | X | X | X | X |
+| SAST (SECRET) | 11 | X | X | X | X | X |
+| SAST (INJ) | 5 | X | X | X | X | X |
+| SAST (EXT) | 7 | X | X | X | X | X |
+| CVE | 14 | X | X | X | X | X |
+| IaC | 21 | X | X | X | X | X |
+| ARCH | 7 | X | X | X | X | X |
+| DAST | 3 | X | X | X | X | X |
+| DEPS | 1 | X | X | X | X | X |
+| GRAPH | 3 | X | X | X | X | X |
+| **Total** | **109** | X | X | X | X | X |
 
 ### Risk Score: [X/100] - [CRITICAL/HIGH/MEDIUM/LOW]
 
@@ -752,7 +990,8 @@ The HTML report includes: executive summary, severity badges, findings table, da
 | VULN-001 | Critical | SQL Injection | UserController.java:150 | getUser() | Yes | True Positive |
 | VULN-002 | High | XSS | index.js:2042 | renderAnswerChunkText() | Yes | True Positive |
 | AUTH-001 | High | Missing Authentication | routes/api/index.js:520 | GET /order/details | Yes | Verified in Burp |
-| AUTH-002 | Medium | Missing Authentication | routes/api/index.js:530 | GET /refund/details | Yes | Not Verified |
+| CVE-001 | Critical | Exploitable CVE | package-lock.json | dependency | N/A | Exploitable |
+| IAC-001 | High | IaC Misconfig | infra/nginx/staging.conf:42 | — | N/A | True Positive |
 
 ---
 
@@ -826,12 +1065,177 @@ Include **every** route lacking application-layer auth. Burp status = `Verified 
 
 ---
 
-**Generated by AI Security Reviewer v3.4**
+## Appendix E: Security Check Coverage Matrix (MANDATORY)
+
+> Full check list: `references/report-coverage-matrix.md` — **you** fill all 109 rows as you execute each check.
+
+### Checks Performed Summary
+
+| Metric | Value |
+|--------|-------|
+| Total checks defined | 109 |
+| Checks executed (PASS + FINDING) | X |
+| Findings (FINDING) | X |
+| Not applicable (N/A) | X |
+| Skipped (SKIP) | X |
+| Failed to run (FAIL) | X |
+| Coverage rate | X% |
+
+| Check ID | Layer | Category | Tool | Status | Finding Ref | Match Count | Notes |
+|----------|-------|----------|------|--------|-------------|-------------|-------|
+| SAST-OG-01 | SAST | Active Debug Code | rg | PASS | — | 0 | |
+| SAST-OG-02 | SAST | Code Injection | rg + graphify | PASS | — | 0 | |
+| SAST-OG-03 | SAST | Command Injection | rg + graphify | PASS | — | 0 | |
+| ... | ... | ... | ... | ... | ... | ... | *(all 109 rows — no PENDING at handoff)* |
+| ARCH-07 | ARCH | IaC blast radius | architect | PASS | — | — | |
+
+**Status legend:** `PASS` | `FINDING` | `FAIL` | `N/A` | `SKIP`
+
+---
+
+## Appendix F: Review Phase Execution Log (MANDATORY)
+
+| Phase | Step | Command / Tool | Status | Artifact | Notes |
+|-------|------|----------------|--------|----------|-------|
+| −1 | Application context | manual-code-review.md | PASS | Appendix G | trust boundaries, assets |
+| 0 | Burp host discovery | `rg` per burp-host-discovery.md | PASS | Appendix C | |
+| 0 | Graphify graph | `graphify extract` / existing | PASS | graphify-out/graph.json | |
+| 0 | Attack surface query | `graphify query` | PASS | — | budget 1500 |
+| 1 | SAST manifests | `rg` per sast_scan_manifest + refs | PASS | Appendix E | |
+| 1f | Extended taxonomy | extended-category-scans.md | PASS | Appendix H | |
+| 1c | CVE reachability | `npm audit` + graphify path | PASS | CVE-NNN | |
+| 1d | IaC `rg` scan | iac-misconfig-scan.md | PASS | IAC-NNN | |
+| 1e | Architect review | security-architect.md | PASS | Appendix G | |
+| 1a | Route auth audit | route_auth_audit.md | PASS | Appendix D | |
+| 1b | Burp probes | `send_http1_request` | SKIP/PASS | Appendix C | |
+| 2 | Data-flow traces | `graphify path` | PASS | — | |
+| 3 | AI validation | agent checklist | PASS | Findings | |
+| 4 | Markdown report | security_report.md | PASS | this file | |
+| 5 | HTML export (optional) | generate_html_report.py | PASS | security_report.html | |
+
+**Phase status:** `PASS` | `FAIL` | `SKIP` | `PARTIAL`
+
+---
+
+## Appendix G: Security Architecture Assessment (MANDATORY)
+
+See `references/security-architect.md` for full template.
+
+### Attack Surface Summary
+| Surface | Entry points | Auth | Sensitivity |
+|---------|--------------|------|-------------|
+
+### Trust Boundaries
+`Internet → WAF → Ingress → App → Redis/DB → Third-party`
+
+### Top Structural Risks
+1. [Risk] — Linked: VULN/CVE/IAC/AUTH-NNN
+
+### Control Maturity (1–5)
+| Domain | Score | Notes |
+|--------|-------|-------|
+| Authentication | | |
+| Authorization | | |
+| Supply chain / CVE | | |
+| Infrastructure (IaC) | | |
+
+### Researcher Notes
+[KEV CVEs, attack chains, defense-in-depth]
+
+---
+
+## Appendix H: Vulnerability Taxonomy Attestation (MANDATORY)
+
+> Full taxonomy: `references/vulnerability-taxonomy-coverage.md` — attest **19 domain groups** after Phase 1f.
+
+| Group ID | Domain | Status | Finding Refs | Notes |
+|----------|--------|--------|--------------|-------|
+| TAX-INJ | Injection (SQL, NoSQL, CMD, LDAP, XPath, XML, CRLF, header, SSTI, EL, log) | PASS / FINDING / N/A | | |
+| TAX-XSS | XSS / HTML / JS / DOM | | | |
+| TAX-AUTH | Authentication (secrets, hashing, session gen, remember-me, bypass) | | | |
+| TAX-AUTHZ | Authorization / IDOR / BOLA / mass assignment | | | |
+| TAX-CRYPTO | Cryptographic weaknesses | | | |
+| TAX-DATA | Sensitive data exposure | | | |
+| TAX-FILE | Path / file handling | | | |
+| TAX-DESER | Deserialization | | | |
+| TAX-MEM | Memory (native C/C++) | N/A typical for web | | |
+| TAX-API | API security | | | |
+| TAX-SSRF | SSRF / open redirect | | | |
+| TAX-XML | XML / XXE | | | |
+| TAX-SESS | Session management | | | |
+| TAX-CONFIG | Config / CORS / headers / debug | | | |
+| TAX-LOGIC | Concurrency / business logic | Manual | | |
+| TAX-MOBILE | Mobile | N/A unless mobile tree | | |
+| TAX-IAC | Cloud / container / IaC | | | |
+| TAX-DEPS | Supply chain / CVE | | | |
+| TAX-FW | Framework-specific (Spring, Node, PHP, Python, Java, .NET) | | | |
+
+**Completion gate:** Every applicable group has Status filled; N/A documented with reason (stack not present).
+
+---
+
+**Generated by AI Security Reviewer v4.3**
 **HTML Export:** `python scripts/generate_html_report.py security_report.md -o security_report.html`
 **PDF Export (optional):** `python generate_pdf.py security_report.md`
 ```
 
 ---
+
+## Key Enhancements (v4.3)
+
+| Feature | Description |
+|---------|-------------|
+| **Full vulnerability taxonomy** | `vulnerability-taxonomy-coverage.md` maps all issue classes (injection, XSS, auth, crypto, file, API, mobile, framework-specific) |
+| **Extended category scans** | `extended-category-scans.md` — supplemental `rg` for Partial taxonomy rows (NoSQL, CRLF, SSTI, IDOR, upload, Spring/Node/PHP/Python/Java/.NET) |
+| **Appendix H attestation** | 19 domain groups (TAX-INJ … TAX-FW) mandatory; complements unchanged 109-check Appendix E |
+| **Injection manifest expanded** | `injection-deep-scan.md` adds NoSQL, CRLF, header, SSTI, EL, log injection sections |
+
+## Key Enhancements (v4.2)
+
+| Feature | Description |
+|---------|-------------|
+| **Mandatory ### Remediation** | `report-finding-completeness.md` — every finding; BEFORE/AFTER for code; gate before HTML |
+| **curl DAST fallback** | `curl-dast-fallback.md` — live verify when Burp MCP unavailable; same verdict matrix |
+| **HTML inference improved** | Generator pulls Remediation Priority + preamble heuristics as fallback only |
+
+## Key Enhancements (v4.1)
+
+| Feature | Description |
+|---------|-------------|
+| **Senior manual code review** | `manual-code-review.md` — context-first, taint analysis, OWASP/API taxonomy |
+| **Pre-report gates G1–G5** | Mandatory before any FINDING; failures → Appendix A |
+| **Phase −1** | Application context before broad scanning; feeds Appendix G |
+| **High-confidence default** | Report only realistic exploitable issues; minimize false positives |
+
+## Key Enhancements (v4.0)
+
+| Feature | Description |
+|---------|-------------|
+| **Agent-only execution** | No scan scripts — you run `rg`, `graphify`, `npm audit`, Burp MCP per manifests |
+| **Directions not pipelines** | Manifests are cookbooks; `references/agent-execution.md` defines the loop |
+| **Reachability = AI + graphify** | Never report CVE/injection from pattern match alone — `graphify path` required |
+| **Scripts deprecated for agents** | `scripts/` retained for optional CI only (`scripts/README.md`) |
+
+## Key Enhancements (v3.9)
+
+| Feature | Description |
+|---------|-------------|
+| **Exploitable CVE analysis** | CVE-NNN only when Critical/High + import + graphify reachability |
+| **IaC misconfiguration scan** | IAC-NNN for Docker/K8s/Terraform/Nginx/CI — 21 checks |
+| **Security architect lens** | ARCH-01…07 + Appendix G threat model, STRIDE, ASVS gaps |
+| **109-check Appendix E** | All v3.8 checks retained + 42 new CVE/IaC/ARCH rows |
+| `run_cve_iac_scan.sh` | CVE + IaC deterministic rg runner |
+
+## Key Enhancements (v3.8)
+
+| Feature | Description |
+|---------|-------------|
+| **Appendix E — Full check matrix** | All 67 SAST/DAST/GRAPH/DEPS checks with PASS/FINDING/N/A in every report |
+| **Appendix F — Phase execution log** | Documents which workflow steps ran (graphify, SAST, Burp, HTML) |
+| **Checks Performed Summary** | Executive summary + per-layer breakdown reconciled with Appendix E |
+| **Coverage generator script** | `generate_coverage_appendix.py` pre-fills from `sast_scan_results.txt` |
+| **Complete SAST runner** | `run_sast_scan.sh` now runs all LEAK-01…08, SECRET-01…11, EXT-01…07 |
+| **DAST manifest** | `dast_scan_manifest.md` — Burp probe rules for AUTH and injection |
 
 ## Key Enhancements (v3.7)
 
@@ -1010,20 +1414,32 @@ that expands to petabytes of data, exhausting disk space and memory.
 
 | File | Contents |
 |------|----------|
+| **`references/report-finding-completeness.md`** | **Mandatory ### Remediation** per finding; BEFORE/AFTER; pre-HTML gate |
+| **`references/skill-privacy.md`** | **No user/org data in skill** — hygiene checklist before sharing |
+| **`references/curl-dast-fallback.md`** | **curl live verify** when Burp MCP unavailable |
+| **`references/manual-code-review.md`** | **Senior AppSec manual review** — context, taint, OWASP taxonomy, gates G1–G5 |
+| **`references/agent-execution.md`** | **Agent-only rules** — no scan scripts; per-check loop |
 | `references/frontend-stacktrace-leaks.md` | SAST-LEAK-01…08 — stacks/errors to frontend |
 | `references/secrets-patterns.md` | SAST-SECRET-01…11 — keys/passwords/tokens |
-| `references/injection-deep-scan.md` | XSS, RCE, CMD, XXE, XML injection |
-| `references/burp-host-discovery.md` | Code-derived Burp targets (no localhost) |
-| `scripts/discover_burp_hosts.sh` | Extract hosts from config → `burp_hosts.txt` |
-| `references/opengrep-vulnerability-index.md` | OpenGrep `vulnerability_class` → `SAST-OG-*` mapping |
-| `references/sast_scan_manifest.md` | Full agent-native SAST checks (28 OpenGrep classes) |
-| `references/coverage-checklist.md` | Appendix E matrix |
-| `scripts/run_sast_scan.sh` | Deterministic rg runner (OpenGrep taxonomy) |
-| `references/route_auth_audit.md` | Unauthenticated endpoint detection, Burp MCP verification, Appendix D |
-| `references/patterns.md` | Static regex signatures (use on graphify-scoped paths only) |
-| `references/burp_poc_templates.md` | Burp Repeater/Intruder HTTP templates by vulnerability class |
-| `references/additional_vulns.md` | Stack trace leak, JNDI, session fixation, DoS, etc. |
-| `scripts/generate_html_report.py` | Markdown → styled HTML report generator |
+| **`references/vulnerability-taxonomy-coverage.md`** | **Master taxonomy map** — all issue classes → check IDs + coverage level |
+| **`references/extended-category-scans.md`** | **Supplemental `rg` probes** for Partial taxonomy rows + framework stacks |
+| `references/injection-deep-scan.md` | XSS, RCE, CMD, XXE, XML, NoSQL, CRLF, SSTI, EL, log injection |
+| `references/burp-host-discovery.md` | Code-derived Burp targets — **agent runs `rg`** (no script) |
+| `references/opengrep-vulnerability-index.md` | OpenGrep class → `SAST-OG-*` mapping |
+| `references/sast_scan_manifest.md` | SAST checks — **agent runs each `rg` block** |
+| `references/cve-exploitability.md` | CVE-DEPS/REACH/CODE + reachability proof |
+| `references/iac-misconfig-scan.md` | IAC-* — **agent runs each `rg` block** |
+| `references/security-architect.md` | ARCH-* + Appendix G |
+| `references/dast_scan_manifest.md` | Burp MCP DAST probes |
+| `references/route_auth_audit.md` | Unauthenticated endpoints, Appendix D |
+| `references/patterns.md` | Regex signatures (graphify-scoped) |
+| `references/burp_poc_templates.md` | Burp Repeater templates |
+| `references/additional_vulns.md` | JNDI, session fixation, DoS, etc. |
+| `references/graphify_security.md` | Graphify query templates |
+| `references/report-coverage-matrix.md` | **Appendix E** — full **109-check** inventory |
+| `references/coverage-checklist.md` | Appendix E summary + completion gate |
+| `scripts/README.md` | Scan scripts = optional CI only, not for agents |
+| `scripts/generate_html_report.py` | Optional markdown → HTML **formatting** only |
 
 ---
 
@@ -1054,20 +1470,9 @@ Run comprehensive security audit and generate PDF report
 
 ---
 
-## HTML Report Generation (MANDATORY — end of every review)
+## HTML Report (MANDATORY — formatting only)
 
-1. Complete **`security_report.md`** with all TRUE POSITIVE findings (including Burp PoC sections).
-2. Run:
-
-```bash
-python ~/.cursor/skills/ai-security-reviewer/scripts/generate_html_report.py security_report.md \
-  -o security_report.html \
-  --project "Project Name"
-```
-
-3. Confirm output path to the user. The HTML includes severity badges, tables, code/Burp blocks, and print-friendly CSS.
-
-**If Python is unavailable:** emit a single self-contained `security_report.html` with inline CSS using the same section order as the markdown report.
+After **you** complete `security_report.md`, run `generate_html_report.py` and deliver `security_report.html` alongside the markdown. It does not perform security analysis.
 
 ---
 
