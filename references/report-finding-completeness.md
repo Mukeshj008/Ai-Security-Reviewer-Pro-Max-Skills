@@ -11,7 +11,8 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 | `### Classification` | Yes | Type, CWE, OWASP, severity, AI verdict |
 | `### Location Summary` | Yes | File, method, route, source/sink lines |
 | `### Description` | Yes | Checkmarx-style natural language (see SKILL.md) |
-| `### Data Flow Trace` | Yes for taint findings | Source → sink; skip for pure IaC if N/A |
+| **`### Vulnerable Code Snippet`** | **Yes** | Real code from repo — source + sink lines; see `report-vulnerable-code-dataflow.md` |
+| **`### Data Flow Trace`** | **Yes** | Full source → sink ASCII box + simplified flow; not optional for taint findings |
 | `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | Write `Burp PoC: N/A — [reason]` for non-HTTP |
 | `### Impact Assessment` | Yes | Table or bullets — CIA / business impact |
 | **`### Remediation`** | **Yes — never omit** | See templates below |
@@ -19,11 +20,14 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 **Completion gate (Phase 4):** Before `generate_html_report.py`, grep the report:
 
 ```bash
-rg -n "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | wc -l   # N findings
-rg -n "^### Remediation" security_report.md | wc -l                      # must equal N
+FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+REM=$(rg -c "^### Remediation" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+VC=$(rg -c "^### Vulnerable Code Snippet" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+DF=$(rg -c "^### Data Flow Trace" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+# FINDINGS must equal REM, VC, and DF
 ```
 
-If counts differ → add missing `### Remediation` blocks before HTML export.
+If any count differs → add missing sections before HTML export. See **`report-vulnerable-code-dataflow.md`** for snippet and trace templates.
 
 ---
 
@@ -108,6 +112,8 @@ Do **not** bury fix advice in Description or table rows. Move it under **`### Re
 |--------------|---------|-----|
 | Table-only finding | `\| Route \| POST /addmoney \|` with fix in last table cell | Add full `### Remediation` |
 | Fix in Description | "Validate req.body.url against allowlist" in Description only | Duplicate under Remediation + code |
+| Code only in Description | Vulnerable `request(url)` inline in Description | Move to `### Vulnerable Code Snippet` |
+| Placeholder data flow | `[Full stack trace as shown above]` | Paste actual ASCII trace from SKILL.md |
 | Missing ### header | `Build URLs server-side...` as plain paragraph | Prefix `### Remediation` |
 | AUTH block without Remediation | AUTH-002 metrics section ends after Impact | Add Remediation with nginx/middleware fix |
 
@@ -115,7 +121,7 @@ Do **not** bury fix advice in Description or table rows. Move it under **`### Re
 
 ## HTML export
 
-`generate_html_report.py` reads **`### Remediation`** first. It may infer short fixes from preamble heuristics — **do not rely on inference**. Always write explicit sections.
+`generate_html_report.py` reads **`### Vulnerable Code Snippet`**, **`### Data Flow Trace`**, and **`### Remediation`** as dedicated panels. Do not bury snippet or trace only in Description.
 
 ---
 

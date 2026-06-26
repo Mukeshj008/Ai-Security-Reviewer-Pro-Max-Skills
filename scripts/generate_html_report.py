@@ -161,6 +161,9 @@ HTML_SHELL = """<!DOCTYPE html>
     }}
     .core-panel.missing h3 {{ color: var(--muted); }}
     .core-panel.missing .placeholder {{ color: var(--muted); font-style: italic; }}
+    .core-panel.vuln-code {{ border-left: 3px solid var(--sink); }}
+    .core-panel.data-flow {{ border-left: 3px solid var(--source); }}
+    .core-panel.vuln-code pre {{ background: rgba(239, 68, 68, 0.08); }}
     .trace-table th {{ width: 120px; }}
     .trace-source {{ color: var(--source); font-weight: 600; }}
     .trace-sink {{ color: var(--sink); font-weight: 600; }}
@@ -733,10 +736,11 @@ def render_inline_content(text: str) -> str:
     return "\n".join(parts)
 
 
-def render_core_panel(title: str, content_html: str, missing: bool = False) -> str:
-    cls = "core-panel missing" if missing else "core-panel"
+def render_core_panel(title: str, content_html: str, missing: bool = False, css_class: str = "") -> str:
+    extra = f" {css_class}" if css_class else ""
+    cls = f"core-panel missing{extra}" if missing else f"core-panel{extra}"
     if missing or not content_html.strip():
-        inner = '<p class="placeholder">Not documented in markdown report — add a ### Description / ### Remediation section or Location Summary table.</p>'
+        inner = f'<p class="placeholder">Not documented in markdown report — add a ### {html.escape(title)} section.</p>'
     else:
         inner = content_html
     return f'<section class="{cls}"><h3>{html.escape(title)}</h3>{inner}</section>'
@@ -770,6 +774,36 @@ def render_findings_section(findings: list[ParsedFinding], priority_map: Optiona
     return "\n".join(render_finding(f, priority_map) for f in findings)
 
 
+def build_vulnerable_code(finding: ParsedFinding) -> str:
+    for key in ("vulnerable code snippet", "vulnerable code"):
+        if finding.sections.get(key):
+            return finding.sections[key]
+    return ""
+
+
+def build_data_flow_trace(finding: ParsedFinding) -> str:
+    for key, content in finding.sections.items():
+        if "data flow trace" in key and content.strip():
+            text = content
+            simplified = finding.sections.get("simplified flow", "")
+            if simplified and "simplified flow" not in text.lower():
+                text = f"{text}\n\n### Simplified Flow\n\n{simplified}"
+            return text
+    simplified = finding.sections.get("simplified flow", "")
+    return simplified
+
+
+def count_missing_section(
+    findings: list[ParsedFinding],
+    builder,
+) -> list[str]:
+    missing: list[str] = []
+    for f in findings:
+        if not builder(f).strip():
+            missing.append(f.finding_id or f.title)
+    return missing
+
+
 def count_missing_remediation(findings: list[ParsedFinding], priority_map: Optional[dict[str, str]] = None) -> list[str]:
     missing: list[str] = []
     for f in findings:
@@ -782,6 +816,8 @@ def render_finding(finding: ParsedFinding, priority_map: Optional[dict[str, str]
     fid = finding.finding_id or "UNKNOWN"
     badge = f'<span class="badge badge-{finding.severity.lower()}">{finding.severity}</span>'
     description = build_description(finding)
+    vulnerable = build_vulnerable_code(finding)
+    data_flow = build_data_flow_trace(finding)
     source, sink, file_ref, method = build_source_sink(finding)
     impact = build_impact(finding)
     remediation = build_remediation(finding, priority_map=priority_map)
@@ -789,6 +825,8 @@ def render_finding(finding: ParsedFinding, priority_map: Optional[dict[str, str]
     core_html = f"""
 <div class="finding-core">
   {render_core_panel("Description", render_inline_content(description), missing=not description.strip())}
+  {render_core_panel("Vulnerable Code", render_inline_content(vulnerable), missing=not vulnerable.strip(), css_class="vuln-code")}
+  {render_core_panel("Data Flow Trace", render_inline_content(data_flow), missing=not data_flow.strip(), css_class="data-flow")}
   {render_trace_panel(source, sink, file_ref, method)}
   {render_core_panel("Impact", render_inline_content(impact), missing=not impact.strip())}
   {render_core_panel("Remediation", render_inline_content(remediation), missing=not remediation.strip())}
@@ -796,9 +834,18 @@ def render_finding(finding: ParsedFinding, priority_map: Optional[dict[str, str]
 """
 
     extra_sections: list[str] = []
-    skip_keys = {"description", "_preamble", "remediation"}
+    skip_keys = {
+        "description",
+        "_preamble",
+        "remediation",
+        "vulnerable code snippet",
+        "vulnerable code",
+        "simplified flow",
+    }
     for key, content in finding.sections.items():
         if key in skip_keys or not content.strip():
+            continue
+        if "data flow trace" in key:
             continue
         if "impact" in key:
             continue
@@ -1024,13 +1071,22 @@ def main() -> int:
     priority_map = parse_remediation_priority(md)
 
     missing_remediation = count_missing_remediation(findings, priority_map)
-    if missing_remediation:
-        print(
-            f"Warning: {len(missing_remediation)} finding(s) lack ### Remediation — "
-            f"add sections per report-finding-completeness.md: {', '.join(missing_remediation[:8])}"
-            + (" ..." if len(missing_remediation) > 8 else ""),
-            file=sys.stderr,
-        )
+    missing_vuln_code = count_missing_section(findings, build_vulnerable_code)
+    missing_data_flow = count_missing_section(findings, build_data_flow_trace)
+
+    for label, missing in (
+        ("### Remediation", missing_remediation),
+        ("### Vulnerable Code Snippet", missing_vuln_code),
+        ("### Data Flow Trace", missing_data_flow),
+    ):
+        if missing:
+            print(
+                f"Warning: {len(missing)} finding(s) lack {label} — "
+                f"see report-finding-completeness.md / report-vulnerable-code-dataflow.md: "
+                f"{', '.join(missing[:6])}"
+                + (" ..." if len(missing) > 6 else ""),
+                file=sys.stderr,
+            )
 
     findings_html = render_findings_section(findings, priority_map)
     body = markdown_to_html(md, findings_html)
@@ -1055,7 +1111,7 @@ def main() -> int:
     out_path = args.output or args.input.with_suffix(".html")
     out_path.write_text(html_doc, encoding="utf-8")
     print(f"HTML report written: {out_path}")
-    print(f"Findings rendered: {len(findings)} (structured Description / Source / Sink / Impact / Remediation)")
+    print(f"Findings rendered: {len(findings)} (Description / Vulnerable Code / Data Flow / Source→Sink / Impact / Remediation)")
     return 0
 
 

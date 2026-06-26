@@ -231,10 +231,10 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 | Phase 1 / manifests | Hits are **candidates only** until gates pass |
 | Phase 1f | Extended taxonomy scans (`extended-category-scans.md`) → Appendix H |
 | Phase 1a | Auth audit = G1 for access control |
-| Phase 2 | Mandatory taint trace per candidate |
+| Phase 2 | Mandatory taint trace per candidate → feeds **`### Data Flow Trace`** |
 | Phase 3 | Apply **Pre-Report Verification Gates** + AI Validation Checklist |
 | Phase 3b | Burp PoC only for TRUE POSITIVE + AUTH |
-| Phase 4 | Executive summary counts = gated findings only |
+| Phase 4 | Each finding: **`### Vulnerable Code Snippet`** + **`### Data Flow Trace`** + **`### Remediation`** (see `report-vulnerable-code-dataflow.md`) |
 | Appendix A | All false positives with gate that failed |
 
 ---
@@ -261,6 +261,7 @@ When filtering a candidate, record:
 4. **Test/dev code** — exclude unless deployed to production paths.
 5. **Dependency CVEs** — CVE-NNN only with import + `graphify path` (see `cve-exploitability.md`).
 6. **Prefer staging hosts** for Burp; never localhost.
+7. **Evidence in report** — paste real source/sink code under **`### Vulnerable Code Snippet`**; never report without a documented data flow.
 
 ---
 

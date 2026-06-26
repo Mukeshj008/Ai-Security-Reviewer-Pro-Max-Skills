@@ -2,7 +2,7 @@
 
 Enterprise-grade **Cursor Agent Skill** for application security reviews — agent-native SAST + DAST with AI-validated findings, Checkmarx-style reports, Burp/curl live verification, and HTML export.
 
-**Version:** 4.3
+**Version:** 4.4
 
 ## What it does
 
@@ -10,6 +10,7 @@ Enterprise-grade **Cursor Agent Skill** for application security reviews — age
 - **Agent-native SAST** — 750+ pattern signatures across 85+ vulnerability classes
 - **109-check coverage matrix** (Appendix E) + **full taxonomy attestation** (Appendix H)
 - **Senior manual review** — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
+- **Vulnerable code + data flow** — real source/sink snippets and full taint traces per finding
 - **Deep injection scans** — SQL, NoSQL, XSS, RCE, CMD, XXE, XML, CRLF, SSTI, log injection
 - **Extended category scans** — auth, crypto, file handling, API, framework-specific (Spring, Node, PHP, Python, Java, .NET)
 - **Secrets & stack-trace leaks** — cloud keys, JWT, passwords, error disclosure
@@ -18,7 +19,7 @@ Enterprise-grade **Cursor Agent Skill** for application security reviews — age
 - **IaC misconfiguration** — Docker, K8s, Terraform, Nginx, CI/CD
 - **Burp MCP + curl fallback** — live DAST on code-derived hosts (never localhost)
 - **Mandatory remediation** — every finding includes BEFORE/AFTER fix snippets
-- **HTML report export** — styled `security_report.html` deliverable
+- **HTML report export** — styled `security_report.html` with Vulnerable Code and Data Flow panels
 
 ## Install in Cursor
 
@@ -59,6 +60,7 @@ graphify extract routes api lib middleware --no-cluster
 ```
 ├── SKILL.md                              # Main skill instructions (Cursor reads this)
 ├── README.md                             # This file
+├── CHANGELOG.md                          # Version history
 ├── references/
 │   ├── agent-execution.md                # Agent-only rules (no scan scripts)
 │   ├── manual-code-review.md             # Senior review + G1–G5 gates
@@ -66,6 +68,7 @@ graphify extract routes api lib middleware --no-cluster
 │   ├── injection-deep-scan.md            # XSS, RCE, CMD, XXE, NoSQL, SSTI, …
 │   ├── extended-category-scans.md        # Supplemental rg for taxonomy gaps
 │   ├── vulnerability-taxonomy-coverage.md
+│   ├── report-vulnerable-code-dataflow.md # Snippet + trace templates (v4.4)
 │   ├── secrets-patterns.md
 │   ├── frontend-stacktrace-leaks.md
 │   ├── route_auth_audit.md
@@ -98,7 +101,7 @@ Check for SQL injection and XSS in the API controllers
 Check for information disclosure and stack trace exposure
 ```
 
-## Workflow overview (v4.3)
+## Workflow overview (v4.4)
 
 1. **Phase −1** — Application context (trust boundaries, auth, assets)
 2. **Graphify recon** — attack surface queries (`budget 1500`)
@@ -106,10 +109,10 @@ Check for information disclosure and stack trace exposure
 4. **Extended taxonomy** — `extended-category-scans.md` → Appendix H
 5. **CVE + IaC + architect** — exploitable deps, infra misconfigs, STRIDE
 6. **Route auth audit** — unauthenticated endpoints → AUTH-NNN
-7. **Data-flow traces** — `graphify path` source → sink
+7. **Data-flow traces** — `graphify path` source → sink; mandatory snippet per finding
 8. **AI validation** — G1–G5 gates; true positives only
 9. **Burp / curl verify** — code-derived staging hosts only
-10. **Report** — `security_report.md` (Appendices D–H) → `security_report.html`
+10. **Report** — `security_report.md` (Vulnerable Code + Data Flow + Remediation per finding) → `security_report.html`
 
 ## Agent execution model
 
@@ -118,6 +121,10 @@ Check for information disclosure and stack trace exposure
 ## Privacy
 
 Before sharing or publishing this skill, run checks in `references/skill-privacy.md`. Do not commit real scan reports, client hosts, or credentials.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 

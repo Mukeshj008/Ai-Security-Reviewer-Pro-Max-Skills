@@ -70,6 +70,6 @@ After core 109 checks, run **`extended-category-scans.md`** for every **Partial*
 
 `scripts/generate_html_report.py` — **mandatory** markdown→HTML styling after **you** wrote `security_report.md`. Does not perform security analysis. Deliver both `.md` and `.html` at handoff.
 
-**Before HTML export:** Verify finding count = remediation count (`report-finding-completeness.md`). Every `## [SEVERITY]` block in Detailed Findings must have **`### Remediation`**.
+**Before HTML export:** Verify finding count equals remediation, vulnerable snippet, and data flow counts (`report-finding-completeness.md`, `report-vulnerable-code-dataflow.md`). Every `## [SEVERITY]` block must have **`### Vulnerable Code Snippet`**, **`### Data Flow Trace`**, and **`### Remediation`**.
 
 **Before sharing the skill:** Run privacy checks in `skill-privacy.md` — no real hosts, user paths, credentials, or engagement-specific data.

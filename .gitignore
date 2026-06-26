@@ -11,6 +11,8 @@ graphify-out/
 *.swp
 .idea/
 .vscode/
+__pycache__/
+*.pyc
 
 # Secrets — never commit
 .env
