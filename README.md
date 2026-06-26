@@ -35,7 +35,7 @@ This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`
 
 ## Install
 
-### Option A — Cursor
+### Option A — Cursor (You can also Ask cursor to intall these skills for you by providing the link)
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
@@ -44,7 +44,7 @@ cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.cursor/skills/ai-security-reviewer
 
 Restart Cursor → attach skill or type: `Review this code for security vulnerabilities`
 
-### Option B — Claude
+### Option B — Claude (You can also Ask Claude to intall these skills for you by providing the link)
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
