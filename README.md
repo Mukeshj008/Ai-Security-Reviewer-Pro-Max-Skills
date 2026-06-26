@@ -1,10 +1,23 @@
 # AI Security Reviewer Pro Max Skills
 
-**Version 4.4** — Agent-native security review skill for **Cursor** and **Claude**.
+> **Works with Cursor and Claude** — same skill, same prompts, same reports.
 
-Enterprise SAST + DAST with AI-validated findings, Checkmarx-style reports, vulnerable code snippets, data-flow traces, and HTML export.
+**Version 4.4** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
 **Repo:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills
+
+---
+
+## Supported AI agents
+
+| Platform | Install path | How to use |
+|----------|--------------|------------|
+| **Cursor** | `~/.cursor/skills/ai-security-reviewer` | Attach skill or paste prompt in chat |
+| **Claude Code** | `~/.claude/skills/ai-security-reviewer` | Skill auto-loads from skills folder |
+| **Claude Desktop** | `~/.claude/skills/ai-security-reviewer` | Enable skill in project settings |
+| **Claude (project)** | `.claude/skills/ai-security-reviewer` | Per-repo skill in project root |
+
+This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`, run shell commands, and write files can run a full security review.
 
 ---
 
@@ -14,48 +27,37 @@ Enterprise SAST + DAST with AI-validated findings, Checkmarx-style reports, vuln
 - Senior manual review — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
 - Every finding includes **Vulnerable Code Snippet**, **Data Flow Trace**, and **Remediation** (BEFORE/AFTER)
 - Unauthenticated endpoint audit (AUTH-NNN) + exploitable CVE + IaC misconfig scans
-- Live verification via **Burp MCP** — falls back to **curl** automatically if Burp is unavailable
-- **Graphify** optional — speeds up discovery when installed; works without it using `rg` + targeted reads
+- Live verification via **Burp MCP** — falls back to **curl** if Burp is not available
+- **Graphify** optional — faster discovery when installed; works without it using `rg` + reads
 - Delivers `security_report.md` + styled `security_report.html`
 
 ---
 
 ## Install
 
-### Cursor
+### Option A — Cursor
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
 cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.cursor/skills/ai-security-reviewer
 ```
 
-Restart Cursor → attach skill or type:
+Restart Cursor → attach skill or type: `Review this code for security vulnerabilities`
 
-```
-Review this code for security vulnerabilities
-```
-
-### Claude (Claude Code / Claude Desktop skills)
+### Option B — Claude
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
 cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.claude/skills/ai-security-reviewer
 ```
 
-Or symlink:
+Restart Claude → skill loads from `SKILL.md`. Same prompts as Cursor.
+
+**Symlink (either platform):**
 
 ```bash
-ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.claude/skills/ai-security-reviewer
-```
-
-Point Claude at `SKILL.md` as the skill entry file. Same prompts work in both IDEs.
-
-### Project-local (either IDE)
-
-```bash
-git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git .claude/skills/ai-security-reviewer
-# or
-git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git .cursor/skills/ai-security-reviewer
+ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.claude/skills/ai-security-reviewer   # Claude
+ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.cursor/skills/ai-security-reviewer   # Cursor
 ```
 
 ---
@@ -66,13 +68,13 @@ git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git 
 |------|------|------------|
 | **Graphify** | Faster attack-surface mapping & source→sink paths | Agent uses `rg` + narrow file reads |
 | **Burp MCP** | Live DAST on code-derived hosts | Agent uses **curl** (`references/curl-dast-fallback.md`) |
-| **ripgrep (`rg`)** | Pattern scans | Use IDE/agent grep — slower but works |
+| **ripgrep (`rg`)** | Pattern scans | Use agent grep — slower but works |
 
 No external service is required to run a full review.
 
 ---
 
-## Usage
+## Usage (Cursor or Claude)
 
 ```
 Review this code for security vulnerabilities
@@ -80,13 +82,11 @@ Review this code for security vulnerabilities
 Run comprehensive security audit and generate security_report.html
 
 Check for SQL injection and XSS in the API controllers
-
-Check for information disclosure and stack trace exposure
 ```
 
 ---
 
-## Workflow (short)
+## Workflow
 
 1. Application context → trust boundaries, auth, assets
 2. Static scans (`rg` per manifest files in `references/`)
@@ -95,7 +95,7 @@ Check for information disclosure and stack trace exposure
 5. Live verify — Burp MCP or curl fallback
 6. Report — `security_report.md` → `security_report.html`
 
-**Agent model:** The AI agent is the scanner. Manifests are cookbooks — do not run bundled scan scripts for analysis.
+The AI agent is the scanner. Manifests are cookbooks — do not run bundled scan scripts for analysis.
 
 ---
 
@@ -103,16 +103,10 @@ Check for information disclosure and stack trace exposure
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | Main skill instructions (entry point) |
+| `SKILL.md` | Main skill instructions (entry point for Cursor & Claude) |
 | `references/` | SAST manifests, taxonomy, DAST rules, report templates |
 | `scripts/generate_html_report.py` | Markdown → HTML (formatting only) |
 | `CHANGELOG.md` | Version history |
-
----
-
-## Privacy
-
-Before sharing this skill publicly, run checks in `references/skill-privacy.md`. Do not commit scan reports, client hosts, or credentials.
 
 ---
 
