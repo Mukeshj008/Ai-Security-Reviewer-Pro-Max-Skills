@@ -8,13 +8,15 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 
 | Section | Required | Notes |
 |---------|----------|-------|
-| `### Classification` | Yes | Type, CWE, OWASP, severity, AI verdict |
-| `### Location Summary` | Yes | File, method, route, source/sink lines |
+| `### Classification` | Yes | **Severity**, **AI Verdict**, **Exploitable**, Type, CWE, OWASP, **Source (full path)**, **Sink (full path)** |
+| `### Location & Data Flow` or `### Location Summary` | Yes | Full repo-relative paths with line numbers |
 | `### Description` | Yes | Checkmarx-style natural language (see SKILL.md) |
+| **`### Assumptions`** | **Yes (v4.15)** | G5 gate — table or bullets; see `finding-templates.md` |
 | **`### Vulnerable Code Snippet`** | **Yes** | Real code from repo — source + sink lines; see `report-vulnerable-code-dataflow.md` |
 | **`### Data Flow Trace`** | **Yes** | Full source → sink ASCII box + simplified flow; not optional for taint findings |
-| `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | Write `Burp PoC: N/A — [reason]` for non-HTTP |
-| `### Impact Assessment` | Yes | Table or bullets — CIA / business impact |
+| `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | **AUTH-NNN:** PoC **mandatory even when Not Verified** (Medium); write `Burp PoC: N/A — [reason]` only for non-HTTP |
+| `Secret Type` in Classification | Yes for secrets | Per `secret-type-labels.md` — e.g. GitHub PAT, AWS key, RabbitMQ password |
+| `### Impact Assessment` | Yes | **CIA + Business table** — per `report-impact-assessment.md`; no generic one-liners |
 | **`### Remediation`** | **Yes — never omit** | See templates below |
 
 **Completion gate (Phase 4):** Before `generate_html_report.py`, grep the report:
@@ -24,10 +26,23 @@ FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | awk -
 REM=$(rg -c "^### Remediation" security_report.md | awk -F: '{s+=$2} END {print s+0}')
 VC=$(rg -c "^### Vulnerable Code Snippet" security_report.md | awk -F: '{s+=$2} END {print s+0}')
 DF=$(rg -c "^### Data Flow Trace" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-# FINDINGS must equal REM, VC, and DF
+AS=$(rg -c "^### Assumptions" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+# FINDINGS must equal REM, VC, DF, and AS
+# Exploitable enum check — see report-finding-field-consistency.md
+rg "^\| \*\*Exploitable\*\*" security_report.md | rg -v "\| Yes \||\| No \||\| Hardening \|"
 ```
 
 If any count differs → add missing sections before HTML export. See **`report-vulnerable-code-dataflow.md`** for snippet and trace templates.
+
+---
+
+## Master Findings Register (legacy — use Verification Register)
+
+**Superseded by `## Security Findings Verification Register`** in v4.12. If both exist, HTML uses the Verification Register.
+
+One row per finding — see **`references/report-findings-verification-register.md`**.
+
+| ID | Severity | Category | Source (full path) | Sink (full path) | Exploitable | AI Verdict | Verification Status | DAST Status | PoC |
 
 ---
 
@@ -59,7 +74,13 @@ If any count differs → add missing sections before HTML export. See **`report-
 2. Allowlist outbound hosts in shared helper
 ```
 
+### SCA / CVE dependency (CVE-NNN in SCA section)
+
+Must appear in **`## Software Composition Analysis (SCA)`** summary table **and** include full snippet + trace + upgrade remediation. Unreachable OSV/npm hits → **SCA Packages Filtered Out** table only — not a FINDING.
+
 ### AUTH-only (missing middleware)
+
+**Burp PoC required** whether Verified or Not Verified. Not Verified → Severity Medium; include manual test PoC.
 
 ```markdown
 ### Remediation

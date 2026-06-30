@@ -4,13 +4,17 @@
 
 **Objective:** Identify only **realistic, exploitable** security issues with **high confidence**. Avoid speculative findings and minimize false positives.
 
-This reference **supplements** (does not replace) graphify recon, SAST manifests, CVE/IaC scans, route auth audit, Burp MCP, and the 109-check Appendix E matrix. Every automated or pattern hit must still pass the gates below before becoming a FINDING.
+This reference **supplements** (does not replace) graphify recon, SAST manifests, route auth audit, Burp MCP / curl DAST, and the 109-check matrix. Every automated or pattern hit must still pass the gates below before becoming a FINDING.
+
+**v4.17 — Security researcher mandate:** The 109 checks are a **minimum coverage floor**. You **must** also perform an independent researcher review (`SKILL.md` § Security researcher layer) and report validated issues even when no check ID applies. Researcher findings use the same G1–G5 bar and normal VULN/AUTH/IAC/LEAK IDs.
+
+> **v4.15 note:** Record Phase −1 context in **agent working notes** and **Top Structural Risks** / optional **Attack Chain Analysis** in the user report. Legacy **Appendix G** references below remain valid for internal architect work.
 
 ---
 
 ## Phase −1: Application Context (before broad scanning)
 
-Complete this **before** Phase 0 (Graphify recon) or in parallel with the first `graphify query`. Record answers in Appendix G and use them to prioritize manual review.
+Complete this **before** Phase 0 (Graphify recon) or in parallel with the first `graphify query`. Record answers in internal architect notes (and **Top Structural Risks** in user report). Legacy: Appendix G.
 
 ### Context checklist
 
@@ -182,7 +186,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 - Spring Boot, Node.js, PHP, Python, Java, .NET — run `extended-category-scans.md` §19 when stack detected
 
-**Mapping:** Core 109 checks (Appendix E) + **Appendix H taxonomy attestation** cover the full issue list in `vulnerability-taxonomy-coverage.md`. Manual review adds **business logic**, **authz chains**, and **cross-file flows** that patterns miss.
+**Mapping:** Core 109 checks (Appendix E) + **Appendix H taxonomy attestation** cover a baseline issue list. Manual **security-researcher review** (mandatory v4.17) adds **business logic**, **authz chains**, **cross-file flows**, and **domain-specific bugs** that patterns and check IDs miss — report these as first-class findings with `Discovery: Researcher`.
 
 ---
 
@@ -250,6 +254,23 @@ When filtering a candidate, record:
 | SSRF | fetch.js:12 | G4 | URL hardcoded; param not passed to fetch |
 | XSS | template.jade:89 | G3 | Jade auto-escapes by default |
 ```
+
+### Appendix A — forbidden exclusion reasons (MANDATORY)
+
+The following exclusion reasons are **not allowed** because past reviews used them to silently drop real findings. Use only when **explicitly verified** with cited evidence:
+
+| Forbidden reason (when unverified) | What you must do instead |
+|--------------------------------------|--------------------------|
+| "Relies on edge gateway / API gateway / WAF" | Cite the specific gateway manifest file:line (Kong/Apigee/NGINX/Spring Cloud Gateway/helm chart) showing the path is gated. **No gateway manifest in repo → cannot use this reason** — keep as Tentative/Not Verified, not Appendix A. |
+| "Internal-only network" / "Not exposed to internet" | Cite the K8s `NetworkPolicy`, `Service.type=ClusterIP` with no Ingress, or VPC/SG rule. Pod-to-pod within the same cluster is **not** "internal" — service-mesh sidecars and other pods can hit it. |
+| "Mutual TLS / service mesh authenticates" | Cite the mesh policy (Istio `PeerAuthentication`, Linkerd policy) showing `STRICT` mode for the namespace. |
+| "Pre-prod / staging only" | Cite the deployment manifest showing the image/profile never ships to prod. A repo-only `dev` profile is **not** proof — `Dockerfile` may still bake it in (see prior Dockerfile-dev-profile finding). |
+| "Test code only" | The file path must be under `**/test/**`, `**/tests/**`, or `src/test/`. A file named `*Test*.java` under `src/main/` is **production**. |
+| "Annotation present on the class" | Open the interceptor and confirm a class-level annotation actually applies to the method in question (most custom Spring interceptors check **method** annotation only — see `per-method-auth-audit.md`). |
+| "Other endpoints on the same controller are protected" | Per-method analysis required (see `per-method-auth-audit.md`) — peer protection is **not** transitive. |
+| "Same DB password is dev/test" | Confirm the password value does not appear in any `application-{prod,pre-prod,uat,perf}*.{yml,properties}` profile. Reuse across environments is itself a finding. |
+
+When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed Findings with explicit `### Assumptions` block listing what would have to be true for the finding to be a false positive. Reviewers will downgrade later; silent drops cannot be recovered.
 
 ---
 

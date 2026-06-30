@@ -128,5 +128,8 @@ rg -n "apiKey\s*[:=]\s*['\"][A-Za-z0-9]{16,}['\"]" [SRC] -i
 
 ## Reporting
 
-- Map findings to **SAST-OG-10** / **DEPS-*** if dependency-related.
-- Severity: **Critical** for live keys in `src/`; **Medium** for test-only if committed to main branch.
+- Map findings to **SAST-OG-10** / **SAST-SECRET-01…11**.
+- **Mandatory:** Set **Secret Type** label per **`secret-type-labels.md`** (e.g. GitHub PAT, AWS Access Key ID, RabbitMQ password, MapMyIndia API key, Strapi token, JWT signing secret).
+- Include in `### Classification`: `Secret Type`, `Service / Vendor`, `Credential Role`.
+- Severity: **Critical** for live keys in `src/`; **High** for production config passwords; **Medium** for test-only if committed to main branch.
+- **Redact** values in report — never paste full secret.

@@ -2,6 +2,10 @@
 
 Systematic detection of **unauthenticated or weakly authenticated HTTP endpoints**. Sink-oriented scans (SQLi, XSS) miss these — this phase is **mandatory** on every review.
 
+> **v4.19 — per-method audit:** For annotation-based frameworks (Spring, Spring Security, Quarkus, ASP.NET, NestJS), you MUST also run **`per-method-auth-audit.md`** which walks **every endpoint method** individually. Counting annotations per controller file is forbidden — past reviews missed unauthenticated `v1`/`v2`/`v3` variants whose `v4` peers were annotated.
+>
+> **v4.19 — scope:** Before this audit, you MUST have run **`multi-module-enumeration.md`** Step 2 to find HTTP controllers in **every** module — not just the obvious "api" one.
+
 ---
 
 ## Why This Matters
@@ -71,13 +75,16 @@ Method | Path | Router file:line | Auth present | Bypass notes | Sensitive? (PII
 
 ---
 
-## Phase 1b: Burp MCP Verification (when MCP available)
+## Phase 1b: Live Verification — Burp MCP or terminal curl (MANDATORY for every AUTH candidate)
 
-### Detect Burp MCP
+**Rule:** Attempt live verification for **every** route in the AUTH inventory when an external host exists in code. Do **not** verify only "high impact" routes — validate **all** candidates.
+
+### Detect Burp MCP → curl fallback
 
 1. List MCP tools under `user-burp` (or project-configured Burp server name).
-2. If `send_http1_request` is available → **run live verification**.
-3. If absent → skip to Phase 1c; all candidates stay **Medium / Not Verified**.
+2. If `send_http1_request` is available → **run live verification for each AUTH candidate** via Burp MCP.
+3. If absent → **do not install Burp** → **run `curl` in terminal** (Shell tool, `network` permission) per **`curl-dast-fallback.md`** for **each** candidate (same verdict matrix). **Executing curl is mandatory** — not optional documentation-only.
+4. If no external host in code → **Not Verified (no target host in code)** for all; still **mandatory Burp PoC** in every AUTH finding (see below).
 
 ### Verification request rules
 
@@ -120,15 +127,32 @@ Read tool schema from MCP descriptors before calling.
 | **401 / 403** + auth error body | Not Verified (gateway enforces auth) | Medium — note "auth at edge" |
 | **403** WAF / block page | Not Verified (WAF blocked) | Medium |
 | **302** → login | Not Verified (redirect to auth) | Medium |
-| **4xx** validation (missing param) but no auth challenge | **Verified in Burp** (partial) | High — endpoint reachable without auth; params needed |
-| Burp MCP unavailable / timeout / error | Not Verified | Medium |
+| **4xx** validation (missing param) but no auth challenge | **Verified in Burp** / **Verified in curl** (partial) | High — endpoint reachable without auth; params needed |
+| Burp MCP absent, curl **not run** (host exists) | **Review incomplete** | Re-run with terminal curl |
+| curl timeout / connection error after run | Not Verified | Medium |
 | **No external host in code** | **Not Verified (no target host in code)** | Medium |
 | **Only localhost in code** | **Not Verified (no target host in code)** | Medium |
-| Code-only, user declined live test | Not Verified | Medium |
 
-**Verified in Burp** means: an unauthenticated caller can reach the application handler (even if business validation fails). **Not Verified** means: code suggests missing auth but live test did not confirm, or MCP was not used.
+**Verified in Burp** / **Verified in curl** means: an unauthenticated caller can reach the application handler (even if business validation fails). **Not Verified** means: code suggests missing auth but live test did not confirm, gateway blocked, or probe failed after curl/Burp attempt.
 
-### Document in finding
+### Document in finding (Burp or curl)
+
+```markdown
+### Live Verification (curl — Burp MCP not present)
+
+| Field | Value |
+|-------|-------|
+| Tool | Terminal curl (Shell) |
+| Command | `curl -sS -w "%{http_code}" "https://staging.example.com/api/..."` |
+| Host | staging.example.com |
+| HTTP status | 200 |
+| Auth headers sent | None |
+| Response indicator | JSON with order_id / PII field names |
+| **Status** | Verified in curl |
+| **Severity** | High |
+```
+
+Or when Burp MCP used:
 
 ```markdown
 ### Live Verification (Burp MCP)
@@ -149,7 +173,42 @@ Or when not verified:
 ```markdown
 | **Status** | Not Verified |
 | **Severity** | Medium |
-| **Reason** | Burp MCP not configured / returned 401 / not live-tested |
+| **Reason** | Returned 401 / WAF blocked / curl timeout (command logged) |
+```
+
+### Mandatory Burp PoC when Not Verified (MANDATORY)
+
+When live verification **fails**, is **skipped**, or returns **401/403 at gateway**:
+
+1. **Severity = Medium** (per verdict matrix) — never omit the finding.
+2. **Still include** full `### Burp Suite PoC` with a **complete raw HTTP request** (method, path, Host, headers, body) ready for Repeater.
+3. **Still include** all required finding sections: Classification, Location, Description, Vulnerable Code Snippet, Data Flow Trace, Impact, Remediation.
+4. Add `### Live Verification` table with **Status: Not Verified** and explicit reason.
+5. Add **Testing notes** for QA: expected confirmation if auth is missing at app layer (e.g. "HTTP 200 + business JSON, not 401").
+
+**Never** drop an AUTH candidate because Burp MCP was unavailable — run **terminal curl** first; if curl also fails, code-level missing auth → **AUTH-NNN** at Medium minimum with PoC to test manually.
+
+```markdown
+### Burp Suite PoC (manual verification required)
+
+> Live probe not confirmed — use this request in Burp Repeater against staging.
+
+\`\`\`http
+GET /api/trains/v1/download/ers?order_id=§ORDER_ID§&isSeller=true HTTP/1.1
+Host: travel-dev.example.com
+User-Agent: Mozilla/5.0 (Security-Review)
+Accept: application/json
+Connection: close
+
+\`\`\`
+
+| Field | Value |
+|-------|-------|
+| **Auth required (expected)** | Yes — SSO / Basic |
+| **Auth sent in PoC** | None |
+| **Expected if vulnerable** | 2xx/4xx business body — **not** 401 Unauthorized |
+| **Live status** | Not Verified — [reason] |
+| **Severity** | Medium (code-only) |
 ```
 
 ---

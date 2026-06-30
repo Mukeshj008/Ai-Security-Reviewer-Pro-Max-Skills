@@ -1,6 +1,6 @@
-# DAST Scan Manifest (Burp MCP)
+# DAST Scan Manifest (Burp MCP or terminal curl)
 
-Live probing via **`user-burp`** MCP `send_http1_request`. **Never** use `localhost` / `127.0.0.1`.
+Live probing via **`user-burp`** MCP `send_http1_request` **when present**. When Burp MCP is **absent**, **do not install Burp** — run **`curl` in terminal** per **`curl-dast-fallback.md`**. **Never** use `localhost` / `127.0.0.1`.
 
 **Prerequisite:** Discover hosts with `rg` per **`burp-host-discovery.md`** (agent only — no script).
 
@@ -22,9 +22,9 @@ Record hosts in Appendix C and Appendix F.
 
 For each route in **Appendix D** (missing application-layer auth):
 
-1. Read Burp MCP tool schema (`user-burp` → `send_http1_request`).
-2. Send **no** `Cookie`, `Authorization`, or SSO headers.
-3. Use first host from `burp_hosts.txt` (staging preferred over production).
+1. If Burp MCP available: read tool schema → `send_http1_request` without auth.
+2. If Burp MCP absent: **run curl in Shell** (see `curl-dast-fallback.md`) — same request shape, no auth headers.
+3. Use first host from code discovery (staging preferred over production).
 
 **Verdict matrix** (see `route_auth_audit.md`):
 
@@ -65,16 +65,16 @@ Only for **TRUE POSITIVE** candidates with HTTP surface. Read-only probes first.
 
 ---
 
-## Burp MCP unavailable
+## Burp MCP unavailable (mandatory curl)
 
-Run **curl** per **`curl-dast-fallback.md`** (same hosts, verdict matrix). Document in report:
+1. **Do not install** Burp Suite or MCP extension.
+2. **Run curl in terminal** per **`curl-dast-fallback.md`** for **every** AUTH candidate when external host exists.
+3. Install `curl` only if command not found (`dependency-install-policy.md`).
 
-- Appendix F: Phase 1b = `PASS (curl fallback)` or `SKIP` if no host / no network
-- Appendix C: tool column = `curl` or `Burp MCP`; status = `Verified in curl` when 2xx unauth
+Document in report:
+
+- Appendix F: Phase 1b = `PASS (curl — Burp MCP not present)` when probes executed
+- Appendix C: tool column = `curl (terminal)`; status = `Verified in curl` when 2xx unauth
 - All AUTH findings: upgrade to **High / Verified in curl** when curl confirms; else **Medium / Not Verified**
 
-If **both** Burp and curl unavailable:
-
-- Appendix F: Phase 1b = `SKIP` — live DAST not run
-- AUTH findings remain **Medium / Not Verified**
-- Appendix C: `Live verification: not run`
+**FAIL gate:** Burp absent + host in code + curl never run → Phase 1b incomplete; re-run review.

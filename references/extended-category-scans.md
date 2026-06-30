@@ -128,6 +128,44 @@ rg -n "login_not_required|skipAuth|bypassAuth|isAdmin\s*=\s*true|role\s*=\s*['\"
 rg -n "if\s*\(\s*!.*password|return\s+true.*auth|authenticate\s*\(\s*\)\s*\{|verify.*\|\|\s*true" --glob "*.{js,ts,py}" -g '!node_modules/**'
 ```
 
+### §3.11 Controller rewrites caller's Authorization header (MANDATORY — Critical pattern)
+
+A handler that **overwrites** the inbound `Authorization` header with a value from server config (e.g., a baked-in admin Bearer token), then uses that to populate the auth context, silently grants every unauthenticated caller the configured privilege.
+
+```bash
+# Java / Spring
+rg -n 'headers\.put\s*\(\s*[^,]*[Aa]uthorization[^,]*,\s*[^)]*(props|properties|getAuthorization|getAdminToken|getBearer)' --type java -B 2 -A 1
+rg -n 'request\.setHeader\s*\(\s*[^,]*[Aa]uthorization' --type java
+
+# JS/Node
+rg -n '(req|request)\.headers\[?["\']?[Aa]uthorization["\']?\]?\s*=' --type js --type ts
+rg -n 'axios\.defaults\.headers\.common\[["\']Authorization["\']\]\s*=\s*config\.' --type js --type ts
+```
+
+Each hit on a handler path → **Critical AUTH-NNN** unless the substitution is *adding* auth to an outbound client call (not the inbound servletRequest/req object).
+
+### §3.12 JWT minted without `exp` (expiration) claim (MANDATORY)
+
+JWTs without an `exp` claim never expire — capture once, replay forever.
+
+```bash
+# auth0 java-jwt
+rg -n 'JWT\.create\(\)' --type java -A 12 | rg -B 6 'sign\(' | rg -L 'withExpiresAt'
+
+# jjwt
+rg -n 'Jwts\.builder\(\)' --type java -A 12 | rg -B 6 '\.compact\(\)' | rg -L 'setExpiration|expiration\('
+
+# Node jsonwebtoken
+rg -n 'jwt\.sign\(' --type js --type ts -A 3 | rg -L 'expiresIn|exp:'
+
+# PyJWT
+rg -n 'jwt\.encode\(' --type py -A 3 | rg -L "'exp'|\"exp\""
+```
+
+Manual confirmation required: open the builder call and verify no `withExpiresAt`/`setExpiration`/`expiresIn`/`exp` is set. **High** finding per minting site.
+
+Also flag custom JWT util methods like `generateToken(...)` whose callers omit the expiry parameter even when the util supports it.
+
 ---
 
 ## §4 Authorization extensions
@@ -197,6 +235,54 @@ rg -n "window\.location.*(token|password|secret)|href=.*password=" --glob "*.{js
 ```bash
 rg -n "(apiKey|api_key|secret|password|token|privateKey)\s*[:=]\s*['\"][^'\"]{8,}" --glob "public/**/*.{js,jsx,ts,tsx,html}" -g '!node_modules/**'
 rg -n "process\.env\.(SECRET|KEY|TOKEN|PASSWORD)" --glob "public/**/*.{js,jsx}" -g '!node_modules/**'
+```
+
+### §6.10 Plaintext token / credential logging (MANDATORY)
+
+Bearer tokens, session tokens, Authorization headers, OTPs, and passwords written to logs are immediate **Critical** findings — log aggregators are typically less hardened than databases.
+
+```bash
+# Authorization / Bearer / session tokens logged
+rg -n 'log(ger)?\.(info|debug|warn|error)\s*\([^)]*\b(Authorization|Bearer|sessionToken|ssoToken|accessToken|refreshToken|idToken|jwt|api[_-]?key)\b' --type java --type kotlin --type js --type ts --type py -i
+
+# Logging the literal header value
+rg -n 'log[^"\n]*"[^"]*Authorization[^"]*"[^)]*request\.(getHeader|headers)' --type java
+rg -n 'log[^"\n]*Authorization[^"]*\+[^)]*getHeader' --type java
+rg -n 'console\.(log|info)\([^)]*req\.headers\.(authorization|cookie)' --type js --type ts
+
+# Logging access token values from DTOs/models on delete/create paths
+rg -n 'log\.(info|debug)\([^)]*"[^"]*token[^"]*\{\}[^"]*"[^)]*\.(getToken|getAccessToken|getRefreshToken)' --type java -i
+```
+
+Any hit on a non-test path = **Critical LEAK-NNN** finding.
+
+### §6.11 Full request header / body map logged (MANDATORY)
+
+Controllers that log the entire `@RequestHeader Map<String,String> headers` or full `@RequestBody` at INFO level leak Authorization, Cookie, OTPs, and PII. Earlier scans missed 20+ such occurrences.
+
+```bash
+# Spring controllers logging the whole headers map
+rg -n 'log\.(info|debug)\([^)]*\bheaders\b[^)]*\)' --type java -B 1 \
+  | rg -B 1 '@RequestHeader\s+Map'
+
+# Logging full request body in controllers
+rg -n 'log\.(info|debug)\([^)]*\b(BODY|REQUEST|requestBody|body)\b[^)]*\{\}[^)]*\)' --type java
+
+# Express equivalent
+rg -n 'console\.(log|info)\([^)]*req\.(headers|body)\)' --type js --type ts
+
+# Python
+rg -n 'log(ger|ging)?\.(info|debug)\([^)]*(request\.headers|request\.json|request\.form)' --type py
+```
+
+Each hit on a controller serving real traffic → **High LEAK-NNN** unless headers/body are demonstrably redacted (search for a redaction helper).
+
+### §6.12 Sensitive field logging (passwords, OTPs, PII)
+
+```bash
+rg -n 'log\.(info|debug|warn)\([^)]*(password|otp|pan|aadhaar|aadhar|cvv|pin|mobile|phone|email|ssn|dob)\b' --type java --type kotlin -i \
+  -g '!**/test/**'
+rg -n 'console\.(log|info|warn)\([^)]*(password|otp|cvv|ssn|creditCard)' --type js --type ts -i
 ```
 
 ---
@@ -314,6 +400,37 @@ rg -n "add_header\s+(X-Frame|Strict-Transport|Content-Security)" --glob "**/*.{c
 ```
 
 If app is internet-facing and no helmet/nginx headers → IAC or CONFIG finding.
+
+### §14.8 CORS allow-list bypass — `endsWith()` / `contains()` / `startsWith()` (MANDATORY)
+
+Custom CORS allow-list filters that match the request `Origin` or `Referer` with `endsWith(allowedDomain)`, `contains(allowedDomain)`, or `startsWith(allowedDomain)` are **bypassable** — `evilpaytm.com` matches `paytm.com`.
+
+```bash
+# Java / Kotlin custom CORS filters
+rg -n '(origin|referer|host)[A-Za-z]*\.(endsWith|contains|startsWith)\s*\(' --type java --type kotlin -B 2 \
+  | rg -B 2 '(cors|Cors|CORS|Origin|origin|allow.{0,5}list)'
+
+# JS/Node custom CORS handlers
+rg -n '(origin|req\.headers\.origin)[^=]*\.(endsWith|startsWith|includes)\s*\(' --type js --type ts -B 2 \
+  | rg -B 2 -i 'cors|allow|origin'
+
+# Python
+rg -n 'request\.headers\.get\(["\']?Origin["\']?\)[^.]*\.(endswith|startswith|find)' --type py
+```
+
+**Safe pattern** (do not flag): exact equality (`==`, `equals`) or strict suffix-with-dot (`origin.equals(d) || origin.endsWith("." + d)`).
+
+Combine with check for `Access-Control-Allow-Credentials: true` — if credentials are allowed **and** the allow-list is bypassable, severity = **Critical**.
+
+### §14.9 Permissive CORS allow-lists (size + content audit)
+
+```bash
+# Spring-style YAML
+rg -n 'cross[_-]?domain[_-]?allow[_-]?access[_-]?list|cors[_-]?allowed[_-]?origins|allow[_-]?origins' \
+  -g '*.{yml,yaml,properties,json}' -A 1
+```
+
+Count the entries. Allow-list with >15 entries, or entries with raw IPs / wildcards, → **High** IAC finding.
 
 ---
 

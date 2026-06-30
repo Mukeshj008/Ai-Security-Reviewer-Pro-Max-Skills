@@ -2,7 +2,7 @@
 
 **Goal:** Supplement pattern matching with **threat modeling**, **trust boundaries**, and **attack-surface reasoning** — like a principal security architect reviewing a design.
 
-This phase does **not** replace SAST/DAST. It **prioritizes** where to dig and **documents** systemic gaps in **Appendix G**.
+This phase does **not** replace SAST/DAST. It **prioritizes** where to dig and **documents** systemic gaps internally. **User report:** **Top Structural Risks** (≤3) + optional **Attack Chain Analysis** (`attack-chain-narrative.md`). Legacy full write-up: Appendix G (internal / HTML-suppressed).
 
 ---
 

@@ -23,9 +23,11 @@
 - Injection (SQL, NoSQL, XSS, RCE, CMD, XXE, SSTI, CRLF, log injection)
 - Authentication & authorization (missing auth routes, IDOR, session flaws)
 - Secrets leakage, stack-trace disclosure, crypto weaknesses
-- Exploitable CVEs (only when import + reachability is proven)
-- IaC misconfigs (Docker, K8s, Terraform, Nginx, CI/CD)
-- 109-check coverage matrix + full OWASP/API taxonomy attestation
+- IaC misconfigs from source (Docker, K8s, Terraform, Nginx, CI/CD)
+- Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
+- Completeness & Residual Risk Register so nothing is silently missed
+
+> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. See `CHANGELOG.md` for the authoritative per-version behavior (operative spec is `SKILL.md`, currently v4.18).
 
 **How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), and optional live verification. Burp MCP is used when available; otherwise it falls back to curl. Graphify speeds up discovery but is not required.
 
@@ -60,7 +62,7 @@ This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`
 
 ## Install
 
-### Option A — Cursor (You can also Ask cursor to intall these skills for you by providing the link)
+### Option A — Cursor
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
@@ -69,7 +71,7 @@ cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.cursor/skills/ai-security-reviewer
 
 Restart Cursor → attach skill or type: `Review this code for security vulnerabilities`
 
-### Option B — Claude (You can also Ask Claude to intall these skills for you by providing the link)
+### Option B — Claude
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git

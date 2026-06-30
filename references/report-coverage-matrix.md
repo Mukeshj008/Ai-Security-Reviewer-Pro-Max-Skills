@@ -1,10 +1,10 @@
-# Report Coverage Matrix — Appendix E & F (MANDATORY)
+# Report Coverage Matrix — Internal 109-Check Template
 
-Every security review **must** include **Appendix E** (all checks) and **Appendix F** (phase execution log) in `security_report.md`.
+**Agent-only:** Execute every row during the review. Record results in **`internal-scan-log.md`** — **do not** paste this full table into `security_report.md`.
 
-**Generate Appendix E:** Copy the 109-row table from this file into `security_report.md`. **You** run each check per [agent-execution.md](agent-execution.md) — no scripts.
+**User report:** Layer summary in Security Verification Checklist `<details>` toggle + **Appendix F** phase log only.
 
-Every security review **must** include **Appendix E**, **Appendix F**, and **Appendix G** in `security_report.md`.
+**Execution:** [agent-execution.md](agent-execution.md) — you run each check; no scripts. Core inventory = **109 rows**; add **5 supplemental `SCA-OSV-*` rows** when OSV SCA runs (**114 total**).
 
 ---
 
@@ -117,6 +117,32 @@ Every security review **must** include **Appendix E**, **Appendix F**, and **App
 | DAST-AUTH-PROBE | Unauthenticated endpoint probes | Burp MCP | `route_auth_audit.md` + `dast_scan_manifest.md` |
 | DAST-INJ-PROBE | Injection payloads on HTTP surface | Burp MCP | `dast_scan_manifest.md` |
 | DEPS-01 | Dependency vulnerability audit | `npm audit` (agent-run) | lockfile + audit output |
+
+### E.6b OSV Software Composition Analysis (`SCA-OSV-*`)
+
+See `osv-sca-scan.md` — agent runs inventory + OSV batch + reachability; **SCA report section = Critical/High exploitable only**.
+
+| Check ID | Category | Tool | Manifest |
+|----------|----------|------|----------|
+| SCA-OSV-01 | Production dependency inventory | lockfile Read + node | `osv-sca-scan.md` §1 |
+| SCA-OSV-02 | OSV CVE/advisory lookup | `curl` OSV API | `osv-sca-scan.md` §2 |
+| SCA-OSV-03 | Package import reachability | rg + graphify | `osv-sca-scan.md` §3 |
+| SCA-OSV-04 | Vulnerable API exploitability | rg + graphify path | `osv-sca-scan.md` §4 + `cve-exploitability.md` |
+| SCA-OSV-05 | SCA section in report | agent write | Critical/High reachable only |
+
+### E.6c Maven / Gradle SCA (`SCA-MAVEN-*`)
+
+See `maven-sca-scan.md` — run when `pom.xml` or `build.gradle(.kts)` present. OSV ecosystem **`Maven`**, name **`groupId:artifactId`**.
+
+| Check ID | Category | Tool | Manifest |
+|----------|----------|------|----------|
+| SCA-MAVEN-01 | Maven/Gradle manifest discovery | `find` + rg | `maven-sca-scan.md` §1 |
+| SCA-MAVEN-02 | dependency:list / pom inventory | `mvn` or rg + Read | `maven-sca-scan.md` §2 |
+| SCA-MAVEN-03 | OSV querybatch (Maven ecosystem) | `curl` OSV API | `maven-sca-scan.md` §3 |
+| SCA-MAVEN-04 | Java import reachability | rg + graphify | `maven-sca-scan.md` §4 |
+| SCA-MAVEN-05 | Vulnerable API exploitability | rg + graphify path | `maven-sca-scan.md` §5 |
+
+**N/A** entire block when no Java build manifests. Counts roll into **MX-SCA** package total with npm/RubyGems.
 
 ### E.7 Graphify recon
 
