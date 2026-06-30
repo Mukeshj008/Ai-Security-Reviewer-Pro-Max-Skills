@@ -4,12 +4,20 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.21] — 2026-06-30
+
+### Changed — vendor-neutral examples
+
+- Removed org-specific naming from docs, prefix blocklists, and examples; replaced with generic `acme` / `acmeteam` placeholders.
+- CORS bypass example in `extended-category-scans.md` §14.8 now uses `evil-example.com` / `example.com`.
+- Use `--extra-prefix` on `derive_report_name.py` to strip your organisation's folder prefixes.
+
 ## [4.20] — 2026-06-30
 
 ### Added — mandatory report-file naming convention
 
-- **`references/report-naming-convention.md`** — single-source spec for the report filename. Derives a clean repo slug from the workspace folder by stripping a default blocklist of org/team prefixes (`paytmteam-`, `paytm-`, `paytmlabs-`, `paytm-internal-`, `team-`, `org-`, `internal-`, `corp-`, `eng-`, `engineering-`, `infra-`, `platform-`, `dev-`, `prod-`, `staging-`, `qa-`, `uat-`, `gh-`, `github-`, `gitlab-`, `bitbucket-`, `bb-`, `customer-`, `client-`) and trailing tokens that match `[-_]?[0-9a-f]{6,40}` (git short-hash/SHA), `[-_]?\d{6,}` (timestamps/dates), `[-_]?v?\d+(\.\d+){1,3}` (semver), or `[-_]?(main|master|develop|release)`. Outputs `<repo>_security_report.md` / `<repo>_security_report.html` (and `<repo>_security_report_gap_analysis.md` / `_delta.md` when applicable). Includes a migration snippet that renames any pre-existing bare `security_report.*` on workspace entry.
-- **`scripts/derive_report_name.py`** — reference implementation; CLI flags `--workdir`, `--project` (user override), `--extra-prefix` (additional org prefix), `--suffix`, `--ext`, `--print-debug`. Self-tested against 12 cases (`paytmteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service`, `paytmteam-paytm-checkout-v1.4.2-3f9a1b2c-main` → `checkout`, `react_native_app` → `react-native-app`, etc.). Underscores in the source name are normalised to hyphens for filename consistency.
+- **`references/report-naming-convention.md`** — single-source spec for the report filename. Derives a clean repo slug from the workspace folder by stripping a default blocklist of org/team prefixes (`acmeteam-`, `acme-`, `acmelabs-`, `acme-internal-`, `team-`, `org-`, `internal-`, `corp-`, `eng-`, `engineering-`, `infra-`, `platform-`, `dev-`, `prod-`, `staging-`, `qa-`, `uat-`, `gh-`, `github-`, `gitlab-`, `bitbucket-`, `bb-`, `customer-`, `client-`) and trailing tokens that match `[-_]?[0-9a-f]{6,40}` (git short-hash/SHA), `[-_]?\d{6,}` (timestamps/dates), `[-_]?v?\d+(\.\d+){1,3}` (semver), or `[-_]?(main|master|develop|release)`. Outputs `<repo>_security_report.md` / `<repo>_security_report.html` (and `<repo>_security_report_gap_analysis.md` / `_delta.md` when applicable). Includes a migration snippet that renames any pre-existing bare `security_report.*` on workspace entry.
+- **`scripts/derive_report_name.py`** — reference implementation; CLI flags `--workdir`, `--project` (user override), `--extra-prefix` (additional org prefix), `--suffix`, `--ext`, `--print-debug`. Self-tested against 12 cases (`acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service`, `acmeteam-acme-checkout-v1.4.2-3f9a1b2c-main` → `checkout`, `react_native_app` → `react-native-app`, etc.). Underscores in the source name are normalised to hyphens for filename consistency.
 - **`SKILL.md`** Phase 4 — adds the derive + migrate + render snippet next to the `generate_html_report.py` invocation and a new **N1** mandatory row in the reference stack.
 - **`references/report-output-spec.md`** — bumped to v4.20; new top-of-spec **Report filenames** section makes the convention canonical.
 - **`references/agent-execution.md`** — new mandatory Phase 0b (derive slug, migrate legacy files) and updated HTML-export snippet that uses `$REPO`.
@@ -48,7 +56,7 @@ Field reviewers reported that running the skill against multiple workspaces unde
 - **`route_auth_audit.md`** — header note pointing to per-method audit + module enumeration prerequisites.
 - **`report-output-spec.md`** — Scan Attestation Summary must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, and `### Per-Method Auth Audit` blocks when their triggers fire; `--strict` recommends these in stderr.
 
-### Why (lessons from the Paytm OAuth UMS gap analysis, 2026-06-30)
+### Why (lessons from an enterprise OAuth UMS gap analysis, 2026-06-30)
 
 A skill-free re-scan turned up 12 additional findings (5 Critical) that the v4.18 run missed. Root causes were structural, not pattern-coverage: module scope narrowed to one directory, profiles sampled instead of enumerated, per-controller annotation counting, blanket "trust the gateway" Appendix A dismissals, and 5 specific pattern classes the manifests did not cover. v4.19 addresses each cause directly.
 

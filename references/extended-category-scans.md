@@ -403,7 +403,7 @@ If app is internet-facing and no helmet/nginx headers → IAC or CONFIG finding.
 
 ### §14.8 CORS allow-list bypass — `endsWith()` / `contains()` / `startsWith()` (MANDATORY)
 
-Custom CORS allow-list filters that match the request `Origin` or `Referer` with `endsWith(allowedDomain)`, `contains(allowedDomain)`, or `startsWith(allowedDomain)` are **bypassable** — `evilpaytm.com` matches `paytm.com`.
+Custom CORS allow-list filters that match the request `Origin` or `Referer` with `endsWith(allowedDomain)`, `contains(allowedDomain)`, or `startsWith(allowedDomain)` are **bypassable** — `evil-example.com` matches `example.com`.
 
 ```bash
 # Java / Kotlin custom CORS filters

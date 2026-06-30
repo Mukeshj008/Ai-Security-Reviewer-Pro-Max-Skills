@@ -17,7 +17,7 @@ Reports must be written under a workspace-derived slug, **not** the bare `securi
 | Gap-analysis pass (optional) | `<repo>_security_report_gap_analysis.md` |
 | Baseline-delta (optional) | `<repo>_security_report_delta.md` |
 
-Where `<repo>` is computed by `scripts/derive_report_name.py` per **`report-naming-convention.md`** — it strips org/team prefixes (`paytmteam-`, `paytm-`, `internal-`, `gh-`, …) and trailing hash / date / version / branch suffixes (`-48e5b67f7489`, `-20260630`, `-v1.2.3`, `-main`) from the workspace folder basename. Example: `paytmteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service_security_report.md`.
+Where `<repo>` is computed by `scripts/derive_report_name.py` per **`report-naming-convention.md`** — it strips org/team prefixes (`acmeteam-`, `acme-`, `internal-`, `gh-`, …) and trailing hash / date / version / branch suffixes (`-48e5b67f7489`, `-20260630`, `-v1.2.3`, `-main`) from the workspace folder basename. Example: `acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service_security_report.md`.
 
 User overrides via `--project "Free-form Project Name"` take precedence (sanitised to a slug); never write bare `security_report.*`.
 

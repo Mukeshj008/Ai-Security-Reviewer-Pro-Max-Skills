@@ -2,7 +2,7 @@
 
 > **Works with Cursor and Claude** — same skill, same prompts, same reports.
 
-**Version 4.20** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
+**Version 4.21** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
 **Repo:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills
 
@@ -28,7 +28,7 @@
 - Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
 - **Security-researcher pass** — issues outside the 109-check matrix, validated with the same G1–G5 bar
 
-> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.20**). See `CHANGELOG.md` for per-version behavior.
+> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.21**). See `CHANGELOG.md` for per-version behavior.
 
 **How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it falls back to **curl only**. Graphify speeds up discovery but is not required.
 
@@ -136,7 +136,7 @@ MD="${REPO}_security_report.md"
 HTML="${REPO}_security_report.html"
 ```
 
-Example: workspace `paytmteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service_security_report.md`
+Example: workspace `acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service_security_report.md`
 
 ---
 

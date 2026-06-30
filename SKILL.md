@@ -13,7 +13,7 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.20** — Adds **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`): every report is prefixed with a clean repo slug derived from the workspace folder, stripping org/team prefixes (`paytmteam-`, `paytm-`, `internal-`, `gh-`, …) and trailing hash / numeric / version / branch suffixes (`-48e5b67f7489`, `-20260630`, `-v1.2.3`, `-main`). Output files become `<repo>_security_report.md` / `<repo>_security_report.html` (e.g. `oauth-user-mgmt-service_security_report.md`) so multiple scans in one workspace, ticket attachments, and SIEM ingestion stay unambiguous. v4.19 scope-completeness enforcement (`multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`), new pattern classes (CORS `endsWith` bypass, controller Authorization-header override, JWT without `exp`, plaintext token/header logging in `extended-category-scans.md` §3.11–§3.12, §6.10–§6.12, §14.8–§14.9), tightened Appendix A rules (`manual-code-review.md`), v4.18 standards completeness mapping, v4.17 researcher layer, and v4.16 code-only mode are all retained.
+**Version 4.21** — Adds **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`): every report is prefixed with a clean repo slug derived from the workspace folder, stripping org/team prefixes (`acmeteam-`, `acme-`, `internal-`, `gh-`, …) and trailing hash / numeric / version / branch suffixes (`-48e5b67f7489`, `-20260630`, `-v1.2.3`, `-main`). Output files become `<repo>_security_report.md` / `<repo>_security_report.html` (e.g. `oauth-user-mgmt-service_security_report.md`) so multiple scans in one workspace, ticket attachments, and SIEM ingestion stay unambiguous. v4.19 scope-completeness enforcement (`multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`), new pattern classes (CORS `endsWith` bypass, controller Authorization-header override, JWT without `exp`, plaintext token/header logging in `extended-category-scans.md` §3.11–§3.12, §6.10–§6.12, §14.8–§14.9), tightened Appendix A rules (`manual-code-review.md`), v4.18 standards completeness mapping, v4.17 researcher layer, and v4.16 code-only mode are all retained.
 
 **Report contract (read first):** `references/report-output-spec.md`
 
@@ -266,7 +266,7 @@ Per **`report-output-spec.md` v4.20**.
 Reports must be prefixed with a clean repo slug derived from the workspace folder. Run the helper once and reuse its output for every artifact this review produces (markdown, HTML, gap analysis, baseline delta, attachments).
 
 ```bash
-# 1. Derive slug from the current workspace (strips paytmteam-, -<hash>, -<date>, -v1.2.3, -main, …)
+# 1. Derive slug from the current workspace (strips org/team prefixes, -<hash>, -<date>, -v1.2.3, -main, …)
 REPO=$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)
 MD="${REPO}_security_report.md"
 HTML="${REPO}_security_report.html"
@@ -305,4 +305,4 @@ Run comprehensive security audit, verify unauthenticated endpoints, generate sec
 
 ## Extended references
 
-See **`CHANGELOG.md`** for version history. v4.20 adds the **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`) so reports are written as `<repo>_security_report.{md,html}` derived from the workspace folder (org/team prefixes and trailing hash/numeric/version/branch suffixes stripped); v4.19 adds scope completeness enforcement, per-method auth audit, new mandatory pattern classes, and tighter Appendix A rules; v4.18 adds standards completeness mapping + residual-risk register + confidence/fail-open validation; v4.17 adds security-researcher discovery; v4.16 disables dependency tool scanning.
+See **`CHANGELOG.md`** for version history. v4.21 replaces org-specific examples with vendor-neutral `acme` placeholders; v4.20 adds the **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`); v4.19 adds scope completeness enforcement, per-method auth audit, new mandatory pattern classes, and tighter Appendix A rules; v4.18 adds standards completeness mapping + residual-risk register + confidence/fail-open validation; v4.17 adds security-researcher discovery; v4.16 disables dependency tool scanning.

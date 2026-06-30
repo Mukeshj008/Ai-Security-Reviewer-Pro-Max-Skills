@@ -13,8 +13,8 @@ Examples
     $ derive_report_name.py --suffix _security_report --ext md
     oauth-user-mgmt-service_security_report.md
 
-    $ derive_report_name.py --project "Paytm OAuth UMS" --suffix _security_report --ext html
-    paytm-oauth-ums_security_report.html
+    $ derive_report_name.py --project "Acme OAuth UMS" --suffix _security_report --ext html
+    acme-oauth-ums_security_report.html
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ import sys
 from pathlib import Path
 
 DEFAULT_PREFIXES = [
-    "paytmteam",
-    "paytmlabs",
-    "paytm-internal",
-    "paytm",
+    "acmeteam",
+    "acmelabs",
+    "acme-internal",
+    "acme",
     "team",
     "org",
     "internal",

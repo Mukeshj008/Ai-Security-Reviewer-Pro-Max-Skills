@@ -14,15 +14,17 @@ Where `<repo>` is derived from the **workspace root directory name** using the a
 
 ## Derivation algorithm
 
-Given the absolute path of the workspace root (e.g. `/Users/me/Downloads/paytmteam-oauth-user-mgmt-service-48e5b67f7489`):
+Given the absolute path of the workspace root (e.g. `/Users/me/Downloads/acmeteam-oauth-user-mgmt-service-48e5b67f7489`):
 
-1. **Take the basename** — `paytmteam-oauth-user-mgmt-service-48e5b67f7489`.
+1. **Take the basename** — `acmeteam-oauth-user-mgmt-service-48e5b67f7489`.
 2. **Lowercase** it.
 3. **Strip leading org / team prefixes** (case-insensitive, one or more in a row, each followed by a `-` or `_`):
 
    | Default blocklist (extend as needed) |
    |--------------------------------------|
-   | `paytmteam`, `paytm`, `paytmlabs`, `paytm-internal`, `team`, `org`, `internal`, `corp`, `eng`, `engineering`, `infra`, `platform`, `dev`, `prod`, `staging`, `qa`, `uat`, `gh`, `github`, `gitlab`, `bitbucket`, `bb`, `customer`, `client` |
+   | `acmeteam`, `acme`, `acmelabs`, `acme-internal`, `team`, `org`, `internal`, `corp`, `eng`, `engineering`, `infra`, `platform`, `dev`, `prod`, `staging`, `qa`, `uat`, `gh`, `github`, `gitlab`, `bitbucket`, `bb`, `customer`, `client` |
+
+   Add org-specific prefixes with `--extra-prefix` on `derive_report_name.py` (repeatable).
 
 4. **Strip trailing hash / numeric tokens** (Bitbucket / GitHub Cloud / Cursor / archive suffixes):
 
@@ -41,12 +43,12 @@ Given the absolute path of the workspace root (e.g. `/Users/me/Downloads/paytmte
 
 | Workspace basename | Derived `<repo>` | Output |
 |--------------------|------------------|--------|
-| `paytmteam-oauth-user-mgmt-service-48e5b67f7489` | `oauth-user-mgmt-service` | `oauth-user-mgmt-service_security_report.md` |
-| `paytm-checkout-api-a1b2c3d` | `checkout-api` | `checkout-api_security_report.md` |
-| `paytmteam-paytm-wallet-service-20260630-3f9a1b2c` | `wallet-service` | `wallet-service_security_report.md` |
+| `acmeteam-oauth-user-mgmt-service-48e5b67f7489` | `oauth-user-mgmt-service` | `oauth-user-mgmt-service_security_report.md` |
+| `acme-checkout-api-a1b2c3d` | `checkout-api` | `checkout-api_security_report.md` |
+| `acmeteam-acme-wallet-service-20260630-3f9a1b2c` | `wallet-service` | `wallet-service_security_report.md` |
 | `internal-fraud-rules-engine` | `fraud-rules-engine` | `fraud-rules-engine_security_report.md` |
 | `gh-acme-corp-orders-svc-v1.2.3` | `acme-corp-orders-svc` | `acme-corp-orders-svc_security_report.md` |
-| `paytmteam-paytm-checkout-v1.4.2-3f9a1b2c-main` | `checkout` | `checkout_security_report.md` |
+| `acmeteam-acme-checkout-v1.4.2-3f9a1b2c-main` | `checkout` | `checkout_security_report.md` |
 | `react_native_app` (underscores normalised) | `react-native-app` | `react-native-app_security_report.md` |
 | `48e5b67f7489` (only a hash) | `48e5b67f7489` (fallback) | `48e5b67f7489_security_report.md` |
 | `my-side-project` | `my-side-project` | `my-side-project_security_report.md` |
@@ -56,7 +58,7 @@ Given the absolute path of the workspace root (e.g. `/Users/me/Downloads/paytmte
 If the user supplies an explicit project name with `--project "Foo Bar"` (or in chat), use a **sanitized** version of that string instead of the derived one:
 
 ```
-project = "Paytm OAuth UMS"  →  <repo> = "paytm-oauth-ums"
+project = "Acme OAuth UMS"  →  <repo> = "acme-oauth-ums"
 ```
 
 User-supplied always wins over derivation.
@@ -98,8 +100,8 @@ python3 derive_report_name.py --suffix _security_report --ext md
 python3 derive_report_name.py --suffix _security_report_gap_analysis --ext md
 
 # User override
-python3 derive_report_name.py --project "Paytm OAuth UMS" --suffix _security_report --ext html
-# → paytm-oauth-ums_security_report.html
+python3 derive_report_name.py --project "Acme OAuth UMS" --suffix _security_report --ext html
+# → acme-oauth-ums_security_report.html
 ```
 
 ## When to apply
