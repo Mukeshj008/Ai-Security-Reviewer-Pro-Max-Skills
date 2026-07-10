@@ -150,13 +150,13 @@ When a **VULN-NNN** has an HTTP surface (injection, SSRF, XSS reflection), run *
 |-------|-------|--------------|------------|
 | SQLi | GET param | `' OR '1'='1'--` (read-only) | SQL error in body / extra rows / timing |
 | XSS | GET param | `<script>alert(1)</script>` or `"><img src=x onerror=1>` | Reflection unencoded in body |
-| SSRF | URL param | `http://169.254.169.254/` or internal metadata URL | Connection error / metadata snippet / timing |
+| SSRF | URL param | `https://[BURP_COLLABORATOR_OR_CONTROLLED_CANARY]/ssrf-test` | OOB callback / controlled canary hit / timing |
 | Path traversal | file param | `../../../etc/passwd` | `root:` in body |
 | IDOR | ID param | Adjacent ID (e.g. `id=2` vs `id=1`) | Foreign object in 200 body |
 
 Log each probe in **Appendix C** with Finding ID, command, HTTP status, body snippet (≤200 chars). Update Verification Checklist **DAST Status** and **Verification Status** per verdict matrix.
 
-**Destructive payloads forbidden** — no DROP, DELETE, or state-changing injection in automated probes.
+**Sensitive/destructive payloads forbidden** — no DROP, DELETE, state-changing injection, cloud metadata IPs (`169.254.169.254`, `metadata.google.internal`) or internal admin hosts in automated probes unless the user explicitly approves that target and environment.
 
 ---
 
@@ -166,3 +166,4 @@ Log each probe in **Appendix C** with Finding ID, command, HTTP status, body sni
 - Read-only GET/HEAD first; POST only when route requires it
 - No auth bypass exploitation beyond confirming missing auth
 - Redact secrets from logged curl output in report
+- Redact tokens/cookies/passwords in PoC blocks unless placeholders are used

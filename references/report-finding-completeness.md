@@ -22,14 +22,15 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 **Completion gate (Phase 4):** Before `generate_html_report.py`, grep the report:
 
 ```bash
-FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-REM=$(rg -c "^### Remediation" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-VC=$(rg -c "^### Vulnerable Code Snippet" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-DF=$(rg -c "^### Data Flow Trace" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-AS=$(rg -c "^### Assumptions" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
+FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+REM=$(rg -c "^### Remediation" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+VC=$(rg -c "^### Vulnerable Code Snippet" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+DF=$(rg -c "^### Data Flow Trace" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+AS=$(rg -c "^### Assumptions" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 # FINDINGS must equal REM, VC, DF, and AS
 # Exploitable enum check — see report-finding-field-consistency.md
-rg "^\| \*\*Exploitable\*\*" security_report.md | rg -v "\| Yes \||\| No \||\| Hardening \|"
+rg "^\| \*\*Exploitable\*\*" "$MD" | rg -v "\| Yes \||\| No \||\| Hardening \|"
 ```
 
 If any count differs → add missing sections before HTML export. See **`report-vulnerable-code-dataflow.md`** for snippet and trace templates.
@@ -74,7 +75,7 @@ One row per finding — see **`references/report-findings-verification-register.
 2. Allowlist outbound hosts in shared helper
 ```
 
-### SCA / CVE dependency (CVE-NNN in SCA section)
+### SCA dependency (SCA-NNN in explicit SCA section)
 
 Must appear in **`## Software Composition Analysis (SCA)`** summary table **and** include full snippet + trace + upgrade remediation. Unreachable OSV/npm hits → **SCA Packages Filtered Out** table only — not a FINDING.
 
@@ -111,7 +112,7 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 ```
 ```
 
-### CVE (CVE-NNN)
+### SCA (SCA-NNN, explicit SCA mode only)
 
 ```markdown
 ### Remediation

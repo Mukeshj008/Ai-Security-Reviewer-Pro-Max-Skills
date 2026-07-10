@@ -11,6 +11,7 @@ Use these templates for every **TRUE POSITIVE** with an HTTP attack surface. Ada
 5. **Label environment** — `Host: staging.example.com` vs production; note if destructive.
 6. **Expected indicators** — status code, body substring, timing, or error that confirms exploit.
 7. **Skip section** — if finding is code-only (no HTTP), write `N/A — not HTTP-exploitable; see Attack Vectors`.
+8. **No sensitive infrastructure probes by default** — do not use cloud metadata IPs or internal admin hosts unless explicitly authorized.
 
 ---
 
@@ -128,10 +129,10 @@ POST /api/fetch HTTP/1.1
 Host: [TARGET_HOST]
 Content-Type: application/json
 
-{"url":"§http://169.254.169.254/latest/meta-data/§"}
+{"url":"§https://[BURP_COLLABORATOR_OR_CONTROLLED_CANARY]/ssrf-test§"}
 ```
 
-**OOB confirm:** `"url":"http://[BURP_COLLABORATOR]/ssrf-test"`
+**OOB confirm:** use Burp Collaborator or a controlled canary host. Metadata endpoints (`169.254.169.254`, `metadata.google.internal`) require explicit approval.
 
 ---
 

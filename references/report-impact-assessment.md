@@ -111,8 +111,9 @@ For each finding ID:
 
 ```bash
 # Every finding has Impact Assessment
-FIND=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-IMP=$(rg -c "^### Impact Assessment" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
+FIND=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+IMP=$(rg -c "^### Impact Assessment" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 # FIND must equal IMP
 ```
 

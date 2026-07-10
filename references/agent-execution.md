@@ -9,7 +9,7 @@
 | Forbidden for analysis | Why |
 |------------------------|-----|
 | `scripts/run_sast_scan.sh` | Agent runs manifest `rg` commands directly |
-| `scripts/run_cve_iac_scan.sh` | Agent runs `cve-exploitability.md` + `iac-misconfig-scan.md` |
+| `scripts/run_cve_iac_scan.sh` | Agent runs IaC manually; explicit SCA mode uses `sca-dependency-audit.md` |
 | `scripts/discover_burp_hosts.sh` | Agent runs `rg` in `burp-host-discovery.md` |
 | `scripts/generate_coverage_appendix.py` | Agent uses `internal-scan-log.md` — not Appendix E in user report |
 | Semgrep / OpenGrep CLI | Agent + `rg` + graphify + AI validation only |
@@ -50,7 +50,7 @@ For **each** row in `report-coverage-matrix.md` (109 checks):
 4. G1–G5 + AI checklist → PASS or FINDING.
 5. Record in **internal scan log** (`internal-scan-log.md`) — Status, Finding Ref, Match Count, Notes.
 
-**Do not** paste 109 rows into `security_report.md`. Summarize layers in the Verification Checklist `<details>` toggle only.
+**Do not** paste 109 rows into `<repo>_security_report.md`. Summarize layers in the Verification Checklist `<details>` toggle only.
 
 **Reachability:** `graphify path` when graph exists; else manual file:line trace — never report from `rg` alone.
 

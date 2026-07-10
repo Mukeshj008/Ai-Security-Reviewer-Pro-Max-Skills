@@ -34,7 +34,7 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | 3 | Vulnerability Coverage Overview (files, LOC, layer summary — **not** 109-row matrix) | `vulnerability-coverage-overview.md` |
 | 4 | Scan Agent & Backend Attribution | `report-scan-matrices-agent.md` |
 | 5 | Scan Matrices Executed (MX-VERIFY, MX-COV, MX-F) | `report-scan-matrices-agent.md` |
-| 6 | **Scan Attestation Summary** (short accountability; note code-only mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit` blocks when their triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md` |
+| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit` blocks when their triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md` |
 | 6b | **Completeness & Residual Risk Register** (OWASP/API/CWE/ASVS/LLM verdicts; nothing silently missed) | `standards-coverage-map.md` |
 | 7 | **Top Structural Risks** (3 bullets max, linked to finding IDs) | below |
 | 8 | **Security Verification Checklist** (findings table w/ **Confidence** + **Discovery** + collapsible scan-layer toggle) | `report-findings-verification-register.md`, `finding-confidence-validation.md` |
@@ -56,7 +56,8 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | **Business Logic Review Summary** | Commerce/fintech/payments | `business-logic-abuse-checklist.md` |
 | **Delta Since Last Review** | Prior report in repo | `baseline-delta-report.md` |
 | **Git History Secrets (summary)** | `.git` present | `git-history-secrets-scan.md` |
-| **Container Image Scan (summary)** | Dockerfile/K8s — **IaC misconfig from source only**; no trivy/grype |
+| **Software Composition Analysis (SCA)** | Only when explicit SCA mode was requested and completed |
+| **Container Image Scan (summary)** | Dockerfile/K8s — **IaC misconfig from source only** by default; image scanner only with explicit approval |
 
 ---
 
@@ -135,17 +136,20 @@ Never report from `rg` pattern match alone.
 
 ---
 
-## SCA section (v4.16 — excluded)
+## SCA section
 
-**Do not** include `## Software Composition Analysis (SCA)` or CVE-NNN / SCA-NNN findings from dependency tools. In **Scan Attestation Summary**, note: *Third-party dependency scanning disabled (code-only mode).*
+Default code-only mode: do **not** include `## Software Composition Analysis (SCA)` or advisory-only SCA findings. In **Scan Attestation Summary**, note: *Third-party dependency scanning disabled (code-only mode).*
+
+Explicit SCA mode: include `## Software Composition Analysis (SCA)` and use `SCA-NNN` IDs per `sca-dependency-audit.md`. Keep SCA findings separate from VULN/AUTH/IAC/LEAK findings.
 
 ---
 
 ## HTML export
 
 ```bash
-python ~/.cursor/skills/ai-security-reviewer/scripts/generate_html_report.py security_report.md \
-  -o security_report.html --project "[Project Name]"
+REPO=$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)
+python ~/.cursor/skills/ai-security-reviewer/scripts/generate_html_report.py "${REPO}_security_report.md" \
+  -o "${REPO}_security_report.html" --project "[Project Name]" --strict
 ```
 
 Use `--strict` before handoff to fail on missing Classification Source/Sink, field inconsistencies, or missing `### Assumptions` / `### Remediation` on findings.

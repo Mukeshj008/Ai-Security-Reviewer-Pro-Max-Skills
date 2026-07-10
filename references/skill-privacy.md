@@ -63,6 +63,20 @@ These are written to **project repos** during scans — do not commit to the ski
 
 Add to project `.gitignore` if needed.
 
+## Report evidence redaction
+
+When a scan finds real secrets, prove the finding without copying the entire value into the report:
+
+| Secret type | Report format |
+|-------------|---------------|
+| API key/token/password | `abcd...wxyz` (first/last 4 chars) or `sha256:<hash>` |
+| JWT | header/payload claim names only; redact signature and sensitive claims |
+| Private key | show header line + fingerprint/hash only |
+| Vault/AppRole IDs | partial value + file/line; recommend rotation |
+| Cookie/session | placeholder (`[SESSION_COOKIE]`) in PoC |
+
+Full raw values may be shown only when the user explicitly requests raw evidence and the output is not intended for broad sharing.
+
 ## Agent note
 
 When generating reports, use **code-derived hosts** from the **current** repo only. Never paste hosts, paths, or findings from a previous engagement into skill files or cross-project templates.

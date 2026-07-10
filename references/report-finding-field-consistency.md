@@ -56,7 +56,8 @@ Before Phase 5 (HTML export), for **each** finding ID:
 
 ```bash
 # Exploitable must be exactly Yes, No, or Hardening
-rg "Exploitable.*\|" security_report.md | rg -v "\| Yes \||\| No \||\| Hardening \|"
+MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
+rg "Exploitable.*\|" "$MD" | rg -v "\| Yes \||\| No \||\| Hardening \|"
 # Non-zero hits → fix before HTML
 ```
 
@@ -70,7 +71,7 @@ rg "Exploitable.*\|" security_report.md | rg -v "\| Yes \||\| No \||\| Hardening
 | TRUE POSITIVE (hardening gap) | Hardening |
 | FALSE POSITIVE / FILTERED | Do not appear in Register (Appendix A only) |
 
-**CVE-NNN:** Classification uses `AI Verdict: EXPLOITABLE (reachable)`; Register **Exploitable: Yes**.
+**SCA-NNN:** In explicit SCA mode, use `Reachability` and `Confidence`; do not mix SCA rows into VULN/AUTH/IAC/LEAK exploitability unless first-party vulnerable usage is proven.
 
 ---
 

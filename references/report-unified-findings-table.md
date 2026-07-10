@@ -44,8 +44,9 @@ OWASP/SANS may appear in **Detailed Findings** Classification blocks — not req
 ## Completion gate
 
 ```bash
-grep -cE '^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]' security_report.md   # findings
-grep -c '^| VULN-\|^| AUTH-\|^| CVE-\|^| IAC-' security_report.md   # checklist rows (approx)
+MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
+rg -c '^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]' "$MD"   # findings
+rg -c '^\| (VULN|AUTH|IAC|LEAK|SCA)-' "$MD"       # checklist rows (approx; SCA only in explicit mode)
 ```
 
 HTML export with `--strict` fails on missing Classification Source/Sink.

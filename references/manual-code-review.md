@@ -178,7 +178,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 ### Cloud / IaC / supply chain
 
 - Public buckets, excessive IAM, K8s/Docker misconfigs (`iac-misconfig-scan.md`)
-- Exploitable CVEs, dependency confusion, unsafe package sources (`cve-exploitability.md`, `extended-category-scans.md` §18)
+- Dependency advisories, dependency confusion, unsafe package sources (`sca-dependency-audit.md` only in explicit SCA mode; otherwise residual)
 
 **Taxonomy:** `vulnerability-taxonomy-coverage.md` §17–§18
 
@@ -186,13 +186,13 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 - Spring Boot, Node.js, PHP, Python, Java, .NET — run `extended-category-scans.md` §19 when stack detected
 
-**Mapping:** Core 109 checks (Appendix E) + **Appendix H taxonomy attestation** cover a baseline issue list. Manual **security-researcher review** (mandatory v4.17) adds **business logic**, **authz chains**, **cross-file flows**, and **domain-specific bugs** that patterns and check IDs miss — report these as first-class findings with `Discovery: Researcher`.
+**Mapping:** Core internal checks + the **Completeness & Residual Risk Register** cover a baseline issue list. Manual **security-researcher review** adds **business logic**, **authz chains**, **cross-file flows**, and **domain-specific bugs** that patterns and check IDs miss — report these as first-class findings with `Discovery: Researcher`.
 
 ---
 
 ## Pre-Report Verification Gates (MANDATORY)
 
-**Before** assigning VULN-NNN, AUTH-NNN, CVE-NNN, or IAC-NNN, answer all five gates. If any gate fails → **FALSE POSITIVE** → Appendix A, not Detailed Findings.
+**Before** assigning VULN-NNN, AUTH-NNN, IAC-NNN, or LEAK-NNN, answer all five gates. If any gate fails → **FALSE POSITIVE** → Appendix A, not Detailed Findings. In explicit SCA mode, use `SCA-NNN` per `sca-dependency-audit.md`; do not turn advisory-only dependency issues into VULN findings.
 
 | Gate | Question | PASS criterion |
 |------|----------|----------------|
@@ -233,7 +233,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 | Phase −1 (this doc) | Context checklist → Appendix G |
 | Phase 0 | Graphify queries informed by entry points & trust boundaries |
 | Phase 1 / manifests | Hits are **candidates only** until gates pass |
-| Phase 1f | Extended taxonomy scans (`extended-category-scans.md`) → Appendix H |
+| Phase 1f | Extended taxonomy scans (`extended-category-scans.md`) → Completeness & Residual Risk Register |
 | Phase 1a | Auth audit = G1 for access control |
 | Phase 2 | Mandatory taint trace per candidate → feeds **`### Data Flow Trace`** |
 | Phase 3 | Apply **Pre-Report Verification Gates** + AI Validation Checklist |
@@ -280,7 +280,7 @@ When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed F
 2. **Severity = impact × exploitability × exposure**, not pattern severity alone.
 3. **Compensating controls** — document gateway auth, WAF, network segmentation; adjust status/severity per AUTH rules.
 4. **Test/dev code** — exclude unless deployed to production paths.
-5. **Dependency CVEs** — CVE-NNN only with import + `graphify path` (see `cve-exploitability.md`).
+5. **Dependency advisories** — default code-only mode marks SCA residual. Explicit SCA mode uses `SCA-NNN`; promote to VULN only when there is first-party vulnerable usage with a normal source→sink trace.
 6. **Prefer staging hosts** for Burp; never localhost.
 7. **Evidence in report** — paste real source/sink code under **`### Vulnerable Code Snippet`**; never report without a documented data flow.
 

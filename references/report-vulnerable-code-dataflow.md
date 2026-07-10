@@ -18,7 +18,7 @@ Every **Detailed Findings** entry must include **`### Vulnerable Code Snippet`**
 |--------------|-------------------|-----------|
 | VULN (taint) | Source + sink lines from actual file | Full ASCII box + simplified flow |
 | AUTH | Route/middleware chain missing auth | Request → unauthenticated handler |
-| CVE | `require()` + vulnerable call site | HTTP/import → vulnerable API |
+| SCA (explicit mode) | package manifest + vulnerable call site when reachable | import/config → vulnerable API |
 | IAC | Misconfigured stanza from IaC file | Config exposure → blast radius (1–3 steps) |
 
 ---
@@ -65,9 +65,10 @@ Use the **full ASCII box** from SKILL.md for taint findings, or a step table for
 ## Completion gate (Phase 4)
 
 ```bash
-FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-VC=$(rg -c "^### Vulnerable Code Snippet" security_report.md | awk -F: '{s+=$2} END {print s+0}')
-DF=$(rg -c "^### Data Flow Trace" security_report.md | awk -F: '{s+=$2} END {print s+0}')
+MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
+FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+VC=$(rg -c "^### Vulnerable Code Snippet" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+DF=$(rg -c "^### Data Flow Trace" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 echo "findings=$FINDINGS vulnerable_snippets=$VC data_flows=$DF"
 # All three counts must match
 ```

@@ -13,9 +13,35 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.21** — Adds **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`): every report is prefixed with a clean repo slug derived from the workspace folder, stripping org/team prefixes (`acmeteam-`, `acme-`, `internal-`, `gh-`, …) and trailing hash / numeric / version / branch suffixes (`-48e5b67f7489`, `-20260630`, `-v1.2.3`, `-main`). Output files become `<repo>_security_report.md` / `<repo>_security_report.html` (e.g. `oauth-user-mgmt-service_security_report.md`) so multiple scans in one workspace, ticket attachments, and SIEM ingestion stay unambiguous. v4.19 scope-completeness enforcement (`multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`), new pattern classes (CORS `endsWith` bypass, controller Authorization-header override, JWT without `exp`, plaintext token/header logging in `extended-category-scans.md` §3.11–§3.12, §6.10–§6.12, §14.8–§14.9), tightened Appendix A rules (`manual-code-review.md`), v4.18 standards completeness mapping, v4.17 researcher layer, and v4.16 code-only mode are all retained.
+**Version 4.22** — Adds a model-proof quick-start contract, candidate ledger, final compliance gate, async/second-order workflow coverage, strict secret-redaction rules, and optional explicit SCA mode. v4.21 report naming, v4.19 scope completeness, per-method auth audit, v4.18 residual-risk mapping, v4.17 researcher layer, and v4.16 code-only default are retained.
 
 **Report contract (read first):** `references/report-output-spec.md`
+
+## Model-proof quick start (read first, token-efficient)
+
+Before scanning, read these references in this order. Do **not** read every reference eagerly; use progressive disclosure.
+
+1. `references/agent-execution.md`
+2. `references/report-output-spec.md`
+3. `references/manual-code-review.md`
+4. `references/model-proof-operating-contract.md`
+5. `references/finding-confidence-validation.md`
+6. `references/multi-module-enumeration.md`
+7. `references/multi-profile-config-audit.md`
+8. `references/per-method-auth-audit.md`
+9. `references/async-second-order-audit.md`
+10. `references/standards-coverage-map.md`
+
+Then execute the shortest complete loop:
+
+```
+scope → modules/profiles/routes → candidates ledger → source→sink validation →
+DAST/curl where reachable → adjudication → residual register → strict report
+```
+
+**Candidate ledger rule:** every plausible candidate ends as `Finding`, `Tentative`, or `Appendix A` with a named reason. Nothing silently disappears.
+
+**Tool wording:** use the platform's file-read and ripgrep tools (`ReadFile`/`Read`, `rg`/Grep equivalents). Prefer direct `rg` + scoped reads; do not rely on skill scan scripts.
 
 ## Scope & honesty statement (read first)
 
@@ -28,14 +54,17 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 
 ## Out of scope (mandatory — do not run)
 
-**Do not** scan third-party libraries or run dependency/CVE tooling. **Do not** report CVE-NNN or SCA-NNN findings from advisory databases.
+**Default mode is code-only:** do not scan third-party libraries or run dependency/CVE tooling unless the user explicitly requests **SCA / dependency audit / full-spectrum security review**. In default code-only mode, mark dependency classes **Residual — not assessed**.
+
+**Optional SCA mode:** when explicitly requested, run `references/sca-dependency-audit.md`. Keep SCA findings in a clearly separated **Software Composition Analysis** section; do not mix advisory-only issues into VULN/AUTH/IAC/LEAK. Use `SCA-NNN` only in SCA mode.
 
 | Forbidden | Examples |
 |-----------|----------|
+| Forbidden in default code-only mode | Examples |
 | Dependency/CVE databases | OSV API, `npm audit`, `pip-audit`, Maven/Gradle dependency CVE lookup |
 | Container image CVE scanners | trivy, grype, Snyk container scan |
 | SBOM / supply-chain tooling | CycloneDX export, KEV prioritization for library CVEs |
-| Import-only CVE claims | "Jackson 2.8.5 has CVE-…" without a **code-level** vulnerable usage path |
+| Import-only VULN claims | "Jackson 2.8.5 has CVE-…" reported as VULN without a **code-level** vulnerable usage path |
 
 **In scope:** vulnerabilities visible in **first-party code and config** — auth gaps, injection sinks, secrets in source, IaC misconfigs read from Dockerfile/K8s YAML, logic flaws, IDOR/BOLA, JWT handling, CORS/filter bugs, open redirects, etc.
 
@@ -52,7 +81,8 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | **IaC** | **This agent (you)** | `rg` + `Read` per `iac-misconfig-scan.md` — **source/config review only** (no image CVE scanners) |
 | **ARCH** | **This agent (you)** | Threat model (`security-architect.md`) → **Top 3 structural risks** + optional **attack chains** |
 | **RESEARCH** | **This agent (you)** | Senior security-researcher pass — issues **outside** the 109-check matrix; same G1–G5 validation |
-| **Report** | **This agent (you)** | `security_report.md` + **`## Scan Attestation Summary`** → `generate_html_report.py [--strict]` |
+| **SCA** | **This agent (you), only when explicitly requested** | `sca-dependency-audit.md` with package manifests + package-manager/advisory tools; separate SCA section |
+| **Report** | **This agent (you)** | `<repo>_security_report.md` + **`## Scan Attestation Summary`** → `generate_html_report.py --strict` |
 
 ### Do NOT use scan scripts or subagents
 
@@ -74,17 +104,20 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | 15 | `report-findings-verification-register.md` | **Security Verification Checklist** |
 | 16 | `internal-scan-log.md` + `scan-attestation-summary.md` | Internal checks + user attestation |
 | 17 | `report-output-spec.md` | **Canonical** report sections (v4.18) |
-| 18 | `finding-templates.md` | VULN/AUTH/IAC formats (**not** CVE/SCA) |
+| 18 | `finding-templates.md` | VULN/AUTH/IAC/LEAK formats; SCA only in explicit SCA mode |
 | **C1** | **`standards-coverage-map.md`** | **MANDATORY** — OWASP/CWE/ASVS/LLM sweep + Completeness & Residual Risk Register |
 | **C2** | **`finding-confidence-validation.md`** | **MANDATORY** — two-stage validation, confidence levels, fail-open policy |
 | **S1** | **`multi-module-enumeration.md`** | **MANDATORY** (multi-module repos) — enumerate ALL modules, controllers, configs, Dockerfiles |
 | **S2** | **`multi-profile-config-audit.md`** | **MANDATORY** (multi-profile configs) — read EVERY `application-*.{yml,properties}`, not a sample |
 | **S3** | **`per-method-auth-audit.md`** | **MANDATORY** — per-endpoint-method walk; prevents per-controller-annotation masking |
 | **N1** | **`report-naming-convention.md`** | **MANDATORY (Phase 4)** — derive `<repo>_security_report.{md,html}` slug; rename legacy `security_report.*` on entry |
+| **A1** | **`async-second-order-audit.md`** | **MANDATORY** — queues, cron, Lambda/EMR/Spark, stored filters, save-now-exploit-later flows |
+| **Q1** | **`model-proof-operating-contract.md`** | **MANDATORY** — token-efficient execution, candidate ledger, final compliance gate |
+| **SCA1** | `sca-dependency-audit.md` | Explicit SCA mode only — dependency health/advisory findings |
 | **19+** | **v4.15 additive (code-only)** | See table below |
 | 19–24 | finding-completeness, dataflow, impact, field-consistency, html-design, scan-matrices | Quality gates |
 
-**Skipped in v4.16 (do not read for findings):** `osv-sca-scan.md`, `maven-sca-scan.md`, `cve-exploitability.md`, `kev-prioritization.md`, `sbom-export.md`, `container-image-scan.md` (trivy path).
+**Skipped in default code-only mode:** `osv-sca-scan.md`, `maven-sca-scan.md`, `cve-exploitability.md`, `kev-prioritization.md`, `sbom-export.md`, `container-image-scan.md` (trivy path). If explicit SCA mode is requested, use **`sca-dependency-audit.md`** as the active SCA contract instead of these legacy references.
 
 **v4.15 additive references (run when applicable):**
 
@@ -133,7 +166,7 @@ Apply the two-stage model in **`finding-confidence-validation.md`**:
 
 1. **Stage 1 — wide net:** generate every plausible candidate (`rg` + graphify + researcher pass). Favor recall.
 2. **Stage 2 — adjudicate:** per candidate, apply G1–G5 + a **CWE-specific micro-rubric** + DAST. Assign **Confidence: Confirmed / Firm / Tentative**.
-3. **Fail-open:** when uncertain, **never silently drop** — keep as Tentative or send to Appendix A *with a named reason*. A real bug downgraded to nothing with no trace is the worst outcome.
+3. **Fail-open + ledger:** when uncertain, **never silently drop** — keep as Tentative or send to Appendix A *with a named reason*. Maintain an internal candidate ledger until every candidate has a terminal status.
 4. **CVE-override:** never suppress a known-active exploited pattern (e.g., Log4Shell-style JNDI, deserialization gadget) just because it sits in a "utils/test" path — flag for human review.
 
 Add a **Confidence** column to the Security Verification Checklist.
@@ -153,7 +186,8 @@ The **109-check matrix is a floor, not a ceiling.** After running applicable che
 - Cross-interceptor auth gaps, ordering bugs, exclude-mapping mistakes
 - Header/body trust confusion (`uid` vs token subject, S2S vs session paths)
 - Domain-specific abuse (KYC/fintech/payments, role assignment, PII exposure)
-- Logic flaws, race conditions, cache poisoning, second-order flows
+- Logic flaws, race conditions, cache poisoning, async/second-order flows
+- Queue/cron/Lambda/EMR/Spark flows where untrusted data is stored first and executed later
 - Shadow endpoints, debug/ops routes, commented-out security controls
 - Framework misuse unique to this codebase (Spring interceptor chains, custom filters)
 
@@ -210,6 +244,7 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 1.  Attack surface          → graphify query OR rg recon — scope = ALL modules from −1c
 2.  SAST manifests          → rg per sast + LEAK + SECRET + INJ (scope = ALL modules)
 2b. Extended scans          → extended-category-scans.md (includes new §3.11–§3.12, §6.10–§6.12, §14.8–§14.9)
+2b.5 Async/second-order     → async-second-order-audit.md (queues, cron, Spark/EMR, Lambda, stored filters)
 2c. + Protocol scans        → protocol-scans-graphql-ws-grpc.md (if detected)
 2d. + Git history secrets   → git-history-secrets-scan.md (if .git)
 4.  IaC (source only)       → iac-misconfig-scan.md — Read EVERY Dockerfile* + K8s/config files
@@ -225,13 +260,14 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 8.  Reachability traces     → graphify path OR manual (≥3 hops)
 9.  Adjudicate + confidence → finding-confidence-validation.md — G1–G5 + CWE rubric + fail-open
                                + manual-code-review.md "forbidden exclusion reasons" check
+9b. Candidate ledger close  → every candidate = Finding / Tentative / Appendix A
 10. Live PoC                → Burp or curl per DAST table; TRUE POSITIVE + every AUTH-NNN
-11. security_report.md      → report-output-spec.md (+ attestation + researcher count + Residual Register
+11. `<repo>_security_report.md` → report-output-spec.md (+ attestation + researcher count + Residual Register
                                + Module/Profile/Per-Method Audit completion gates)
 12. HTML                    → generate_html_report.py [--strict]
 ```
 
-**Removed from sequence:** OSV SCA, KEV, CVE reachability, container image CVE scan, SBOM.
+**Default code-only removed from sequence:** OSV SCA, KEV, CVE reachability, container image CVE scan, SBOM. Explicit SCA mode re-adds dependency review via `sca-dependency-audit.md` only.
 
 Record applicable checks in **internal scan log**; mark SCA/CVE/DEPS rows **N/A (code-only mode)**; publish **Scan Attestation Summary** in user report.
 
@@ -243,7 +279,9 @@ Required sections: **Classification** (Source/Sink), **Description**, **Assumpti
 
 Templates: **`finding-templates.md`**, **`report-vulnerable-code-dataflow.md`**, **`report-impact-assessment.md`**.
 
-**Finding IDs:** VULN-NNN, AUTH-NNN, IAC-NNN, LEAK-NNN only — **never** CVE-NNN or SCA-NNN from dependency tools.
+**Finding IDs:** VULN-NNN, AUTH-NNN, IAC-NNN, LEAK-NNN. In explicit SCA mode only, dependency findings use SCA-NNN in a separate SCA section.
+
+**Report secret redaction:** show enough evidence to prove a secret exists (type, file, line, first/last 4 chars or hash), but redact raw values in reports and PoCs unless the user explicitly asks for raw evidence in a secure context.
 
 **Discovery tag (mandatory in checklist):** `Checklist` or `Researcher` — researcher findings are first-class; same format and verification bar.
 
@@ -257,7 +295,7 @@ Per **`report-output-spec.md` v4.20**.
 
 **Mandatory:** Executive Summary with **risk score rubric** · Coverage Overview · Scan Agent attribution · Scan Matrices · **Scan Attestation Summary** · **Completeness & Residual Risk Register** (`standards-coverage-map.md`) · Top Structural Risks · Verification Checklist (with **Confidence** column) · Detailed Findings · Remediation Priority · Appendices A, B, C, D, F.
 
-**Excluded:** `## Software Composition Analysis (SCA)` — omit entirely; note in attestation: *Third-party dependency scanning disabled (code-only mode).*
+**SCA section:** omit entirely in default code-only mode and note: *Third-party dependency scanning disabled (code-only mode).* Include `## Software Composition Analysis (SCA)` only when explicit SCA mode was requested and completed.
 
 **Recommended when applicable:** Attack Chain Analysis · Business Logic Summary · Delta Since Last Review · Git History summary.
 
@@ -295,7 +333,7 @@ Deliver **both** `.md` and `.html` using the derived `<repo>_*` filenames.
 
 ```
 Review this code for security vulnerabilities
-Run comprehensive security audit, verify unauthenticated endpoints, generate security_report.html
+Run comprehensive security audit, verify unauthenticated endpoints, generate <repo>_security_report.html
 /graphify .   # optional
 ```
 

@@ -886,6 +886,8 @@ def render_hero(title: str, meta: dict[str, str]) -> str:
     for key in (
         "Report ID",
         "Generated",
+        "Scan Date",
+        "Report Version",
         "Project",
         "Skill Version",
         "Scan Agent",
