@@ -26,7 +26,12 @@
 | **SKIP/FAIL** | 0 at handoff (or explain in Notes) |
 | **Internal log** | session notes / `.security-review/internal-scan-log.md` / layer toggle |
 | **Researcher-discovered findings** | N (validated outside 109 matrix; `Discovery: Researcher`) |
-| **DAST backend** | Burp MCP \| curl-only \| Not Verified (no host) |
+| **DAST backend** | Burp MCP \| curl (user approved) \| None — Burp PoC only (user declined / no host) |
+| **HTTP findings with Burp PoC crafted** | N / N (must equal HTTP AUTH+VULN count) |
+| **Deep-link audit** | Completed (`deeplink-audit.md`) \| N/A (no mobile/deeplink surfaces) — never silent skip when triggers match |
+| **Mobile SAST (static)** | Completed (`mobile-sast-audit.md`) \| N/A (no mobile code) — ATS/exported IPC/storage reviewed; Frida/MITM Residual |
+| **Precision adjudication (v4.32.1+)** | All `*-ADJ-*` gates applied; SSRF-ADJ-01: N candidates (M excluded via **G3**); LDAP-ADJ-01: P candidates (Q excluded); untraced builders → Tentative count |
+| **Actuator sensitive endpoints audit** | Completed (`actuator-sensitive-endpoints-audit.md`) \| N/A (no Spring/management endpoints) — sensitive-only reporting; health/info probe-safe |
 | **Attestation** | All applicable 109 checks run + security-researcher pass completed; G1–G5 on every finding |
 
 ### Example
@@ -58,6 +63,10 @@
 - [ ] Every FINDING links to a check ID **or** `Discovery: Researcher` with G1–G5 notes
 - [ ] No `PENDING` in internal scan log
 - [ ] Logged in **Appendix F** Phase 1 (SAST manifests) = PASS
+- [ ] **AUTH coverage gate:** Appendix D endpoint rows == sum of AUTH instance counts; checklist AUTH rows == distinct AUTH finding IDs; multi-instance findings include `### Instances` with per-instance Source/Sink (`finding-instances.md`)
+- [ ] **No duplicate finding IDs** for the same CWE + root cause (secrets, TLS trust-all, CORS, Vault tokens, etc. → instances)
+- [ ] **Precision adjudication:** every SAST-OG-26/OG-18 candidate has SSRF-ADJ-01 / LDAP-ADJ-01 notes; SSRF exclusions cite **G3**; untraced builders → Tentative (`precision-false-positive-adjudication.md` v4.32.1+)
+- [ ] **Mobile SAST (static)** completed or N/A justified (`mobile-sast-audit.md`) — exported components, ATS, on-device storage
 
 **`--strict` HTML export:** warns if `## Scan Attestation Summary` is missing (does not fail export — additive recommendation). Missing attestation is logged to stderr.
 

@@ -22,13 +22,10 @@ This is the **completeness backbone** of the skill. The 109-check matrix is *imp
 | ID | Category | Primary coverage | Notes |
 |----|----------|------------------|-------|
 | A01 | Broken Access Control | `route_auth_audit.md`, `idor-bola-audit.md`, researcher pass | Core strength |
-| A02 | Cryptographic Failures | `secrets-patterns.md`, SAST-OG-07/16, crypto review | Weak hash/cipher/IV, hardcoded keys |
-| A03 | Injection | SAST-INJ-*, SAST-OG-03/18/25/27/28, `injection-deep-scan.md` | SQLi, CMD, XXE, SSTI, LDAP, XPath |
-| A04 | Insecure Design | `security-architect.md`, `business-logic-abuse-checklist.md`, researcher pass | Manual — needs threat model |
-| A05 | Security Misconfiguration | `iac-misconfig-scan.md`, config review, CORS/filter review | Source/config only |
-| A06 | Vulnerable & Outdated Components | **RESIDUAL in code-only mode** | Dependency CVE scanning disabled — **must register** (see §6) |
-| A07 | Identification & Auth Failures | `jwt-deep-test.md`, auth interceptor review, session checks | |
-| A08 | Software & Data Integrity Failures | Deserialization (SAST-OG-15), CI/CD config, update integrity | Library-side gadgets = Residual |
+| A02 | Cryptographic Failures | `secrets-patterns.md`, SAST-OG-07/16, crypto review, **`mobile-sast-audit.md`** (weak crypto / plaintext device storage) | Weak hash/cipher/IV, hardcoded keys |
+| A05 | Security Misconfiguration | `iac-misconfig-scan.md`, config review, CORS/filter review, **mobile ATS/cleartext/exported IPC** | Source/config only; mobile when present |
+| A07 | Identification & Auth Failures | `jwt-deep-test.md`, auth interceptor review, session checks, **`deeplink-audit.md`**, **mobile exported login bypass** | |
+| A08 | Software & Data Integrity Failures | Deserialization (SAST-OG-15), **CI-01 workflow injection**, **SIG-01/SIG-02 signature verification**, update integrity | Library-side gadgets = Residual |
 | A09 | Security Logging & Monitoring Failures | `frontend-stacktrace-leaks.md`, log review (ASVS V16) | Often Manual |
 | A10 | SSRF | SAST-OG-22, outbound-fetch trace | |
 
@@ -87,10 +84,10 @@ Walk each chapter; treat as a checklist of *control areas* that must each get a 
 | V4 | API & Web Service | `route_auth_audit.md`, `protocol-scans-graphql-ws-grpc.md` |
 | V5 | File Handling | upload/path review (CWE-434/22) |
 | V6 | Authentication | auth interceptor/session review |
-| V7 | Session Management | session/cookie/timeout review |
+| V7 | Session Management | session/cookie/timeout review + **`deeplink-audit.md`** (session/token in deep links) when triggered |
 | V8 | Authorization | `idor-bola-audit.md`, BFLA |
 | V9 | Self-contained Tokens | `jwt-deep-test.md` |
-| V10 | OAuth & OIDC | OAuth flow review when present |
+| V10 | OAuth & OIDC | OAuth flow review when present + deep-link `redirect_uri` / magic-link handlers (`deeplink-audit.md`) |
 | V11 | Cryptography | crypto + key review |
 | V12 | Secure Communication | TLS/transport config review |
 | V13 | Configuration | `iac-misconfig-scan.md`, config secrets |
@@ -135,6 +132,7 @@ Publish this in `security_report.md` (after Scan Attestation Summary). It is how
 | ASVS 5.0 | V12 Secure Communication | Residual | TLS terminated at gateway, out of repo scope |
 | CWE Top 25 | CWE-787 OOB Write | N/A | Managed runtime (JVM), no native code |
 | LLM 2025 | All | N/A | Not an LLM application |
+| Mobile / MASVS | ATS, exported IPC, on-device storage | Covered \| N/A \| Residual | `mobile-sast-audit.md` when mobile present; Frida/MITM = Residual (static-only) |
 | DAST | Live exploit verification | Residual | No reachable host resolved; findings are Code/Config confirmed only |
 
 **Residual ≠ safe.** Each Residual row is an area that requires additional tooling, environment, or scope to confirm. High-impact Residual rows are escalated to Top Structural Risks.

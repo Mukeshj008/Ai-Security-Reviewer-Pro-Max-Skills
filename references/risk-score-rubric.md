@@ -2,6 +2,8 @@
 
 **Purpose:** Define **Risk Score: X/100** in Executive Summary so scores are comparable across runs. **Adds** structure; existing severity distribution tables **remain**.
 
+**Prerequisite:** Assign per-finding **Severity** using **`severity-calibration.md`** first. Risk score **aggregates** severities — it does not determine them.
+
 ---
 
 ## Formula (0–100, higher = worse)

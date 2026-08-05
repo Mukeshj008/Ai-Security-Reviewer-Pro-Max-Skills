@@ -3,7 +3,7 @@
 Maps the **API / Web / Android / iOS / Cross-platform / Manual** checklist to ai-security-reviewer checks.  
 Use for **agent attestation** (internal). **v4.15:** Optional **Appendix I** in user report still supported (HTML suppresses); prefer platform gaps noted in **Scan Attestation Summary** N/A rows.
 
-**New deep-dive refs (v4.15):** `idor-bola-audit.md`, `jwt-deep-test.md`, `business-logic-abuse-checklist.md`, `mobile-sast-manifest.md`, `protocol-scans-graphql-ws-grpc.md`.
+**New deep-dive refs (v4.15+):** `idor-bola-audit.md`, `jwt-deep-test.md`, `business-logic-abuse-checklist.md`, `mobile-sast-manifest.md`, `protocol-scans-graphql-ws-grpc.md`, **`deeplink-audit.md` (v4.29)**, **`mobile-sast-audit.md` (v4.30 static mobile)**.
 
 **Legend:** Full = automated in skill · Partial = supplemental rg / DAST sample · Manual = G1–G5 + human · Gap = not in skill yet · N/A = stack not present
 
@@ -21,7 +21,7 @@ Use for **agent attestation** (internal). **v4.15:** Optional **Appendix I** in 
 | Missing token expiry | ✓ | — | **Partial** | manual-code-review |
 | Weak password storage | ✓ | — | **Partial** | SAST-OG-16, extended §3.4 |
 | Static service credentials | ✓ | — | **Full** | SAST-SECRET-07 |
-| Credentials in source | ✓ | — | **Full** | SAST-SECRET-01…11 |
+| Credentials in source | ✓ | — | **Full** | SAST-SECRET-01…12 |
 | Missing MFA | — | ✓ | **Manual** | route auth + manual |
 | Insecure OAuth flow | ✓ | ✓ | **Partial** | SAST-OG-22, burp open redirect |
 | Missing refresh token validation | ✓ | ✓ | **Partial** | manual + DAST-AUTH-PROBE |
@@ -105,11 +105,15 @@ Use for **agent attestation** (internal). **v4.15:** Optional **Appendix I** in 
 
 | Domain | Skill coverage | Notes |
 |--------|----------------|-------|
-| Storage / crypto / exported components / WebView / TLS | **N/A default** | Run when `android/` or `ios/` tree detected |
-| TAX-MOBILE | **Partial** | extended-category-scans §19 mobile blocks |
-| MITM / Frida / runtime | **Manual/DAST** | Not automated in agent skill |
+| Storage / crypto / exported components / WebView / TLS | **Full (static)** | **`mobile-sast-audit.md`** + MOB-01…26 |
+| Deep links / App Links / Universal Links / session-in-URL | **Full when triggered** | **`deeplink-audit.md`** + MOB-09…11 |
+| ATS / cleartext / network_security_config | **Full** | MOB-06, MOB-17, MOB-18 |
+| Exported Activities / Receivers / Providers / Services | **Full** | MOB-12…16 |
+| On-device sensitive data (prefs/DB/files/backup) | **Full** | MOB-19…24 |
+| TAX-MOBILE (general) | **Full (static)** | Runtime Frida/MITM Residual |
+| MITM / Frida / runtime | **Residual** | Not required for static findings |
 
-**Gap:** No dedicated SAST-ANDROID-* / SAST-IOS-* manifest rows yet — use extended §19 + manual when mobile present.
+**Gap:** Interactive runtime (Frida unpinning demos, live MITM) remains Residual in static-only mode — still publish static findings with adb reproduction steps.
 
 ---
 
@@ -117,7 +121,7 @@ Use for **agent attestation** (internal). **v4.15:** Optional **Appendix I** in 
 
 | Check | Skill coverage | Check IDs |
 |-------|----------------|-----------|
-| Secrets scanning | **Full** | SAST-SECRET-01…11 |
+| Secrets scanning | **Full** | SAST-SECRET-01…12 |
 | Dependency CVE / OSV | **Full** | SCA-OSV-01…05, CVE-* |
 | IaC misconfig | **Full** | IAC-* |
 | Container CVE | **Partial** | IAC-DOCKER when Dockerfile present |

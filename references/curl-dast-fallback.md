@@ -1,13 +1,17 @@
-# curl DAST Fallback (MANDATORY when Burp MCP unavailable)
+# curl DAST Fallback (MANDATORY when Burp MCP unavailable — user permission required)
 
-When **`user-burp`** MCP is **not** configured or `send_http1_request` is missing:
+When **`user-burp`** MCP is **not** configured, `send_http1_request` fails, or the user rejects Burp MCP probes:
 
 1. **Do not install Burp Suite** or Burp MCP — per `dependency-install-policy.md`
-2. **Run `curl` in the terminal** (Shell tool) — this is the **only** permitted HTTP verification tool when Burp is absent
-3. **Do not** substitute Playwright, Firefox DevTools MCP, Python `requests`, `wget`, or custom scripts for DAST verification
-4. Apply the **same verdict matrix** as Burp; record **Verified in curl** (treat as **Verified in Burp** for severity)
+2. **Ask the user for permission** before running **any** `curl` command — see **`dast-verification-flow.md`** § User permission prompt. **Never run curl silently.**
+3. If user **approves** → run `curl` in the terminal (Shell tool) — the **only** permitted HTTP verification tool when Burp is absent
+4. If user **denies** → skip live probes; status = `Not Verified (live probe skipped — user declined)` — **still include `### Burp Suite PoC`** in every HTTP finding
+5. **Do not** substitute Playwright, Firefox DevTools MCP, Python `requests`, `wget`, or custom scripts for DAST verification
+6. Apply the **same verdict matrix** as Burp; record **Verified in curl** (treat as **Verified in Burp** for severity)
 
 Same host rules as Burp — **never** probe `localhost` / `127.0.0.1`.
+
+**Canonical flow:** `references/dast-verification-flow.md`
 
 ---
 
@@ -16,17 +20,41 @@ Same host rules as Burp — **never** probe `localhost` / `127.0.0.1`.
 | Condition | Action |
 |-----------|--------|
 | Burp MCP available | **Burp MCP only** — `send_http1_request` (Phase 7 primary) |
-| Burp MCP missing / error | **Mandatory:** run **curl only** in terminal — **every** AUTH candidate + HTTP **VULN** probes |
-| Burp absent, curl attempted | No other HTTP tool may be used for verification |
-| `curl` missing | Install per `dependency-install-policy.md`, then run probes |
-| No external host in code | Skip live probes — `Not Verified (no target host in code)` |
-| Production host only | Staging preferred; prod only with read-only probes |
+| Burp MCP missing / error / user rejected | **Ask user permission** → if approved, run **curl only** in terminal |
+| User declines curl | **No live probe** — `Not Verified (live probe skipped — user declined)`; **mandatory Burp PoC** in finding |
+| Burp absent, curl attempted (user approved) | No other HTTP tool may be used for verification |
+| `curl` missing | Install per `dependency-install-policy.md`, then run probes (after user approval) |
+| No external host in code | Skip live probes — `Not Verified (no target host in code)`; Burp PoC with `[TARGET_HOST]` |
 
-**Never** mark Phase 1b `SKIP` because Burp MCP is absent when a code-derived external host exists — execute curl first.
+**Never** mark Phase 7 incomplete solely because Burp MCP is absent **if** user declined curl **and** every HTTP finding has a crafted `### Burp Suite PoC`.
+
+**FAIL gate:** Burp absent + host in code + user **approved** curl + curl never run → Phase 7 incomplete; re-run review.
 
 ---
 
-## Execution requirement (mandatory)
+## User permission gate (mandatory — before first curl)
+
+**Do not run curl until the user explicitly approves.** Use `AskQuestion` or a direct message:
+
+```markdown
+Burp MCP is unavailable. I can verify [N] HTTP findings against **[HOST]** with read-only curl.
+
+Example: `curl -sS -w "%{http_code}" "https://[HOST]/[PATH]"`
+
+Approve curl verification? (Deny = code review + Burp PoC only in report)
+```
+
+| User response | Action |
+|---------------|--------|
+| Approve (single or batch) | Run curl probes; log commands in findings + Appendix C |
+| Deny / Skip | No curl; `Not Verified (live probe skipped — user declined)`; **Burp PoC still in each finding** |
+| No response / topic change | Treat as **Deny** |
+
+Re-ask if switching hosts (staging → prod) or if probe class changes (AUTH → injection).
+
+---
+
+## Execution requirement (when user approves curl)
 
 For **each** row in Appendix D when host exists:
 
@@ -92,17 +120,19 @@ head -c 500 /tmp/sec_body.txt
 
 ---
 
-## Verdict matrix (same as Burp)
+## Verdict matrix (verification status only)
 
-| curl result | Status column | AUTH severity |
-|-------------|---------------|---------------|
-| 2xx + business JSON/body | **Verified in curl** (= Verified in Burp) | **High** |
-| 4xx validation without auth challenge | **Verified in curl** (partial) | **High** |
-| 401/403 auth error body | Not Verified (auth at gateway) | Medium |
-| 302 → `/login` only | Not Verified (auth at gateway) | Medium |
-| 403 from WAF/ELB | Not Verified (WAF blocked) | Medium |
-| Timeout / connection refused **after curl run** | Not Verified | Medium |
-| Burp absent, curl **not run** (host exists) | **FAIL** — re-run review | — |
+| curl result | Status column |
+|-------------|---------------|
+| 2xx + business JSON/body | **Verified in curl** (= Verified in Burp) |
+| 4xx validation without auth challenge | **Verified in curl** (partial) |
+| 401/403 auth error body | Not Verified (auth at gateway) |
+| 302 → `/login` only | Not Verified (auth at gateway) |
+| 403 from WAF/ELB | Not Verified (WAF blocked) |
+| Timeout / connection refused **after curl run** | Not Verified |
+| Burp absent, curl **not run** (host exists) | **FAIL** — re-run review |
+
+**Severity:** assign via `severity-calibration.md` — **not** from this table.
 
 In findings, write: `### Live Verification (curl)` with command, status code, and body snippet (first 200 chars).
 
@@ -121,9 +151,11 @@ In findings, write: `### Live Verification (curl)` with command, status code, an
 
 ## Report wording
 
-**Header:** `DAST Backend: curl (Burp MCP not present)` when Burp skipped and curl executed.
+**Header:** `DAST Backend: curl (Burp MCP not present)` when Burp skipped and user-approved curl executed.
 
-In **Burp Suite PoC** sections (keep section name for Repeater copy-paste), add:
+**Header:** `DAST Backend: None — live probe skipped (user declined); Burp PoC crafted` when user declined curl.
+
+In findings, **always** include `### Burp Suite PoC` first. Add curl table only when curl actually ran:
 
 ```markdown
 ### Live Verification (curl — Burp MCP not present)
@@ -138,7 +170,7 @@ In **Burp Suite PoC** sections (keep section name for Repeater copy-paste), add:
 | **Severity** | **High** |
 ```
 
-Still include raw HTTP request block for manual Burp Repeater retest.
+Still include raw HTTP request block for manual Burp Repeater retest — **even when curl was not run**.
 
 ---
 

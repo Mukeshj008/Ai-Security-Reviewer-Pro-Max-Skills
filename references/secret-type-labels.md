@@ -90,6 +90,18 @@ Use the **first matching row** after `rg` hit. If vendor is obvious from variabl
 | `Bearer [long token]` in source | Bearer API token (identify service from URL/host if possible) |
 | `Basic [base64]` in source | HTTP Basic credentials |
 
+### Secret managers / Vault / KMS
+
+| Pattern / context | Secret Type label |
+|-------------------|-------------------|
+| `hvs.` token | **HashiCorp Vault service token** |
+| `spring.cloud.vault.token` literal | **HashiCorp Vault bootstrap token** |
+| `VAULT_TOKEN=` literal | HashiCorp Vault token |
+| `s.` Vault client token (legacy) | HashiCorp Vault client token |
+| AWS `secretAccessKey` literal | AWS Secret Access Key |
+| GCP `private_key` in service-account JSON | GCP service-account private key |
+| Azure client secret literal | Azure AD client secret |
+
 ### Application / partner APIs (name heuristics)
 
 | Variable / comment / host context | Secret Type label |
@@ -138,4 +150,4 @@ can extract this **[Secret Type]** and [impact: publish to bus / call API / decr
 
 ## Appendix E linkage
 
-Map to **SAST-SECRET-01…11** row that matched. In **Notes** column: `Secret Type: GitHub PAT`.
+Map to **SAST-SECRET-01…12** row that matched. In **Notes** column: `Secret Type: GitHub PAT`.

@@ -186,6 +186,6 @@ Only send if host discovered per `burp-host-discovery.md`. Read-only GET/POST fi
 | SAST-INJ-EL | Expression language injection (extended) |
 | SAST-INJ-LOG | Log injection (extended) |
 | SAST-LEAK-01…08 | Stack trace / error disclosure |
-| SAST-SECRET-01…11 | Hardcoded secrets |
+| SAST-SECRET-01…12 | Hardcoded secrets |
 
 **Note:** Extended INJ rows are attested in **Appendix H** (TAX-INJ); core 109-check SAST-INJ-* rows remain five (XSS, RCE, CMD, XXE, XML).

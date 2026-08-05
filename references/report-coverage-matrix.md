@@ -86,6 +86,7 @@
 | SAST-SECRET-09 | Env fallback to hardcoded | rg | §09 |
 | SAST-SECRET-10 | Base64 / hex encoded secrets (heuristic) | rg + manual | §10 |
 | SAST-SECRET-11 | Kafka / RMQ / third-party inline creds | rg | §11 |
+| SAST-SECRET-12 | Vault / KMS / cloud SM tokens (`hvs.*`) | rg | §12 |
 
 ### E.4 Deep injection (`SAST-INJ-*`)
 

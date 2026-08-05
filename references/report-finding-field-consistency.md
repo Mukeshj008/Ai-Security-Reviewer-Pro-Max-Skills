@@ -75,15 +75,24 @@ rg "Exploitable.*\|" "$MD" | rg -v "\| Yes \||\| No \||\| Hardening \|"
 
 ---
 
-## Status vs Severity (AUTH)
+## Status vs Severity (AUTH) — independent
 
-| Live test | Severity | Status |
-|-----------|----------|--------|
-| Verified unauthenticated 2xx | High | `Verified in Burp` / `Verified in curl` |
-| Code only or 401 at gateway | Medium | `Not Verified` + reason |
-| No host in code | Medium | `Not Verified (no target host in code)` |
+| Live test | Verification status | Severity |
+|-----------|---------------------|----------|
+| Verified unauthenticated 2xx | `Verified in Burp` / `Verified in curl` | From **four factors** — live proof may set Confidence Confirmed |
+| Code only; probe skipped / 401 at gateway / WAF / no host | `Not Verified` + reason | From **four factors** — **same rules as verified** |
 
-Severity in **Classification** for AUTH findings should match this rule (not duplicated in Exploitable).
+**Forbidden:** setting Severity to Medium (or any band) **because** status is Not Verified.
+
+---
+
+## Severity derivation (all finding types)
+
+1. Assign **Confidence** and **Exploitable** (G1–G5).
+2. Write **`### Impact Assessment`**.
+3. Rate four factors → **`### Severity Rationale`** (`severity-calibration.md`).
+4. Set **Verification Status** / **DAST Status** from DAST flow — **does not change step 3**.
+5. Sync **Severity** across Register, Classification, and title.
 
 ---
 

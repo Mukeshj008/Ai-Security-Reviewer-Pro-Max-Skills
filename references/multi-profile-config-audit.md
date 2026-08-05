@@ -66,6 +66,10 @@ rg -n '(azure|gcp|gcs|firebase)[_-]?(key|secret|token)[:= ]' <file> -i
 
 # Internal admin tokens baked into config (HIGH risk — controllers may use them)
 rg -n '(admin|service|internal)[_-]?(authorization|token|secret)[:= ]+["'\'']?[A-Za-z0-9\-_./+=]{8,}' <file> -i
+
+# HashiCorp Vault tokens + cleartext Vault URI
+rg -n 'hvs\.[A-Za-z0-9_-]{20,}|spring\.cloud\.vault\.token\s*:' <file>
+rg -n 'uri:\s*http://[^\s#]+vault|vault[^\n]*uri:\s*http://' <file> -i
 ```
 
 **Skip patterns** (do not report):

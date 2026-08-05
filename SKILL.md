@@ -2,18 +2,18 @@
 name: ai-security-reviewer
 description: >-
   Agent-native SAST+DAST+IaC code review: 109 security checks · 85+ vulnerability classes ·
-  760+ pattern signatures. v4.19 adds scope completeness enforcement (every module, every
-  config profile, every Dockerfile), per-method auth audit (per-endpoint, not per-controller),
-  and new pattern classes for CORS endsWith() bypass, controller Authorization-header overrides,
-  JWT minted without exp, and plaintext token/headers logging. Plus security-researcher discovery
-  beyond the 109-check matrix. IDOR/BOLA, JWT deep test, business-logic abuse cases, git-history
-  secrets, IaC misconfig review from source. Burp MCP when present; curl-only DAST when Burp
-  absent. Code-only findings — no npm/OSV/Maven/trivy dependency scanning. Agent runs rg/Read/curl.
+  760+ pattern signatures. v4.31: evidence-based false-positive control (effective-controls
+  catalogue, exploitability preconditions) + Go/Ruby/Rust/C-C++/Elixir/Scala/Apex stack packs,
+  constant-time MAC, SAML, OAuth, CI workflow injection, ZipSlip, weak RNG. v4.32.1 gate-precision fixes
+  (G3/G4 SSRF labels, pathSegment, Feign @Url, redirect chain). v4.30 static mobile
+  SAST (ATS, exported IPC, on-device storage); v4.29 deeplink session theft. Burp/curl DAST.
+  Code-only — no npm/OSV/Maven/trivy SCA; mobile runtime Frida/MITM = Residual.
 ---
 
 # AI Security Reviewer
 
-**Version 4.22** — Adds a model-proof quick-start contract, candidate ledger, final compliance gate, async/second-order workflow coverage, strict secret-redaction rules, and optional explicit SCA mode. v4.21 report naming, v4.19 scope completeness, per-method auth audit, v4.18 residual-risk mapping, v4.17 researcher layer, and v4.16 code-only default are retained.
+**Version 4.32.1** — **Gate precision fixes:** G3 vs G4 labels for SSRF exclusions; §2 authority precondition; `.path()` vs `.pathSegment()`; trace-until-found (no hop cap); LDAP callee chain; redirect/Feign `@Url`/runtime-config; all `*-ADJ-*` gates in Phase 2a. v4.32 SSRF/LDAP adjudication retained.
+
 
 **Report contract (read first):** `references/report-output-spec.md`
 
@@ -26,16 +26,24 @@ Before scanning, read these references in this order. Do **not** read every refe
 3. `references/manual-code-review.md`
 4. `references/model-proof-operating-contract.md`
 5. `references/finding-confidence-validation.md`
-6. `references/multi-module-enumeration.md`
-7. `references/multi-profile-config-audit.md`
-8. `references/per-method-auth-audit.md`
-9. `references/async-second-order-audit.md`
-10. `references/standards-coverage-map.md`
+5b. `references/effective-controls-catalogue.md` — **read before excluding anything as a false positive (G3/G4 evidence)**
+5c. `references/precision-false-positive-adjudication.md` — **read before reporting SSRF (SAST-OG-26) or LDAP (SAST-OG-18) hits**
+6. `references/severity-calibration.md` — **read before assigning Critical/High/Medium**
+6b. `references/finding-instances.md` — **same root cause → instances, not duplicate IDs**
+7. `references/multi-module-enumeration.md`
+8. `references/multi-profile-config-audit.md`
+9. `references/per-method-auth-audit.md`
+10. `references/async-second-order-audit.md`
+10b. `references/deeplink-audit.md` — **when mobile / deeplink / Linking / App Links triggers match**
+10c. `references/mobile-sast-audit.md` — **when Android/iOS/RN/Flutter mobile code present (static)**
+11. `references/dast-verification-flow.md` — **read before Phase 7 DAST**
+12. `references/standards-coverage-map.md`
 
 Then execute the shortest complete loop:
 
 ```
 scope → modules/profiles/routes → candidates ledger → source→sink validation →
+severity calibration (Impact × Exploitability × Exposure × Complexity) →
 DAST/curl where reachable → adjudication → residual register → strict report
 ```
 
@@ -66,7 +74,7 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | SBOM / supply-chain tooling | CycloneDX export, KEV prioritization for library CVEs |
 | Import-only VULN claims | "Jackson 2.8.5 has CVE-…" reported as VULN without a **code-level** vulnerable usage path |
 
-**In scope:** vulnerabilities visible in **first-party code and config** — auth gaps, injection sinks, secrets in source, IaC misconfigs read from Dockerfile/K8s YAML, logic flaws, IDOR/BOLA, JWT handling, CORS/filter bugs, open redirects, etc.
+**In scope:** vulnerabilities visible in **first-party code and config** — auth gaps, injection sinks, secrets in source, IaC misconfigs read from Dockerfile/K8s YAML, logic flaws, IDOR/BOLA, JWT handling, CORS/filter bugs, open redirects, **static mobile issues** (ATS/cleartext, exported Activities/Receivers/Providers/Services, on-device sensitive storage, WebView), deep-link session theft, etc.
 
 ---
 
@@ -107,12 +115,19 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | 18 | `finding-templates.md` | VULN/AUTH/IAC/LEAK formats; SCA only in explicit SCA mode |
 | **C1** | **`standards-coverage-map.md`** | **MANDATORY** — OWASP/CWE/ASVS/LLM sweep + Completeness & Residual Risk Register |
 | **C2** | **`finding-confidence-validation.md`** | **MANDATORY** — two-stage validation, confidence levels, fail-open policy |
+| **C2b** | **`effective-controls-catalogue.md`** | **MANDATORY** — what truly neutralizes each CWE (G3), exploitability preconditions (G4), third-party-response trust-boundary rule, plus SIG/SAML/OAuth/CI/ZipSlip/RAND/XXE precision patterns |
+| **C2c** | **`precision-false-positive-adjudication.md`** | **MANDATORY** — SSRF-ADJ-01 authority analysis; LDAP-ADJ-01 `.search()` disambiguation; Stage-2 gates before reporting pattern-only HTTP/LDAP hits |
+| **C3** | **`severity-calibration.md`** | **MANDATORY** — Impact × Exploitability × Exposure × Complexity; caps; `### Severity Rationale` |
+| **I1** | **`finding-instances.md`** | **MANDATORY** — same root cause → one finding with multi-instance Source/Sink; no duplicate IDs |
 | **S1** | **`multi-module-enumeration.md`** | **MANDATORY** (multi-module repos) — enumerate ALL modules, controllers, configs, Dockerfiles |
 | **S2** | **`multi-profile-config-audit.md`** | **MANDATORY** (multi-profile configs) — read EVERY `application-*.{yml,properties}`, not a sample |
 | **S3** | **`per-method-auth-audit.md`** | **MANDATORY** — per-endpoint-method walk; prevents per-controller-annotation masking |
 | **N1** | **`report-naming-convention.md`** | **MANDATORY (Phase 4)** — derive `<repo>_security_report.{md,html}` slug; rename legacy `security_report.*` on entry |
 | **A1** | **`async-second-order-audit.md`** | **MANDATORY** — queues, cron, Lambda/EMR/Spark, stored filters, save-now-exploit-later flows |
+| **DL1** | **`deeplink-audit.md`** | **MANDATORY when triggered** — deep-link session theft, unvalidated handlers, App Links gaps |
+| **M1** | **`mobile-sast-audit.md`** | **MANDATORY when mobile code present** — static ATS, exported IPC, on-device storage (no Frida) |
 | **Q1** | **`model-proof-operating-contract.md`** | **MANDATORY** — token-efficient execution, candidate ledger, final compliance gate |
+| **D4** | **`dast-verification-flow.md`** | **MANDATORY (Phase 7)** — Burp PoC always; curl only with user permission |
 | **SCA1** | `sca-dependency-audit.md` | Explicit SCA mode only — dependency health/advisory findings |
 | **19+** | **v4.15 additive (code-only)** | See table below |
 | 19–24 | finding-completeness, dataflow, impact, field-consistency, html-design, scan-matrices | Quality gates |
@@ -128,27 +143,44 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | `business-logic-abuse-checklist.md` | Commerce/fintech/payments |
 | `protocol-scans-graphql-ws-grpc.md` | GraphQL / WebSocket / gRPC detected |
 | `git-history-secrets-scan.md` | `.git` present — **git log/grep only**, not secret scanners as primary |
-| `risk-score-rubric.md` | Executive Summary risk score |
+| `risk-score-rubric.md` | Executive Summary risk score (after severity calibration) |
+| `severity-calibration.md` | **Every review** — assign Critical/High/Medium/Low |
 | `attack-chain-narrative.md` | ≥2 chainable findings |
 | `baseline-delta-report.md` | Prior report exists |
-| `mobile-sast-manifest.md` | android/ or ios/ tree |
+| `mobile-sast-manifest.md` | android/ or ios/ tree — MOB-01…26 checklist |
+| **`mobile-sast-audit.md`** | **Full static mobile audit** (ATS, exported components, on-device secrets) |
+| **`deeplink-audit.md`** | **Deep links / App Links / Universal Links / backend minting `myapp://` or session in link URL** |
 | `large-repo-playbook.md` | >500 files or >100k LOC |
 
 **Internal only (never required in user report):** full `report-coverage-matrix.md`, `platform-coverage-checklist.md`. Legacy Appendix E/G/I in markdown still OK — HTML suppresses.
 
-### Burp MCP / DAST (mandatory)
+### Burp MCP / DAST (mandatory — v4.23)
+
+**Full decision tree:** `references/dast-verification-flow.md`
+
+#### Always (before any live probe)
+
+For **every** HTTP-exploitable `AUTH-NNN` / `VULN-NNN`, **craft and publish** `### Burp Suite PoC` with a complete raw HTTP/1.1 request in Detailed Findings — **even when** Burp MCP is unavailable, curl is skipped, the user declines live probes, or no target host exists (use `[TARGET_HOST]` placeholder). See `burp_poc_templates.md` + `finding-templates.md`.
+
+Non-HTTP findings (`LEAK`, `IAC`) → `Burp PoC: N/A — not HTTP-exploitable`.
+
+#### Live verification (in order)
 
 1. Discover hosts with `rg` per **`burp-host-discovery.md`**
 2. **Never probe `localhost` / `127.0.0.1`**
-3. No external host → `Not Verified (no target host in code)`
-4. **Burp MCP present** → `send_http1_request` for AUTH + HTTP VULN + IDOR/JWT probes
-5. **Burp MCP absent** → **terminal `curl` only** — no Playwright, no Python `requests`, no other HTTP clients for verification (`curl-dast-fallback.md`, `network` permission)
+3. **Burp MCP present** → `send_http1_request` using the crafted PoC (AUTH + HTTP VULN + IDOR/JWT)
+4. **Burp MCP absent or rejected** + external host in code → **ask user permission before any `curl`** (AskQuestion or explicit Approve/Deny). **Do not run curl silently.**
+5. **User approves curl** → terminal `curl` only (`curl-dast-fallback.md`, `network` permission) — no Playwright, Python `requests`, or other HTTP clients
+6. **User declines curl** / no external host → `Not Verified` — **Burp PoC still mandatory** in the finding; document reason in Appendix C
 
-| DAST backend | Allowed verification tool |
-|--------------|---------------------------|
-| Burp MCP available | **Burp MCP only** (`send_http1_request`) |
-| Burp MCP unavailable | **curl only** (Shell tool) |
-| No external host in code | Skip live probes — document in Appendix C |
+| DAST backend | When |
+|--------------|------|
+| Burp MCP | `send_http1_request` probes executed |
+| curl (terminal) | Burp absent/unavailable **and user approved** curl |
+| None — Burp PoC only | User declined curl, or no external host — crafted requests still in findings |
+| Not Verified (no target host in code) | No host in code — PoC uses `[TARGET_HOST]` placeholder |
+
+**User permission is mandatory for curl.** If the user skips/denies, Phase 7 is still complete when every HTTP finding has a Burp PoC block.
 
 ---
 
@@ -165,7 +197,7 @@ For each taxonomy row, assign **Covered** / **N/A (justified)** / **Residual (no
 Apply the two-stage model in **`finding-confidence-validation.md`**:
 
 1. **Stage 1 — wide net:** generate every plausible candidate (`rg` + graphify + researcher pass). Favor recall.
-2. **Stage 2 — adjudicate:** per candidate, apply G1–G5 + a **CWE-specific micro-rubric** + DAST. Assign **Confidence: Confirmed / Firm / Tentative**.
+2. **Stage 2 — adjudicate:** per candidate, apply G1–G5 + CWE micro-rubric + **`effective-controls-catalogue.md`** (§1 control must be read and cited to exclude; §2 preconditions gate exploitability) + **severity calibration** (four factors only — **not** DAST/Not Verified) + DAST for **Verification Status** separately. Assign **Confidence** and **Severity** with mandatory `### Severity Rationale`.
 3. **Fail-open + ledger:** when uncertain, **never silently drop** — keep as Tentative or send to Appendix A *with a named reason*. Maintain an internal candidate ledger until every candidate has a terminal status.
 4. **CVE-override:** never suppress a known-active exploited pattern (e.g., Log4Shell-style JNDI, deserialization gadget) just because it sits in a "utils/test" path — flag for human review.
 
@@ -188,6 +220,8 @@ The **109-check matrix is a floor, not a ceiling.** After running applicable che
 - Domain-specific abuse (KYC/fintech/payments, role assignment, PII exposure)
 - Logic flaws, race conditions, cache poisoning, async/second-order flows
 - Queue/cron/Lambda/EMR/Spark flows where untrusted data is stored first and executed later
+- **Deep-link session theft** — tokens/OTP/session in URL; unvalidated `redirect`/`url` from deep links; custom-scheme hijack; missing App Links `autoVerify` / AASA
+- **Mobile IPC / storage** — exported Activities/Receivers/Providers; plaintext tokens in prefs/DB; ATS exceptions (see `mobile-sast-audit.md`)
 - Shadow endpoints, debug/ops routes, commented-out security controls
 - Framework misuse unique to this codebase (Spring interceptor chains, custom filters)
 
@@ -243,10 +277,22 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 0.  Host discovery          → burp-host-discovery.md
 1.  Attack surface          → graphify query OR rg recon — scope = ALL modules from −1c
 2.  SAST manifests          → rg per sast + LEAK + SECRET + INJ (scope = ALL modules)
-2b. Extended scans          → extended-category-scans.md (includes new §3.11–§3.12, §6.10–§6.12, §14.8–§14.9)
+2a. **Precision adjudication** → `precision-false-positive-adjudication.md` on **every** matching candidate:
+                               **SSRF-ADJ-01** (SAST-OG-26), **LDAP-ADJ-01** (SAST-OG-18),
+                               **INJ-ADJ-01** (SAST-OG-25/SQL hits), **DESER-ADJ-01** (readValue/parse),
+                               **LOG-ADJ-01** (SAST-OG-21), **AUTH-ADJ-01** (route auth hits),
+                               **XXE-ADJ-01** (XML/JAXB) — authority/sink trace before VULN ID
+2b. Extended scans          → extended-category-scans.md (§3.11–§3.12, §6.10–§6.12, §14.8–§14.9)
+2b.1 Stack pack             → extended-category-scans.md §19.x for EVERY language present
+                               (Spring/Node/PHP/Python/Java/.NET/mobile/**Go/Ruby/Rust/C-C++/Elixir/Scala/Apex/shell**)
+2b.2 Precision patterns     → effective-controls-catalogue.md §3 — SIG-01 constant-time MAC, SIG-02, SAML-01,
+                               OAUTH-01, CI-01 workflow injection, ARCHIVE-01 ZipSlip, RAND-01,
+                               **SSRF-ADJ-01, LDAP-ADJ-01** (mandatory on HTTP-client / `.search()` hits)
 2b.5 Async/second-order     → async-second-order-audit.md (queues, cron, Spark/EMR, Lambda, stored filters)
 2c. + Protocol scans        → protocol-scans-graphql-ws-grpc.md (if detected)
 2d. + Git history secrets   → git-history-secrets-scan.md (if .git)
+2e. + **Deep-link audit**   → deeplink-audit.md (if mobile / Linking / App Links / deeplink minting)
+2f. + **Mobile SAST (static)** → mobile-sast-audit.md + mobile-sast-manifest.md MOB-01…26 (if android/ios/RN/Flutter)
 4.  IaC (source only)       → iac-misconfig-scan.md — Read EVERY Dockerfile* + K8s/config files
 5.  Architect review        → security-architect.md → Top 3 risks (+ attack chains optional)
 6.  Route auth audit        → route_auth_audit.md
@@ -256,12 +302,13 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 6d. + Business logic        → business-logic-abuse-checklist.md (if commerce)
 6e. + Researcher pass       → manual-code-review.md — issues OUTSIDE 109 matrix; G1–G5
 6f. + Standards sweep       → standards-coverage-map.md — OWASP/API/CWE/ASVS/LLM completeness
-7.  DAST verify             → Burp MCP if present; **curl only** if Burp absent
+7.  DAST verify             → craft Burp PoC per finding first → Burp MCP if present → **ask user** → curl only if approved (`dast-verification-flow.md`)
 8.  Reachability traces     → graphify path OR manual (≥3 hops)
 9.  Adjudicate + confidence → finding-confidence-validation.md — G1–G5 + CWE rubric + fail-open
+9a. **Severity calibration** → severity-calibration.md — four factors, Step 1 caps, `### Severity Rationale`
                                + manual-code-review.md "forbidden exclusion reasons" check
 9b. Candidate ledger close  → every candidate = Finding / Tentative / Appendix A
-10. Live PoC                → Burp or curl per DAST table; TRUE POSITIVE + every AUTH-NNN
+10. Live PoC                → Burp PoC block in **every** HTTP finding; live Burp/curl when permitted; TRUE POSITIVE + every AUTH-NNN
 11. `<repo>_security_report.md` → report-output-spec.md (+ attestation + researcher count + Residual Register
                                + Module/Profile/Per-Method Audit completion gates)
 12. HTML                    → generate_html_report.py [--strict]
@@ -275,11 +322,11 @@ Record applicable checks in **internal scan log**; mark SCA/CVE/DEPS rows **N/A 
 
 ## Finding formats
 
-Required sections: **Classification** (Source/Sink), **Description**, **Assumptions**, **Vulnerable Code Snippet**, **Data Flow Trace**, **Impact Assessment**, **Remediation**, live PoC when HTTP applies (Burp or curl).
+Required sections: **Classification** (Source/Sink), **Description**, **Assumptions**, **Vulnerable Code Snippet**, **Data Flow Trace**, **Impact Assessment**, **`### Severity Rationale`**, **Remediation**, **`### Burp Suite PoC`** for every HTTP finding (mandatory even when live verification skipped), plus `### Live Verification (Burp MCP)` or `### Live Verification (curl)` when a probe actually ran.
 
 Templates: **`finding-templates.md`**, **`report-vulnerable-code-dataflow.md`**, **`report-impact-assessment.md`**.
 
-**Finding IDs:** VULN-NNN, AUTH-NNN, IAC-NNN, LEAK-NNN. In explicit SCA mode only, dependency findings use SCA-NNN in a separate SCA section.
+**Finding IDs:** VULN-NNN, AUTH-NNN, IAC-NNN, LEAK-NNN. In explicit SCA mode only, dependency findings use SCA-NNN in a separate SCA section. **Same CWE + root cause → one ID with `### Instances`** (per-instance Source/Sink) — see `finding-instances.md`. Do not repeat finding IDs for the same pattern across files/endpoints.
 
 **Report secret redaction:** show enough evidence to prove a secret exists (type, file, line, first/last 4 chars or hash), but redact raw values in reports and PoCs unless the user explicitly asks for raw evidence in a secure context.
 
@@ -343,4 +390,4 @@ Run comprehensive security audit, verify unauthenticated endpoints, generate <re
 
 ## Extended references
 
-See **`CHANGELOG.md`** for version history. v4.21 replaces org-specific examples with vendor-neutral `acme` placeholders; v4.20 adds the **mandatory report-file naming convention** (`report-naming-convention.md` + `scripts/derive_report_name.py`); v4.19 adds scope completeness enforcement, per-method auth audit, new mandatory pattern classes, and tighter Appendix A rules; v4.18 adds standards completeness mapping + residual-risk register + confidence/fail-open validation; v4.17 adds security-researcher discovery; v4.16 disables dependency tool scanning.
+See **`CHANGELOG.md`** for version history. **v4.32.1** gate-precision fixes; **v4.32** SSRF/LDAP precision adjudication; **v4.31** effective-controls catalogue + stack packs; **v4.30** full static mobile SAST; **v4.29** deeplink session theft.

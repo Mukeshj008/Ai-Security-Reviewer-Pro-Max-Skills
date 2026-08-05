@@ -232,9 +232,11 @@ GET /api/users?id='; DROP TABLE users; --
 GET /api/users?id=' AND SLEEP(5) --
 \`\`\`
 
-### Burp Suite PoC (MANDATORY for HTTP-exploitable findings)
+### Burp Suite PoC (MANDATORY for HTTP-exploitable findings — always include)
 
-Provide a **complete raw HTTP request** ready for Burp Repeater. Use placeholders for secrets. Mark Intruder positions with `§payload§`.
+Provide a **complete raw HTTP request** ready for Burp Repeater **in every AUTH-NNN and HTTP VULN-NNN** — **even when** Burp MCP is unavailable, the user declined curl, or no target host exists (use `[TARGET_HOST]`). Use placeholders for secrets. Mark Intruder positions with `§payload§`.
+
+**Order of work:** craft this PoC **before** attempting Burp MCP or curl (`dast-verification-flow.md`).
 
 \`\`\`http
 GET /api/users?id=§1' OR '1'='1'--§ HTTP/1.1
@@ -252,8 +254,14 @@ Cookie: session=[SESSION_COOKIE]
 | **Payload list** | `' OR '1'='1'--`, `' UNION SELECT...`, `' AND SLEEP(5)--` |
 | **Expected confirmation** | HTTP 200 + extra records / SQL error in body / 5s delay |
 | **Destructive** | No — read-only probe |
+| **Live status** | Verified in Burp / Verified in curl / Not Verified — [reason] |
+| **Manual retest** | Paste into Burp Repeater when live probe skipped |
 
 **Multi-step exploits:** number steps (Step 1 store payload → Step 2 trigger). For non-HTTP findings write: `Burp PoC: N/A — not HTTP-exploitable`.
+
+**Deep-link / mobile session-theft findings:** include `### Burp Suite PoC` when an HTTP minting endpoint or universal-link URL is involved; **also** include `### Mobile Deep Link PoC` with `adb shell am start -a android.intent.action.VIEW -d "…"` and/or `xcrun simctl openurl booted "…"` per `deeplink-audit.md`. Pure on-device custom-scheme issues without HTTP → Burp PoC N/A + Mobile Deep Link PoC mandatory.
+
+**Mobile IPC / storage / ATS findings (static):** Burp PoC N/A unless an HTTP API is involved. Include `### Mobile Component PoC` or storage notes per `mobile-sast-audit.md` (`am start` / `am broadcast` / `content query` / backup extraction path). Do not require Frida for Confirmed/Firm confidence when manifest+handler source→sink is clear.
 
 See **`references/burp_poc_templates.md`** for class-specific templates (SQLi, XSS, SSRF, IDOR, NoSQL, etc.).
 
@@ -387,7 +395,7 @@ public User getUser(@RequestParam Long id) {
 
 ## Hardcoded Secret Finding Format (VULN-NNN — secrets)
 
-Use when **SAST-SECRET-01…11** or **SAST-OG-10** confirms a committed credential. **Always** label the secret type per **`secret-type-labels.md`**.
+Use when **SAST-SECRET-01…12** or **SAST-OG-10** confirms a committed credential. **Always** label the secret type per **`secret-type-labels.md`**.
 
 ### Classification (mandatory fields)
 
@@ -416,19 +424,26 @@ Include **Vulnerable Code Snippet**, **Data Flow Trace** (config → runtime con
 
 Use for **missing or weak authentication** on HTTP routes. Separate ID series from `VULN-NNN`. **Validate every AUTH candidate** with Burp or curl when a staging host exists in code.
 
+**v4.28 — every unauthenticated endpoint is covered:** each method/path without effective app-layer auth **must** appear as an **instance** under an AUTH-NNN (Checklist one row per finding; Appendix D one row per endpoint with Finding+Inst). Same root cause → merge instances — **do not** repeat AUTH-001/002/003. Including Low-severity `/health`. Never Appendix D–only. See **`finding-instances.md`**.
+
 ### Severity & Status Rules (MANDATORY)
 
-| Condition | Severity | Status |
-|-----------|----------|--------|
-| Code shows missing auth; live test not run (but host exists) | **Medium** | **Not Verified** — **still file AUTH-NNN + mandatory Burp PoC** |
-| Burp/curl without auth → app responds (2xx business body, or 4xx validation without auth challenge) | **High** | **Verified in Burp** (or **Verified in curl**) |
-| Code suggests missing auth; Burp returns 401/403 auth error or login redirect | **Medium** | **Not Verified** (auth at gateway) — **mandatory Burp PoC for manual retest** |
-| Burp returns WAF 403 only | **Medium** | **Not Verified** (WAF blocked) — **mandatory Burp PoC** |
-| No external host in code | **Medium** | **Not Verified (no target host in code)** — **mandatory Burp PoC with placeholder host** |
+**Severity:** `severity-calibration.md` (Impact × Exploitability × Exposure × Complexity) + **`### Severity Rationale`**.  
+**Verification status:** table below — **does not set or cap severity**.
 
-> **Every AUTH-NNN** must include `### Burp Suite PoC` with a complete raw HTTP request — **even when Not Verified**. Severity Medium does **not** exempt PoC or other required sections.
+| Condition | Verification status | Burp PoC |
+|-----------|---------------------|----------|
+| Code shows missing auth; live test not run (user declined curl / Burp absent) | **Not Verified (live probe skipped)** | **Mandatory** |
+| Burp/curl without auth → 2xx / business body | **Verified in Burp** / **Verified in curl** | Include in Live Verification |
+| Burp returns 401/403 auth error or login redirect | **Not Verified (auth at gateway)** | **Mandatory** for retest |
+| Burp returns WAF 403 only | **Not Verified (WAF blocked)** | **Mandatory** |
+| No external host in code | **Not Verified (no target host in code)** | **Mandatory** with `[TARGET_HOST]` |
+
+> **Every AUTH-NNN** must include `### Burp Suite PoC` — regardless of severity or verification status. Ask user permission before curl (`curl-dast-fallback.md`).
 
 > Injection/IDOR on the same route may still be a separate `VULN-NNN` at Critical/High — AUTH findings measure **access control**, not payload exploitability.
+
+> **Multi-instance:** If multiple endpoints share one root cause, use **one AUTH-NNN** and list each endpoint under `### Instances` with per-instance Source and Sink (`finding-instances.md`).
 
 ### AUTH Finding Template
 
@@ -443,19 +458,29 @@ Use for **missing or weak authentication** on HTTP routes. Separate ID series fr
 | Vulnerability Type | Missing Authentication / Broken Access Control     |
 | CWE ID             | CWE-306: Missing Authentication for Critical Function |
 | OWASP Category     | A01:2021 - Broken Access Control                  |
-| Severity           | High (Verified in Burp) OR Medium (Not Verified)   |
-| Status             | Verified in Burp / Not Verified                    |
+| Severity           | From **`severity-calibration.md`** (not from DAST status)   |
+| Status             | Verified in Burp / Verified in curl / Not Verified (…)       |
 | Confidence         | High (code) / High (code + live)                   |
 | AI Verdict         | ✅ TRUE POSITIVE (missing auth middleware)         |
-| **Source (full path)** | `src/routes/api/index.js:520`                  |
-| **Sink (full path)**   | `src/routes/api/index.js:520`                  |
+| **Source (full path)** | `src/routes/api/index.js:520` (primary / worst instance) |
+| **Sink (full path)**   | `src/routes/api/index.js:520` |
+| **Instances**          | N (see ### Instances — required when N>1) |
+
+### Instances
+
+| Instance | Source (full path) | Sink (full path) | Method / Path | Notes |
+|----------|--------------------|------------------|---------------|-------|
+| 1 | `src/routes/api/index.js:520` | `src/routes/api/index.js:520` | GET /order/details | PII read — primary |
+| 2 | `src/routes/api/index.js:530` | `src/routes/api/index.js:530` | GET /refund/details | Same missing-middleware root cause |
+
+*(Omit ### Instances when there is only one location — Source/Sink in Classification suffice.)*
 
 ### Location Summary
 | Attribute          | Value                                              |
 |--------------------|----------------------------------------------------|
 | Router File        | src/routes/api/index.js                            |
 | Route Line         | 520                                                |
-| Method / Path      | GET /order/details                                 |
+| Method / Path      | GET /order/details (primary); see Instances for all |
 | Auth Expected      | verifySsoToken chain                               |
 | Auth Present       | None in handler chain                              |
 | Bypass Notes       | N/A — or `isSeller=true` skips SSO                 |

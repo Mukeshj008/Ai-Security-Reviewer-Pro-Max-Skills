@@ -198,31 +198,39 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 |------|----------|----------------|
 | **G1 — Attacker control** | Is there an actual attacker-controlled input (or missing auth on a reachable HTTP route)? | YES with file:line evidence |
 | **G2 — Reachability** | Can the input realistically reach the dangerous sink (or unauthenticated handler execute)? | YES — `graphify path` or equivalent trace |
-| **G3 — Protections** | Is there existing protection that blocks exploitation? | Document it; if effective → PASS / Appendix A |
-| **G4 — Practical exploit** | Can it **practically** be exploited (not theoretical, not dev-only, not test-only)? | YES with concrete attack scenario |
+| **G3 — Protections** | Is there existing protection that blocks exploitation? | Judge against **`effective-controls-catalogue.md` §1** — cite the control's `file:line`; bypassable control = NOT effective |
+| **G4 — Practical exploit** | Can it **practically** be exploited (not theoretical, not dev-only, not test-only)? | YES with concrete attack scenario; check **`effective-controls-catalogue.md` §2** preconditions |
 | **G5 — Assumptions** | What assumptions are required (auth role, second victim, timing, internal network)? | Listed explicitly; minimal assumptions preferred |
+
+**G3/G4 evidence rule:** an exclusion is valid only when you name the control (§1) or the unmet precondition (§2) **with a citation**. Unknown precondition → **Tentative**, not Appendix A.
 
 ### Verdict rules
 
 | Outcome | Action |
 |---------|--------|
-| All gates PASS | TRUE POSITIVE → Detailed Finding + Burp PoC if HTTP |
+| All gates PASS | TRUE POSITIVE → Detailed Finding + **mandatory** Burp PoC if HTTP |
 | G1 or G2 fails | FALSE POSITIVE → Appendix A |
-| G3 effective protection | FALSE POSITIVE or INFO only (do not inflate severity) |
-| G4 fails (theoretical only) | FALSE POSITIVE → Appendix A; note "speculative" |
+| G3 effective protection | FALSE POSITIVE → Appendix A — cite control `file:line`; failed gate **G3** (+ adjudication ID e.g. SSRF-ADJ-01) |
+| G4 fails (theoretical only) | FALSE POSITIVE → Appendix A; failed gate **G4**; note "speculative" |
 | G5 requires many unlikely assumptions | Downgrade or exclude; document in Appendix A |
-| Missing auth in code, Burp not run | AUTH-NNN **Medium / Not Verified** (existing rule) |
-| Missing auth, Burp confirms | AUTH-NNN **High / Verified in Burp** |
+| Missing auth in code, live probe not run (user declined / no host) | AUTH-NNN per **`severity-calibration.md`** + **Not Verified** + **mandatory Burp PoC** — cover every unauth route as an **instance** under that AUTH (or merge under shared root-cause AUTH); not Appendix D–only |
+| Unauthenticated `/health` (no secrets) | **Low** instance under shared AUTH (or Low AUTH if unique root cause) |
+| Multiple files/endpoints, same root cause | **One finding ID** + `### Instances` with Source/Sink each — **`finding-instances.md`** |
+| Missing auth, Burp/curl confirms 2xx / business body | Same severity rules — live success may set **Confidence: Confirmed**; **does not auto-upgrade severity** unless four factors justify it |
 
-### Confidence labels
+### Confidence labels (single canonical enum)
 
-| Confidence | Meaning |
-|------------|---------|
-| **High** | G1–G5 PASS; complete source→sink; live or code proof |
-| **Medium** | Strong code proof; Burp/gateway not verified |
-| **Low** | Do **not** report as FINDING — Appendix A or researcher note only |
+Use **`Confirmed` / `Firm` / `Tentative`** only — defined in `finding-confidence-validation.md`. The legacy High/Medium/Low confidence wording is **removed**; High/Medium/Low belong to **Severity** (`severity-calibration.md`). Never put a severity word in a confidence field.
 
-**Default posture:** When in doubt, **do not report**. Prefer fewer, higher-quality findings over noisy scans.
+| Confidence | Meaning | Where it goes |
+|------------|---------|---------------|
+| **Confirmed** | Live PoC succeeded, or unambiguous static proof with full source→sink | Detailed Findings |
+| **Firm** | G1–G5 pass on strong static evidence, no live verification | Detailed Findings |
+| **Tentative** | Plausible; a hop, control, or precondition is unproven | Detailed Findings **with `### Assumptions`**, or Appendix A with a named reason |
+
+**Default posture:** report **precisely**, not sparsely. Every candidate ends as a Finding, a Tentative finding, or an Appendix A row **with a named failed gate** — never a silent drop (`finding-confidence-validation.md` fail-open policy). Resolve doubt by **reading the code and citing the control** (`effective-controls-catalogue.md`), not by omitting the candidate.
+
+Precision comes from evidence: cite the neutralizing control (§1) or the unmet precondition (§2) of `effective-controls-catalogue.md` when excluding. An exclusion without cited evidence is a defect, exactly like an unproven finding.
 
 ---
 
@@ -237,7 +245,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 | Phase 1a | Auth audit = G1 for access control |
 | Phase 2 | Mandatory taint trace per candidate → feeds **`### Data Flow Trace`** |
 | Phase 3 | Apply **Pre-Report Verification Gates** + AI Validation Checklist |
-| Phase 3b | Burp PoC only for TRUE POSITIVE + AUTH |
+| Phase 3b | Burp PoC for **every** HTTP TRUE POSITIVE + AUTH (live probe optional) |
 | Phase 4 | Each finding: **`### Vulnerable Code Snippet`** + **`### Data Flow Trace`** + **`### Remediation`** (see `report-vulnerable-code-dataflow.md`) |
 | Appendix A | All false positives with gate that failed |
 
@@ -252,6 +260,8 @@ When filtering a candidate, record:
 |---------|----------|-------------|------------------|
 | SQL Injection | db.js:45 | G3 | Uses parameterized query via ORM |
 | SSRF | fetch.js:12 | G4 | URL hardcoded; param not passed to fetch |
+| SSRF | OutboundHttpClient.java:104 | **G3** | SSRF-ADJ-01: buildUrl() uses config base + pathSegment(domain); authority not attacker-controlled |
+| LDAP | JsonPathUtils.java:60 | **G3** | LDAP-ADJ-01: JMESPath Expression.search on JsonNode; no LDAP sink in file or callee chain |
 | XSS | template.jade:89 | G3 | Jade auto-escapes by default |
 ```
 
@@ -269,6 +279,10 @@ The following exclusion reasons are **not allowed** because past reviews used th
 | "Annotation present on the class" | Open the interceptor and confirm a class-level annotation actually applies to the method in question (most custom Spring interceptors check **method** annotation only — see `per-method-auth-audit.md`). |
 | "Other endpoints on the same controller are protected" | Per-method analysis required (see `per-method-auth-audit.md`) — peer protection is **not** transitive. |
 | "Same DB password is dev/test" | Confirm the password value does not appear in any `application-{prod,pre-prod,uat,perf}*.{yml,properties}` profile. Reuse across environments is itself a finding. |
+| "`restTemplate.exchange` / `fetch(` / `axios(` present → SSRF" | Run **SSRF-ADJ-01** (`precision-false-positive-adjudication.md`): trace who controls scheme/host/port. Config base + pathSegment/query only → Appendix A with cited builder. |
+| "`.search(` method call → LDAP injection" | Run **LDAP-ADJ-01**: require LDAP imports (`LdapTemplate`, `InitialDirContext`, etc.). JMESPath `Expression.search`, Elasticsearch, Python `re.search` → Appendix A. |
+| "Outbound call uses user-derived `domain` in URL → SSRF" | Distinguish **authority** vs **path segment**. `UriComponentsBuilder.fromHttpUrl(configBase).pathSegment(domain)` does not retarget host — Appendix A via **G3** (SSRF-ADJ-01). **G1 may still pass.** |
+| "`.path()` with user input is safe like pathSegment" | **Forbidden.** `.path(userInput)` injects slashes/`..` — not an SSRF authority bypass but not a safe dynamic segment; do not Appendix A on SSRF authority grounds alone if `.path()` used |
 
 When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed Findings with explicit `### Assumptions` block listing what would have to be true for the finding to be a false positive. Reviewers will downgrade later; silent drops cannot be recovered.
 
@@ -277,11 +291,11 @@ When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed F
 ## Senior reviewer notes (quality bar)
 
 1. **One finding, one root cause** — do not duplicate the same bug as SQLi + injection + OG hit.
-2. **Severity = impact × exploitability × exposure**, not pattern severity alone.
-3. **Compensating controls** — document gateway auth, WAF, network segmentation; adjust status/severity per AUTH rules.
+2. **Severity = f(Impact, Exploitability, Exposure, Complexity)** — use `severity-calibration.md`; not pattern severity alone. The shorthand **impact × exploitability × exposure** is retained but **Complexity** and **Step 1 caps** are explicit in the calibration doc.
+3. **Compensating controls** — document gateway auth, WAF, network segmentation; adjust status/severity per AUTH rules and calibration downgrades **only when verified**.
 4. **Test/dev code** — exclude unless deployed to production paths.
 5. **Dependency advisories** — default code-only mode marks SCA residual. Explicit SCA mode uses `SCA-NNN`; promote to VULN only when there is first-party vulnerable usage with a normal source→sink trace.
-6. **Prefer staging hosts** for Burp; never localhost.
+6. **Prefer staging hosts** for Burp/curl; never localhost; **ask user before curl**.
 7. **Evidence in report** — paste real source/sink code under **`### Vulnerable Code Snippet`**; never report without a documented data flow.
 
 ---

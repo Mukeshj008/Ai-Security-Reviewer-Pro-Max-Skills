@@ -62,7 +62,7 @@ run_check "SAST-OG-14" "Improper Validation / bus" 'JSON\.parse\(message\.|consu
 run_check "SAST-OG-15" "Insecure Deserialization" 'pickle\.loads|yaml\.load\(|unserialize|node-serialize'
 run_check "SAST-OG-16" "Insecure Hashing" "createHash\\(['\"]md5|createHash\\(['\"]sha1"
 run_check "SAST-OG-17" "Insufficient Logging" 'catch\s*\([^)]*\)\s*\{\s*\}'
-run_check "SAST-OG-18" "LDAP Injection" 'ldap\.|createClient\(.*ldap|filter\s*=\s*['\''"].*\+'
+run_check "SAST-OG-18" "LDAP Injection" 'LdapTemplate|InitialDirContext|DirContext|ldapTemplate|ldap\.|createClient\(.*ldap|filter\s*=\s*['\''"].*\+'
 run_check "SAST-OG-19" "Mass Assignment / PP" 'Object\.assign\([^)]*req\.(body|query)|__proto__|lodash\.(set|merge|defaultsDeep)'
 run_check "SAST-OG-20" "Memory Issues" 'allocUnsafe\(|new Buffer\(|noAssert\s*:\s*true'
 run_check "SAST-OG-21" "Mishandled Sensitive Info" 'err\.stack|res\.json\(\s*err\s*\)|logger\.(info|error).*(password|customer_id)'
@@ -70,7 +70,7 @@ run_check "SAST-OG-22" "Open Redirect" 'redirect\([^)]*req\.(query|body|params)|
 run_check "SAST-OG-23" "Other Security" 'cors\(\s*\)|Access-Control-Allow-Origin.*\*|bypassSecurityTrust'
 run_check "SAST-OG-24" "Path Traversal" 'path\.join\([^)]*req\.|readFile\([^)]*req\.|\.\./'
 run_check "SAST-OG-25" "SQL Injection" '\.query\(`|\.query\(['\''"].*\+|sequelize\.query\(['\''"].*\+'
-run_check "SAST-OG-26" "SSRF" 'axios\(|require\(['\''"]request['\''"]\)|fetch\(|url:\s*(req\.|data\.|message\.)'
+run_check "SAST-OG-26" "SSRF" 'axios\(|restTemplate\.(exchange|getForEntity)|fetch\(|WebClient|@Url\s|url:\s*(req\.|data\.|message\.)|new URL\(|URI\.create'
 run_check "SAST-OG-27" "XML Injection / XXE" 'xml2json|libxmljs|DOMParser|DOCTYPE|ENTITY'
 run_check "SAST-OG-28" "XPath Injection" 'xpath\.|selectNodes\(|evaluate\([^)]*\+'
 

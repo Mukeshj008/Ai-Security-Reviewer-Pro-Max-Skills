@@ -143,15 +143,40 @@ render_template("template.html", data=user_data)
 
 ### SSRF Patterns
 ```python
-# Dangerous
+# Dangerous — user controls destination
 requests.get(user_url)
 urllib.request.urlopen(user_provided_url)
 httpx.get(url_from_user)
+restTemplate.exchange(userSuppliedUrl, ...)  # Java — full URL from input
 
-# Safe - Allowlist validation
+# Safe — Allowlist validation (post-DNS resolution)
 if urlparse(url).hostname in ALLOWED_HOSTS:
     requests.get(url)
 ```
+
+```java
+// Dangerous — authority from user
+restTemplate.getForObject(req.getParameter("url"), String.class);
+URI.create(userInput);
+UriComponentsBuilder.fromUriString(userProvidedUrl).build();
+// Spring Cloud OpenFeign — user-controlled full URL
+@GetMapping
+Response get(@Url String url);
+
+// Safe — config-fixed authority; user input in path segment or query only
+@Value("${service.api.base-url}") private String baseUrl;
+UriComponentsBuilder.fromHttpUrl(baseUrl)
+    .path("/api/v1/")
+    .pathSegment(domain)   // encoded segment — cannot change host
+    .build()
+    .toUri();
+// NOT equivalent to .path(domain) — .path() allows slashes and ..
+
+// configBase + FIXED_ENDPOINT_CONSTANT — no user in URL at all
+String fullUrl = botEngineUrl + CHAT_COMPLETIONS_ENDPOINT;
+```
+
+**Mandatory:** before any CWE-918 finding, run **SSRF-ADJ-01** — trace authority; Appendix A exclusions use **failed gate G3** (not G4).
 
 ### Path Traversal
 ```python
@@ -336,10 +361,22 @@ new Buffer(str);  // deprecated unsafe
 
 ### LDAP Injection (SAST-OG-18)
 ```javascript
-// Dangerous
+// Dangerous — LDAP filter concat
 client.search(`(uid=${username})`);
 const filter = '(&(cn=' + userInput + ')(objectClass=*))';
 ```
+
+```java
+// NOT LDAP — do not report as CWE-90
+import io.burt.jmespath.Expression;
+Expression<JsonNode> expr = ...;
+expr.search(inputNode);  // JSON query — scanner false match on .search()
+
+// Dangerous — real LDAP
+ldapTemplate.search(baseDn, "(uid=" + username + ")", ...);
+```
+
+**Mandatory:** **LDAP-ADJ-01** — require LDAP imports/context; exclude JMESPath/ES/`re.search` namesakes.
 
 ### XML / XXE (SAST-OG-27)
 ```javascript

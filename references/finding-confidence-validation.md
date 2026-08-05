@@ -49,10 +49,24 @@ For the candidate's CWE, answer the rubric — generic reasoning underperforms C
 1. **Source** — exact attacker-controlled input (`file:line`)?
 2. **Sink** — exact dangerous operation for *this* CWE (`file:line`)?
 3. **Path** — does the data actually reach the sink (≥3 hops or graphify path)?
-4. **Control** — is there encoding/validation/authz that neutralizes it? Is it effective?
-5. **Exploit** — concrete attack input + expected effect.
+4. **Control** — is there encoding/validation/authz that neutralizes it? Judge with **`effective-controls-catalogue.md` §1** and cite `file:line`; a bypassable control is not a control.
+5. **Exploit** — concrete attack input + expected effect; the class preconditions in **`effective-controls-catalogue.md` §2** must hold (unknown → Tentative).
 
 If 1–3 or 5 cannot be answered → not Confirmed/Firm. Decide Tentative vs Appendix A per fail-open policy.
+
+---
+
+## Severity calibration (Stage 2 — after CWE rubric, before finding ID)
+
+**Do not assign Critical/High/Medium/Low until `severity-calibration.md` is applied.**
+
+1. Complete **`### Impact Assessment`** (CIA + Business) first — highest level feeds **Impact** factor.
+2. Rate **Exploitability**, **Exposure**, **Complexity** per `severity-calibration.md`.
+3. Apply **Step 1 caps** (Tentative → Medium max; Local exposure → Medium max for IAC; Hardening → High max). **Do not** cap severity for Not Verified / skipped DAST.
+4. Assign **Severity** from the decision matrix; document in mandatory **`### Severity Rationale`** table.
+5. Set **Verification Status** / **DAST Status** from Burp/curl (`dast-verification-flow.md`) — **independent** of severity.
+
+**Independence:** Confidence = certainty the bug exists. Severity = urgency from four factors. Verification Status = live DAST outcome. A **Firm** + **High** + **Not Verified** finding is valid.
 
 ---
 
@@ -63,7 +77,9 @@ Keep a consistent record so results are reproducible:
 ```
 candidate_id, cwe, source(file:line), sink(file:line), path_proven(yes/no/partial),
 control_present(desc), exploit(desc), verdict(Confirmed|Firm|Tentative|FalsePositive),
-confidence, verification_status, dast(Burp|curl|none), notes
+confidence, impact(Severe|High|...), exploitability(Trivial|...), exposure(Public|...),
+complexity(Low|...), severity(Critical|High|...), severity_cap(none|...),
+verification_status, dast(Burp|curl|none), notes
 ```
 
 ---
@@ -72,11 +88,30 @@ confidence, verification_status, dast(Burp|curl|none), notes
 
 Move to Appendix A only with a **named reason**, e.g.:
 - Sink not reachable from any attacker source (path disproven)
-- Effective framework/encoding control present (cite it)
+- Effective framework/encoding control present (cite it — `effective-controls-catalogue.md` §1)
+- Class precondition demonstrably unmet (name it — `effective-controls-catalogue.md` §2)
+- **Precision gate passed** — cite `SSRF-ADJ-01`, `LDAP-ADJ-01`, etc. from `precision-false-positive-adjudication.md`
 - Dev/test-only code, not built into deployable artifact
 - Input is not attacker-controlled (internal constant)
 
-Never use a bare "false positive" with no reason — that is itself a defect.
+### CWE-918 (SSRF) — mandatory micro-rubric addendum
+
+Before Confirmed/Firm SSRF:
+1. Trace URL to **authority** (scheme/host/port) — not merely "user input appears near HTTP call".
+2. If authority is config/constant-only **and not runtime-writable by attacker** → **Appendix A (SSRF-ADJ-01, failed gate G3)** — G1 may still pass (path segment input).
+3. Distinguish **`.pathSegment()`** (safe for SSRF authority) from **`.path(userInput)`** (not safe — keep candidate or separate path-abuse note).
+4. Fixed authority + redirect chain → **Tentative/Low** (SSRF-ADJ-01-F), not Appendix A.
+5. Merge multiple safe `buildUrl()` call sites → one finding with instances, not duplicate IDs.
+6. Builder not traced → **Tentative**, not Appendix A (fail-open).
+
+### CWE-90 (LDAP) — mandatory micro-rubric addendum
+
+Before Confirmed/Firm LDAP injection:
+1. Confirm LDAP client imports/API in the **file or callee chain** (≤3 hops).
+2. Confirm user input reaches **LDAP filter or DN string concat** — not JSON/JMESPath/regex `.search()`.
+3. JMESPath `io.burt.jmespath.Expression.search` → **Appendix A (LDAP-ADJ-01, failed gate G3 — wrong sink type)**.
+
+Never use a bare "false positive" with no reason — that is itself a defect. The forbidden-exclusion table in `manual-code-review.md` still applies: gateway/internal-network/staging claims need cited manifest evidence.
 
 ---
 

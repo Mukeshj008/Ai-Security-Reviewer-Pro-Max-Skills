@@ -77,6 +77,10 @@ rg -n "crypto\.pseudoRandomBytes|Math\.random\(\)" [SRC]
 rg -n "new WebSocket\s*\(\s*['\"]ws://" [SRC]
 rg -n "rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED" [SRC]
 rg -n "jsonwebtoken\.sign\([^)]*algorithm\s*:\s*['\"]none" [SRC]
+# Java / Apache HttpClient TLS trust-all (mandatory — not Node-only)
+rg -n "NoopHostnameVerifier|TrustAllStrategy|InsecureTrustManagerFactory|HOSTNAME_VERIFIER" [SRC]
+rg -n "TrustStrategy|loadTrustMaterial\s*\([^)]*\)\s*->\s*true|checkServerTrusted\s*\([^)]*\)\s*\{\s*\}" [SRC]
+rg -n "AES/CBC|PKCS5Padding|IvParameterSpec\s*\([^)]*getBytes" [SRC]
 ```
 
 ---
@@ -174,15 +178,27 @@ rg -n "createHash\(['\"]md5|createHash\(['\"]sha1|bcrypt\.compareSync\([^,]+,\s*
 ```bash
 rg -n "catch\s*\([^)]*\)\s*\{\s*\}|catch\s*\([^)]*\)\s*\{\s*//" [SRC]
 rg -n "logger\.(info|error).*(password|token|secret|ssn)" [SRC]
+# Format-string / curl debug leaks (Bearer, passwords) — often missed by logger.* only
+rg -n "String\.format\([^)]*(password|Bearer|accessToken|apiSecret|refreshToken)" [SRC] -i
+rg -n "Authorization:\s*Bearer\s*%s|CURL:.*Bearer|printInfoLogs\([^)]*(password|Bearer|token)" [SRC] -i
 ```
 
 ---
 
 ## SAST-OG-18 — LDAP Injection
 
+**Mandatory adjudication:** `precision-false-positive-adjudication.md` **LDAP-ADJ-01** — bare `.search(` matches JMESPath, Elasticsearch, Python `re.search`, etc. Require LDAP context before CWE-90.
+
 ```bash
-rg -n "ldap\.|createClient\(|search\([^)]*\+|filter\s*=\s*['\"].*\+.*['\"]" [SRC]
+# Stage 1 — candidates (wide net; do NOT report from hits alone)
+rg -n "LdapTemplate|InitialDirContext|DirContext|ldapTemplate|SpringLdap|LDAPConnection|ldap\.|createClient\(.*ldap" [SRC]
+rg -n "filter\s*=\s*['\"].*\+.*['\"]|\.search\([^)]*(\+|String\.format)" [SRC] --glob '*.{java,kt,js,ts,py,rb,cs}'
+
+# Stage 2 — exclude known namesake APIs (verify file has NO LDAP imports)
+rg -n "io\.burt\.jmespath|Expression\.search|re\.search\(|elasticsearch.*\.search" [SRC]
 ```
+
+When the only hit is JMESPath `Expression.search(JsonNode)` or similar with **no LDAP context in file or callee chain** → **Appendix A (LDAP-ADJ-01, failed gate G3)**.
 
 ---
 
@@ -191,6 +207,9 @@ rg -n "ldap\.|createClient\(|search\([^)]*\+|filter\s*=\s*['\"].*\+.*['\"]" [SRC
 ```bash
 rg -n "Object\.assign\([^)]*req\.(body|query)|\.\.(create|update)\(req\.body\)" [SRC]
 rg -n "__proto__|constructor\.prototype|lodash\.(set|merge|defaultsDeep)\(" [SRC]
+# Java / Jackson — ignoreUnknown + broad setters enable BOPLA
+rg -n "@JsonIgnoreProperties\s*\([^)]*ignoreUnknown\s*=\s*true" [SRC]
+rg -n "@RequestBody.*\b(Map|JsonNode|Object)\b|BeanUtils\.copyProperties\s*\([^)]*req" [SRC]
 ```
 
 ---
@@ -214,11 +233,16 @@ rg -n "console\.(log|info|debug)\(" [SRC]
 
 ---
 
-## SAST-OG-22 — Open Redirect
+## SAST-OG-22 — Open Redirect **and Deep Link destinations**
 
 ```bash
 rg -n "redirect\([^)]*req\.(query|body|params)|res\.redirect\([^)]*\+|location\.href\s*=" [SRC]
+# Deep link / universal link / app link surfaces (mandatory follow-up: deeplink-audit.md)
+rg -n -i "deeplink|deep_link|universalLink|appLink|intent://|getInitialURL|Linking\.(openURL|getInitialURL)|CFBundleURLSchemes|android:scheme" [SRC]
+rg -n -i "(token|session|sid|auth|otp)=.*(://|&)|://[^\s\"']+\?(token|session|sid|authToken|otp)=" [SRC]
 ```
+
+When any deeplink trigger matches (mobile tree **or** backend minting `myapp://` / universal links with tokens), run **`references/deeplink-audit.md`** end-to-end — session-in-URL and unvalidated handlers are bug-bounty Critical/High classics.
 
 ---
 
@@ -228,6 +252,10 @@ rg -n "redirect\([^)]*req\.(query|body|params)|res\.redirect\([^)]*\+|location\.
 rg -n "bypassSecurityTrust|trustAsHtml|ng-bind-html|sanitize\s*:\s*false" [SRC]
 rg -n "cors\(\s*\)|Access-Control-Allow-Origin.*\*" [SRC]
 rg -n "helmet\(\)|app\.disable\(['\"]x-powered-by" [SRC]
+# Spring CORS: wildcard origins + credentials (invalid/unsafe)
+rg -n "setAllowedOrigins\s*\([^)]*\*|setAllowCredentials\s*\(\s*true|allowedOriginPatterns\s*\([^)]*\*" [SRC]
+# Header → identity trust confusion (uid/tenant from request, not token)
+rg -n "getHeader\s*\(\s*[\"'](uid|userId|customerId|merchantId|X-Tenant|tenantId|X-User-Id)" [SRC] -i
 ```
 
 ---
@@ -252,10 +280,23 @@ rg -n "\$\{.*\}.*SELECT|SELECT.*\$\{" [SRC]
 
 ## SAST-OG-26 — Server-Side Request Forgery (SSRF)
 
+**Mandatory adjudication:** `precision-false-positive-adjudication.md` **SSRF-ADJ-01** — trace who controls **scheme/host/port** before any CWE-918 finding. Config-fixed base + path segment/query only → Appendix A.
+
 ```bash
-rg -n "axios\(|require\(['\"]request['\"]\)|fetch\(|http\.get\(|https\.get\(" [SRC]
-rg -n "url:\s*(req\.|data\.|message\.|params\.)" [SRC]
+# Stage 1 — candidates (wide net; do NOT report from hits alone)
+rg -n "axios\(|require\(['\"]request['\"]\)|fetch\(|http\.get\(|https\.get\(|restTemplate\.(exchange|getForEntity|getForObject|postForEntity)|WebClient|HttpClient\.|OkHttpClient|@Url\s" [SRC]
+rg -n "FeignClient|@RequestLine" [SRC] --glob '*.{java,kt}'
+rg -n "url:\s*(req\.|data\.|message\.|params\.)|new URL\(|URI\.create\(|fromUriString\(" [SRC]
+
+# Stage 2 — trace builders (Read hit file; follow buildUrl / UriComponentsBuilder ≤3 hops)
+rg -n "buildUrl|UriComponentsBuilder|fromHttpUrl|@Value.*\.url|baseUrl|base\.url" [SRC] --glob '*.{java,kt,js,ts,py,go}'
 ```
+
+**Report SSRF only when:** user input supplies authority (full URL, host, scheme, port), Feign `@Url`, unsafe string concat, or **`.path(userInput)`** on sensitive paths — not `pathSegment` alone.
+
+**Appendix A when:** authority from config/constant (not runtime-writable); dynamic values only in **`pathSegment`/queryParam** on fixed base (cite builder `file:line`; **failed gate G3**).
+
+**Tentative/Low when:** fixed authority + unvalidated redirect chain (SSRF-ADJ-01-F).
 
 ---
 
@@ -291,5 +332,6 @@ Every `SAST-OG-01` … `SAST-OG-28` row must appear in **Appendix E** with PASS 
 
 Also complete:
 - **`references/frontend-stacktrace-leaks.md`** — SAST-LEAK-01…08
-- **`references/secrets-patterns.md`** — SAST-SECRET-01…11
+- **`references/secrets-patterns.md`** — SAST-SECRET-01…12 (includes Vault `hvs.*`)
 - **`references/injection-deep-scan.md`** — SAST-INJ-XSS, RCE, CMD, XXE, XML
+- When Spring detected: **`extended-category-scans.md` §19.1** in full (TLS trust-all, CORS, Kafka trusted.packages, Vault HTTP, permitAll, secret logging)

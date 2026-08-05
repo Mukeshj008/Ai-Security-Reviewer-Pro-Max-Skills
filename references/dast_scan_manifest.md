@@ -1,6 +1,8 @@
-# DAST Scan Manifest (Burp MCP or terminal curl)
+# DAST Scan Manifest (Burp MCP, user-approved curl, or Burp PoC only)
 
-Live probing via **`user-burp`** MCP `send_http1_request` **when present**. When Burp MCP is **absent**, **do not install Burp** — run **`curl` in terminal** per **`curl-dast-fallback.md`**. **Never** use `localhost` / `127.0.0.1`.
+Live probing via **`user-burp`** MCP `send_http1_request` **when present**. When Burp MCP is **absent or rejected**, **ask user permission** before **`curl` in terminal** per **`curl-dast-fallback.md`** and **`dast-verification-flow.md`**. **Never** use `localhost` / `127.0.0.1`.
+
+**Always:** craft `### Burp Suite PoC` in each HTTP finding **before** any live probe — mandatory even when both Burp and curl are skipped.
 
 **Prerequisite:** Discover hosts with `rg` per **`burp-host-discovery.md`** (agent only — no script).
 
@@ -22,18 +24,22 @@ Record hosts in Appendix C and Appendix F.
 
 For each route in **Appendix D** (missing application-layer auth):
 
+0. **Craft `### Burp Suite PoC`** in the finding (mandatory — always).
 1. If Burp MCP available: read tool schema → `send_http1_request` without auth.
-2. If Burp MCP absent: **run curl in Shell** (see `curl-dast-fallback.md`) — same request shape, no auth headers.
-3. Use first host from code discovery (staging preferred over production).
+2. If Burp MCP absent/rejected: **ask user permission** → if approved, run curl in Shell (see `curl-dast-fallback.md`).
+3. If user declines curl: mark `Not Verified (live probe skipped — user declined)` — **Burp PoC still in finding**.
+4. Use first host from code discovery (staging preferred over production).
 
-**Verdict matrix** (see `route_auth_audit.md`):
+**Verdict matrix** (verification status only — see `route_auth_audit.md`):
 
-| Response | Burp status | AUTH severity |
-|----------|-------------|---------------|
-| 2xx + business body | Verified in Burp | High |
-| 401/403 auth challenge | Not Verified | Medium |
-| WAF 403 only | Not Verified (WAF) | Medium |
-| Connection error | Not Verified | Medium |
+| Response | Burp status |
+|----------|-------------|
+| 2xx + business body | Verified in Burp |
+| 401/403 auth challenge | Not Verified |
+| WAF 403 only | Not Verified (WAF) |
+| Connection error | Not Verified |
+
+**Severity:** `severity-calibration.md` — not derived from this table.
 
 Record each probe in **Appendix C**.
 
@@ -65,16 +71,18 @@ Only for **TRUE POSITIVE** candidates with HTTP surface. Read-only probes first.
 
 ---
 
-## Burp MCP unavailable (mandatory curl)
+## Burp MCP unavailable (curl with user permission, or Burp PoC only)
 
 1. **Do not install** Burp Suite or MCP extension.
-2. **Run curl in terminal** per **`curl-dast-fallback.md`** for **every** AUTH candidate when external host exists.
-3. Install `curl` only if command not found (`dependency-install-policy.md`).
+2. **Ask user permission** before any curl probe when external host exists (`dast-verification-flow.md`).
+3. If **approved** → run curl in terminal per **`curl-dast-fallback.md`** for AUTH + HTTP VULN candidates.
+4. If **declined** → no curl; every HTTP finding still has `### Burp Suite PoC`; Appendix C notes `Not run — Burp PoC only`.
+5. Install `curl` only if command not found (`dependency-install-policy.md`) **and** user approved probes.
 
 Document in report:
 
-- Appendix F: Phase 1b = `PASS (curl — Burp MCP not present)` when probes executed
-- Appendix C: tool column = `curl (terminal)`; status = `Verified in curl` when 2xx unauth
-- All AUTH findings: upgrade to **High / Verified in curl** when curl confirms; else **Medium / Not Verified**
+- Appendix F: Phase 7 = `PASS (curl — user approved)` OR `PASS (Burp PoC crafted; live probe skipped — user declined)`
+- Appendix C: tool column = `curl (terminal)` / `Burp MCP` / `Not run — Burp PoC only`
+- All AUTH findings: set **Verification Status** from Burp/curl; assign **Severity** via `severity-calibration.md` (Not Verified does not cap severity)
 
-**FAIL gate:** Burp absent + host in code + curl never run → Phase 1b incomplete; re-run review.
+**FAIL gate:** Burp absent + host in code + user **approved** curl + curl never run → Phase 7 incomplete.

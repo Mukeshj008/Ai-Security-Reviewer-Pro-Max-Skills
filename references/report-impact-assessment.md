@@ -32,10 +32,22 @@ Every **Detailed Finding** must include `### Impact Assessment` with a **CIA + B
 
 | Row | Write about |
 |-----|-------------|
-| Confidentiality | Exact data returned without auth (PII, catalog, orders, tokens) |
+| Confidentiality | Exact data returned without auth — classify **PII / PHI / PFI / None** (field names) |
 | Integrity | Whether the route is read-only or can mutate state |
 | Authentication | Application-layer auth missing; note gateway/WAF if live test inconclusive |
-| Business Impact | Fraud, compliance (PCI/GDPR), customer trust, SLA |
+| Business Impact | Fraud, compliance (PCI/GDPR/HIPAA), customer trust, SLA |
+
+### IDOR / BOLA (VULN)
+
+| Row | Write about |
+|-----|-------------|
+| Confidentiality | Cross-user object access — mandatory **PII / PHI / PFI / None** labels + named fields (see `idor-bola-audit.md` Step 1b) |
+| Integrity | Whether the IDOR allows create/update/delete of another tenant's object |
+| Authentication | Session/token present but ownership check missing (horizontal/vertical) |
+| Business Impact | Privacy breach, payment/health compliance, mass enumeration risk |
+
+**Bad:** `IDOR on GET /orders/{id}.`  
+**Good:** `Authenticated user B can read user A's order via `/v1/orders/{id}` (no ownership filter). Response includes **PII** (name, email, phone) and **PFI** (masked PAN last4, amount, payout account id).`
 
 **Bad:** `Missing authentication — unauthenticated access to GET /foo.`  
 **Good:** `Unauthenticated callers can read live catalog DB rows (`/v1/test` verified on staging) including product metadata used for storefront merchandising.`
@@ -87,17 +99,19 @@ Every **Detailed Finding** must include `### Impact Assessment` with a **CIA + B
 
 ---
 
-## Exploitable vs Impact
+## Exploitable vs Impact vs Severity
 
 | Field | Purpose |
 |-------|---------|
 | **Exploitable** (Classification + Register) | Can an attacker **trigger** the flaw in production? `Yes` / `No` / `Hardening` only |
-| **Impact Assessment** | **If triggered**, what is harmed? (CIA + business) |
+| **Impact Assessment** | **If triggered**, what is harmed? (CIA + business) — feeds **Impact** factor |
+| **Severity Rationale** | **How urgent?** Derived from Impact + Exploitability + Exposure + Complexity (`severity-calibration.md`) |
 
 **Mapping:**
-- Preconditions (DEBUG on, internal network only) → **Exploitable: Hardening**; Impact still describes harm **when** preconditions met.
+- Preconditions (DEBUG on, internal network only) → **Exploitable: Hardening**; Impact still describes harm **when** preconditions met; Severity usually **Medium** (Exposure/Exploitability caps).
 - Theoretical / filtered by gates → Appendix A, not a finding.
-- Live verified AUTH → **Exploitable: Yes**; Impact Confidentiality at least MEDIUM/HIGH.
+- Live verified AUTH → **Exploitable: Yes**; Severity from four factors (not auto-High).
+- **Not Verified** → document in Verification Status; **do not** lower Severity because of it.
 
 ---
 
@@ -107,7 +121,8 @@ For each finding ID:
 
 1. `### Impact Assessment` table present (5 rows minimum).
 2. No generic fallback phrases (see `report-finding-field-consistency.md`).
-3. Highest Impact **Level** should align with **Severity** (Critical/High finding should not be all LOW/NONE without justification in Description).
+3. Highest Impact **Level** should align with **Severity Rationale → Impact** row (Critical/High finding should not be all LOW/NONE without Step 1 cap noted in Severity Rationale).
+4. **`### Severity Rationale`** present per `severity-calibration.md`.
 
 ```bash
 # Every finding has Impact Assessment

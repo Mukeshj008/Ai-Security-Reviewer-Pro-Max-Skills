@@ -34,8 +34,8 @@ HTML export auto-wraps the findings table in a **collapsible toggle** (`<details
 
 | Situation | Checklist row |
 |-----------|---------------|
-| Missing auth + confirmed data exposure on same route | **VULN-NNN** only; route still in Appendix D |
-| Missing auth, inventory / gateway unknown | **AUTH-NNN** |
+| Missing auth + confirmed data exposure on same routes | **One AUTH-NNN** with instances; optional separate **VULN-NNN** only for a distinct second CWE |
+| Missing auth (any route, including `/health`) | Covered by AUTH finding **instances** + Appendix D (`Finding`+`Inst`); checklist one row per AUTH ID |
 | Injection on protected route | **VULN-NNN** only |
 
 One checklist row per unique finding ID. Register count = detailed finding count.
@@ -52,7 +52,7 @@ One checklist row per unique finding ID. Register count = detailed finding count
 | **AI Verdict** | Yes | `TRUE POSITIVE` / `FILTERED` |
 | **Verification Status** | Yes | How the finding was validated (see enum below) |
 | **DAST Status** | Yes | Live probe result when HTTP applies |
-| **PoC** | Yes | `Yes` / `N/A` |
+| **PoC** | Yes | Burp raw HTTP reference (e.g. `Burp PoC — GET /path`) — **required for every HTTP finding** even when DAST not run; `N/A` only for non-HTTP |
 
 ### Verification Status enum
 
@@ -68,7 +68,7 @@ One checklist row per unique finding ID. Register count = detailed finding count
 
 ### DAST Status enum
 
-`Verified in Burp` · `Verified in curl` · `Not Verified` · `Not Verified (internal port)` · `WAF blocked` · `N/A`
+`Verified in Burp` · `Verified in curl` · `Not Verified` · `Not Verified (live probe skipped — user declined)` · `Not Verified (no target host in code)` · `Not Verified (internal port)` · `WAF blocked` · `N/A`
 
 ---
 

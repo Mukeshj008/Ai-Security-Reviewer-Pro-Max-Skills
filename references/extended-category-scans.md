@@ -188,6 +188,8 @@ rg -n "findById\s*\(.*req\.|getUser\s*\(.*req\.|WHERE.*req\." --glob "*.{js,ts,p
 
 **Mandatory:** `graphify path` from param → DB/API fetch; verify ownership check in handler.
 
+**Mandatory data sensitivity:** for each IDOR candidate, classify exposed assets as **PII / PHI / PFI / None** (see `idor-bola-audit.md` Step 1b) and carry labels into Impact Assessment.
+
 ### §4.4 Privilege escalation
 
 ```bash
@@ -229,6 +231,17 @@ rg -n "random\.random\s*\(|rand\s*\(\s*\)|java\.util\.Random\s*\(\s*\)" --glob "
 rg -n "res\.redirect\s*\(.*(token|password|secret|apiKey|session)|Location.*\?.*(token|password|key)=" --glob "*.{js,ts,py,java}" -g '!node_modules/**'
 rg -n "window\.location.*(token|password|secret)|href=.*password=" --glob "*.{js,jsx,html}" -g '!node_modules/**'
 ```
+
+### §6.8b Deep links / universal links / session theft (MANDATORY when triggered)
+
+**Full procedure:** `deeplink-audit.md` (inventory → session params → unvalidated destinations → App Links/AASA → backend minting).
+
+```bash
+rg -n -i "deeplink|deep_link|universalLink|appLink|intent://|getInitialURL|Linking\.|CFBundleURLSchemes|android:scheme|autoVerify|applinks:" --glob '**/*.{java,kt,js,ts,swift,xml,plist,yml,json,dart}' -g '!node_modules/**' | head -80
+rg -n -i "getQueryParameter\s*\(\s*[\"'](token|session|sid|auth|otp|code|url|redirect|next)" --glob '**/*.{java,kt,js,ts,swift,dart}'
+```
+
+**Typical FINDING:** session/OTP/token in deep-link query without one-time binding → **VULN-NNN** (ATO); unvalidated `redirect`/`url` from deep link → **VULN-NNN** (CWE-601).
 
 ### §6.9 Client-side secrets
 
@@ -277,12 +290,14 @@ rg -n 'log(ger|ging)?\.(info|debug)\([^)]*(request\.headers|request\.json|reques
 
 Each hit on a controller serving real traffic → **High LEAK-NNN** unless headers/body are demonstrably redacted (search for a redaction helper).
 
-### §6.12 Sensitive field logging (passwords, OTPs, PII)
+### §6.12 Sensitive field logging (passwords, OTPs, PII / PHI / PFI)
+
+Classify leaked fields: **PII** (identity), **PHI** (health), **PFI** (financial/payment).
 
 ```bash
-rg -n 'log\.(info|debug|warn)\([^)]*(password|otp|pan|aadhaar|aadhar|cvv|pin|mobile|phone|email|ssn|dob)\b' --type java --type kotlin -i \
+rg -n 'log\.(info|debug|warn)\([^)]*(password|otp|pan|aadhaar|aadhar|cvv|pin|mobile|phone|email|ssn|dob|patient|diagnosis|prescription|balance|iban|card)\b' --type java --type kotlin -i \
   -g '!**/test/**'
-rg -n 'console\.(log|info|warn)\([^)]*(password|otp|cvv|ssn|creditCard)' --type js --type ts -i
+rg -n 'console\.(log|info|warn)\([^)]*(password|otp|cvv|ssn|creditCard|patient|diagnosis|pan|balance)' --type js --type ts -i
 ```
 
 ---
@@ -486,7 +501,33 @@ Detect stack from manifests, then run applicable subsection only.
 ```bash
 rg -n "actuator|/env|/heapdump|management\.endpoints|spring\.security\.csrf\.disable|@CrossOrigin\s*\(\s*\*|SpelExpressionParser|ObjectMapper.*enableDefaultTyping|readValue\s*\(.*HttpServletRequest" --glob "*.{java,xml,yml,yaml,properties}" -g '!node_modules/**'
 rg -n "jwt\.decode|parseClaimsJws|setSigningKey\s*\(\s*['\"]|verify\s*\(\s*false" --glob "*.{java,kt}" -g '!node_modules/**'
+# TLS trust-all on outbound clients
+rg -n "NoopHostnameVerifier|TrustAllStrategy|InsecureTrustManagerFactory|TrustStrategy|loadTrustMaterial" --glob "*.{java,kt}"
+# CORS wildcard + credentials
+rg -n "setAllowedOrigins\s*\(|setAllowCredentials\s*\(\s*true|allowedOriginPatterns\s*\(|CorsConfiguration" --glob "*.{java,kt}"
+# Kafka / Jackson polymorphic deser
+rg -n "trusted\.packages\s*:\s*['\"]?\*|enableDefaultTyping|activateDefaultTyping|@JsonTypeInfo" --glob "*.{java,yml,yaml,properties}"
+# Config footguns
+rg -n "ddl-auto:\s*(update|create)|h2\.console|management\.endpoints\.web\.exposure\.include:\s*[\"']?\*" --glob "*.{yml,yaml,properties}"
+# Vault cleartext + hardcoded token
+rg -n "spring\.cloud\.vault\.(uri|token)|hvs\.[A-Za-z0-9_-]{20,}|uri:\s*http://[^\s]*vault" --glob "*.{yml,yaml,properties}"
+# Global permitAll / SecurityFilterChain
+rg -n "permitAll\s*\(|authorizeHttpRequests|SecurityFilterChain|csrf\(.*disable" --glob "*.{java,kt}"
+# Secret logging (format / curl)
+rg -n "String\.format\([^)]*(password|Bearer|accessToken)|Authorization:\s*Bearer\s*%s|CURL:.*Bearer" --glob "*.{java,kt}" -i
+# Header impersonation
+rg -n "getHeader\s*\(\s*[\"'](uid|userId|customerId|merchantId|X-Tenant|tenantId)" --glob "*.{java,kt}" -i
+# Outbound HTTP (SSRF candidates — adjudicate with SSRF-ADJ-01; do NOT report from rg alone)
+rg -n "restTemplate\.(exchange|getForEntity|getForObject|postForEntity|execute)|WebClient\.|\.retrieve\(\)|HttpClient\.|OkHttpClient" --glob "*.{java,kt}"
+rg -n "@Url\s|FeignClient|@RequestLine" --glob "*.{java,kt}"
+rg -n "buildUrl|UriComponentsBuilder|fromHttpUrl|fromUriString|new URL\(|URI\.create|@Value.*\.url" --glob "*.{java,kt}"
+# JMESPath / namesake .search (exclude from LDAP — LDAP-ADJ-01)
+rg -n "io\.burt\.jmespath|Expression\.search" --glob "*.{java,kt}"
 ```
+
+**Mandatory when Spring detected:** every hit above that reaches a reachable HTTP path or secret store → candidate ledger entry (Finding / Tentative / Appendix A). Do not skip because "gateway protects it."
+
+**SSRF hits:** trace URL builder until authority source found (or **Tentative**). Config base + **`pathSegment`/`queryParam` only** (not `.path(userInput)`) → Appendix A **G3**. Feign `@Url` user URL → Finding. Redirect chain → Tentative/Low (SSRF-ADJ-01-F).
 
 ### §19.2 Node.js
 
@@ -519,6 +560,110 @@ rg -n "Runtime\.getRuntime\(\)\.exec|ProcessBuilder\s*\(|Class\.forName\s*\(.*re
 rg -n "BinaryFormatter|LosFormatter|ObjectStateFormatter|JavaScriptSerializer|ViewState|validateRequest\s*=\s*false|Request\.ValidateInput\s*\(\s*false" --glob "*.{cs,cshtml,vb}" 
 rg -n "TypeNameHandling\.All|JsonConvert\.DeserializeObject.*Type" --glob "*.cs" 
 ```
+
+### §19.7 Android / iOS / RN / Flutter (STATIC mobile — MANDATORY when triggered)
+
+**Full procedure:** `mobile-sast-audit.md` + checklist `mobile-sast-manifest.md` (MOB-01…26) + `deeplink-audit.md` when links present.  
+Do **not** require Frida/MITM; mark runtime Residual.
+
+```bash
+# Exported IPC
+rg -n 'android:exported\s*=\s*"true"|<activity|<receiver|<provider|<service|intent-filter|android:permission|grantUriPermissions' --glob '**/AndroidManifest.xml'
+rg -n 'startActivity\s*\(\s*getIntent|onReceive\s*\(|openFile\s*\(|PendingIntent\.(getActivity|getBroadcast)|FLAG_MUTABLE' --glob '**/*.{java,kt}'
+
+# ATS / cleartext
+rg -n 'usesCleartextTraffic|cleartextTrafficPermitted|NSAllowsArbitraryLoads|NSExceptionAllowsInsecureHTTPLoads|networkSecurityConfig' --glob '**/*.{xml,plist}'
+rg -n 'TrustAll|HostnameVerifier|checkServerTrusted|ServerTrustPolicy\.disable|AFSecurityPolicy' --glob '**/*.{java,kt,swift,m}'
+
+# On-device sensitive storage
+rg -n 'getSharedPreferences|EncryptedSharedPreferences|MODE_WORLD_|UserDefaults|NSUserDefaults|SecItemAdd|AsyncStorage|FlutterSecureStorage|shared_preferences' --glob '**/*.{java,kt,swift,ts,tsx,dart}'
+rg -n -i 'putString.*(token|session|password|otp|auth)|UserDefaults.*(token|password)|AsyncStorage\.setItem' --glob '**/*.{java,kt,swift,ts,tsx,dart}'
+
+# Backup / debug / WebView
+rg -n 'android:debuggable|android:allowBackup|addJavascriptInterface|setAllowUniversalAccessFromFileURLs|setJavaScriptEnabled\s*\(\s*true' --glob '**/*.{xml,java,kt}'
+rg -n 'Log\.[dviwe]\s*\([^)]*(token|password|otp|Bearer)' --glob '**/*.{java,kt}' -i
+```
+
+**Mandatory when mobile detected:** every exported component and every ATS/storage hit enters the candidate ledger (Finding / Tentative / Appendix A). Same IPC root cause → instances.
+
+### §19.8 Go (Gin / Echo / Fiber / net-http / gRPC)
+
+```bash
+# Injection sinks
+rg -n 'fmt\.Sprintf\([^)]*(SELECT|INSERT|UPDATE|DELETE|WHERE)|db\.(Query|Exec|Raw)\([^)]*\+|gorm.*\.Raw\(|\.Where\([^?)]*\+' --glob '*.go'
+rg -n 'exec\.Command\((\s*"(sh|bash|cmd)"|[^)]*\+)|exec\.CommandContext\([^)]*\+' --glob '*.go'
+# Template context (text/template in HTML = XSS)
+rg -n 'text/template|template\.HTML\(|template\.JS\(|template\.URL\(' --glob '*.go'
+# SSRF / path traversal
+rg -n 'http\.(Get|Post|NewRequest)\([^)]*(r\.|req\.|c\.Query|c\.Param|vars\[)|url\.Parse\([^)]*r\.' --glob '*.go'
+rg -n 'os\.(Open|ReadFile|Create|WriteFile)\([^)]*(r\.|c\.Param|vars\[|filepath\.Join\([^)]*r\.)' --glob '*.go'
+# TLS / crypto / randomness
+rg -n 'InsecureSkipVerify\s*:\s*true|tls\.Config\{[^}]*MinVersion' --glob '*.go'
+rg -n 'math/rand|rand\.Intn|rand\.Seed' --glob '*.go'
+rg -n 'hmac\.Equal|subtle\.ConstantTimeCompare|==\s*expectedMAC|bytes\.Equal\([^)]*(sig|mac|hmac)' --glob '*.go' -i
+# Auth middleware gaps (route registered without middleware group)
+rg -n '\.(GET|POST|PUT|DELETE|PATCH)\(\s*"' --glob '*.go' | head -60
+rg -n 'Use\(|Group\(|middleware\.|AuthRequired|RequireAuth|jwt\.' --glob '*.go' | head -40
+# Deserialization / SSTI-ish / unsafe
+rg -n 'gob\.NewDecoder|yaml\.Unmarshal\([^)]*&(map|interface)|json\.Unmarshal\([^)]*&(map\[string\]interface|interface)' --glob '*.go'
+rg -n 'unsafe\.Pointer|reflect\.' --glob '*.go' | head -20
+```
+
+**Go notes:** `html/template` auto-escapes — `text/template` for HTML output is a finding. `math/rand` for tokens is a finding (`crypto/rand` required). Per-route middleware is easy to omit on one route in a group — walk every registration (`per-method-auth-audit.md`).
+
+### §19.9 Ruby / Rails
+
+```bash
+rg -n '\.where\([^)]*#\{|find_by_sql|execute\(|\.order\([^)]*params|\.pluck\([^)]*params' --glob '*.{rb,erb}'
+rg -n 'system\(|`[^`]*#\{|%x\(|Open3\.|exec\(|eval\(|send\(\s*params|public_send\(\s*params|constantize|instance_eval' --glob '*.rb'
+rg -n 'html_safe|raw\(|<%==|sanitize\(' --glob '*.{rb,erb,haml,slim}'
+rg -n 'Marshal\.load|YAML\.load\b|Psych\.load\b|to_yaml.*load' --glob '*.rb'
+rg -n 'protect_from_forgery|skip_before_action\s*:verify_authenticity_token|skip_before_action\s*:authenticate' --glob '*.rb'
+rg -n 'permit!|params\.permit\(|attr_accessible|update_attributes\(\s*params' --glob '*.rb'
+rg -n 'render\s+(file|inline|text)\s*:|redirect_to\s+params|send_file\s*[^,]*params' --glob '*.rb'
+rg -n 'secure_compare|==\s*.*(token|signature|digest)' --glob '*.rb' -i
+```
+
+**Ruby notes:** `skip_before_action :authenticate` / `:verify_authenticity_token` are the highest-yield auth findings. `permit!` = mass assignment. ERB `<%= %>` escapes; `html_safe`/`raw` do not.
+
+### §19.10 Rust
+
+```bash
+rg -n 'unsafe\s*\{|from_utf8_unchecked|get_unchecked|transmute|static mut' --glob '*.rs'
+rg -n 'format!\([^)]*(SELECT|INSERT|UPDATE|DELETE)|query\(&format!|sqlx::query\(&' --glob '*.rs'
+rg -n 'Command::new\((\s*"(sh|bash)"|[^)]*format!)' --glob '*.rs'
+rg -n 'danger_accept_invalid_certs|danger_accept_invalid_hostnames|ClientConfig.*dangerous' --glob '*.rs'
+rg -n '\.unwrap\(\)|\.expect\(' --glob '*.rs' | head -20   # DoS-only; report solely on reachable request path
+```
+
+**Rust notes:** `sqlx::query!` (macro, compile-checked) and bound `.bind()` are safe; `&format!` into `query()` is not. `.unwrap()` is a finding only when a request-path panic causes DoS in a single-threaded/critical service — otherwise Appendix A.
+
+### §19.11 C / C++ (only when native code is in scope)
+
+```bash
+rg -n '\b(strcpy|strcat|sprintf|vsprintf|gets|scanf|alloca)\s*\(' --glob '*.{c,cc,cpp,h,hpp}'
+rg -n 'memcpy\s*\([^)]*\b(len|size|count|n)\b|\[\s*i\s*\]\s*=|malloc\s*\([^)]*[\+\*]' --glob '*.{c,cc,cpp}'
+rg -n 'printf\s*\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\)|fprintf\s*\([^,]+,\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\)' --glob '*.{c,cc,cpp}'
+rg -n 'free\s*\(|delete\s+|use.?after.?free|double free' --glob '*.{c,cc,cpp}' | head -20
+rg -n 'system\s*\(|popen\s*\(|execl?p?\s*\([^)]*\+' --glob '*.{c,cc,cpp}'
+```
+
+Format-string (`printf(user)`) and `strcpy`/`gets` on attacker-length input are the reliable static findings; heap-lifetime bugs usually need Tentative confidence unless the flow is short and clear.
+
+### §19.12 Other stacks (run when detected)
+
+```bash
+# Elixir / Phoenix
+rg -n 'Code\.eval|:erlang\.binary_to_term|String\.to_atom\(|Ecto\.Adapters\.SQL\.query\([^)]*#\{|raw\(' --glob '*.{ex,exs,eex,heex}'
+# Scala / Play / Akka
+rg -n 'sql"|SQL\(|\.as\(|Http\(\)\.singleRequest\([^)]*request|scala\.util\.Random' --glob '*.{scala,sbt}'
+# Salesforce Apex
+rg -n 'Database\.query\(|\[SELECT[^\]]*:\s*\w+|without sharing|WITHOUT SECURITY_ENFORCED|escapeSingleQuotes' --glob '*.{cls,trigger}'
+# Shell scripts in repo (deploy/entrypoint)
+rg -n 'eval\s+\$|\$\(\s*curl|curl[^|]*\|\s*(sh|bash)|chmod\s+777|--no-check-certificate|-k\b' --glob '*.{sh,bash}'
+```
+
+Apex: `without sharing` + dynamic SOQL built from input = record-level authz bypass + SOQL injection. Entrypoint scripts piping `curl | sh` are supply-chain findings (`IAC-NNN`).
 
 ---
 

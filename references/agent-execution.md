@@ -35,10 +35,10 @@
 1. **Phase −1** — Application context + scan scope (`scan-scope-metrics.md` → Executive Summary + Coverage Overview).
 1a. **Phase −1c — Module enumeration (mandatory for multi-module repos)** — Run `multi-module-enumeration.md`. Build module inventory; every subsequent `rg`/`Read` MUST cover **every** module in the inventory, not just one. Populate `### Module & Profile Enumeration` block in the Scan Attestation.
 1b. **Phase −1d — Profile config audit (mandatory when configs exist)** — Run `multi-profile-config-audit.md`. Read **every** `application-*.{yml,properties}` and equivalent per-environment file; do not sample. Build `### Config / Profile Audit` block.
-2. **Phase 0+** — Graphify or rg recon, manifests, IaC (**source/config Read only — every Dockerfile\***), **git/protocol/mobile scans when applicable**, architect (internal), AUTH audit, **per-method auth audit (`per-method-auth-audit.md`)**, **IDOR/BOLA**, **JWT deep test**, **business logic** (commerce), **security-researcher pass** (issues outside 109 matrix), DAST (Burp or curl-only), extended scans. **No OSV/npm/Maven/trivy dependency scanning (v4.16).**
+2. **Phase 0+** — Graphify or rg recon, manifests, IaC (**source/config Read only — every Dockerfile\***), **git/protocol/mobile scans when applicable**, architect (internal), AUTH audit, **per-method auth audit (`per-method-auth-audit.md`)**, **IDOR/BOLA**, **JWT deep test**, **business logic** (commerce), **security-researcher pass** (issues outside 109 matrix), DAST (**craft Burp PoC per HTTP finding → Burp MCP → ask user → curl only if approved** — `dast-verification-flow.md`), extended scans. **No OSV/npm/Maven/trivy dependency scanning (v4.16).**
 3. **Phase 6e — Researcher pass (mandatory)** — After checklist scans, read code as a senior AppSec researcher; validate with G1–G5; tag findings `Discovery: Researcher`.
 4. **Per candidate** — Taint trace; `graphify path` when graph exists else manual ≥3 hops.
-5. **Pre-report gates** — G1–G5 before FINDING; **check the "forbidden exclusion reasons" table in `manual-code-review.md` before moving anything to Appendix A** — unverified "trust the gateway" exclusions are no longer allowed.
+5. **Pre-report gates** — G1–G5 before FINDING; **severity calibration** (`severity-calibration.md`) with mandatory `### Severity Rationale`; **check the "forbidden exclusion reasons" table in `manual-code-review.md` before moving anything to Appendix A** — unverified "trust the gateway" exclusions are no longer allowed.
 
 ## Per-check execution loop
 
@@ -48,11 +48,12 @@ For **each** row in `report-coverage-matrix.md` (109 checks):
 2. Run documented `rg` / `graphify` / `Read` **yourself**. Bootstrap CLIs if missing (**except Graphify**). Skip SCA/CVE/DEPS rows as **N/A (code-only mode)**.
 3. On hits: narrow `Read` → reachability trace.
 4. G1–G5 + AI checklist → PASS or FINDING.
-5. Record in **internal scan log** (`internal-scan-log.md`) — Status, Finding Ref, Match Count, Notes.
+5. **Matching `*-ADJ-*` hits:** apply `precision-false-positive-adjudication.md` (SSRF, LDAP, INJ, DESER, LOG, AUTH, XXE) before FINDING; builder untraced → Tentative.
+6. Record in **internal scan log** (`internal-scan-log.md`) — Status, Finding Ref, Match Count, Notes.
 
 **Do not** paste 109 rows into `<repo>_security_report.md`. Summarize layers in the Verification Checklist `<details>` toggle only.
 
-**Reachability:** `graphify path` when graph exists; else manual file:line trace — never report from `rg` alone.
+**Reachability:** `graphify path` when graph exists; else manual file:line trace — **never report from `rg` alone**. For outbound HTTP, **never report SSRF from sink match alone** — authority trace to source is mandatory (SSRF-ADJ-01); Appendix A SSRF exclusions cite **failed gate G3**.
 
 ## Scan agent & matrices (mandatory in report)
 

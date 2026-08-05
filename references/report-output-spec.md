@@ -34,11 +34,11 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | 3 | Vulnerability Coverage Overview (files, LOC, layer summary — **not** 109-row matrix) | `vulnerability-coverage-overview.md` |
 | 4 | Scan Agent & Backend Attribution | `report-scan-matrices-agent.md` |
 | 5 | Scan Matrices Executed (MX-VERIFY, MX-COV, MX-F) | `report-scan-matrices-agent.md` |
-| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit` blocks when their triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md` |
+| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit` blocks when their triggers fire; **`### Deep Link Audit` / `### Mobile SAST Audit (static)` when mobile/deeplink triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`, **`deeplink-audit.md`**, **`mobile-sast-audit.md`** |
 | 6b | **Completeness & Residual Risk Register** (OWASP/API/CWE/ASVS/LLM verdicts; nothing silently missed) | `standards-coverage-map.md` |
 | 7 | **Top Structural Risks** (3 bullets max, linked to finding IDs) | below |
 | 8 | **Security Verification Checklist** (findings table w/ **Confidence** + **Discovery** + collapsible scan-layer toggle) | `report-findings-verification-register.md`, `finding-confidence-validation.md` |
-| 9 | Detailed Findings | `finding-templates.md` |
+| 9 | Detailed Findings (incl. **`### Severity Rationale`**) | `finding-templates.md`, `severity-calibration.md` |
 | 10 | Remediation Priority | — |
 | 11 | Appendix A — False Positives Filtered | — |
 | 12 | Appendix B — Scan Coverage (languages/frameworks) | — |
@@ -78,7 +78,7 @@ HTML export suppresses Appendix E, G, I if present in markdown (unchanged behavi
 
 Use **`## Security Verification Checklist`** only. Legacy aliases accepted by HTML parser: `Security Findings Verification Register`, `Master Findings Register`.
 
-Columns: ID · Severity · Category · **Confidence** (`Confirmed` \| `Firm` \| `Tentative`) · **Discovery** (`Checklist` \| `Researcher`) · Source (full path) · Sink (full path) · Exploitable · AI Verdict · Verification Status · DAST Status · PoC.
+Columns: ID · Severity · Category · **Confidence** (`Confirmed` \| `Firm` \| `Tentative`) · **Discovery** (`Checklist` \| `Researcher`) · Source (full path) · Sink (full path) · Exploitable · AI Verdict · Verification Status · DAST Status · PoC (Burp request ref — mandatory for HTTP even when live probe skipped; see `dast-verification-flow.md`).
 
 Optional second toggle (markdown `<details>`):
 
@@ -110,12 +110,19 @@ Do **not** emit full STRIDE / trust-boundary appendix.
 
 | Situation | Report as |
 |-----------|-----------|
-| Missing auth + sensitive data exposure on same route | **VULN-NNN** (primary); list route in **Appendix D** only — **no separate AUTH-NNN** unless access control is the sole issue |
-| Missing auth, no exploitable data path yet (inventory) | **AUTH-NNN** in checklist + Appendix D; Medium default |
+| Missing auth on routes sharing one root cause (e.g. global `permitAll`) | **One AUTH-NNN** with **N instances** (one per endpoint method). Each instance has its own Source/Sink. Checklist = 1 row; Appendix D = N rows linked to that AUTH ID + Instance #. See **`finding-instances.md`**. |
+| Missing auth with **different** root causes | Separate AUTH-NNNs (do not merge) |
+| Missing auth + sensitive data on same routes | Still that **AUTH-NNN** (instances). Optional separate **VULN-NNN** only for a **distinct** second CWE |
 | Injection on authenticated route | **VULN-NNN** only |
-| Same ID in checklist and Detailed Findings | **One row per unique ID** — register row count = detailed finding count |
+| Same ID in checklist and Detailed Findings | **One checklist/Detailed Finding ID** — instances live *inside* the finding, not as extra IDs |
 
-Appendix D may list more routes than the checklist (full inventory). Checklist = confirmed findings only.
+**Completion gate (v4.28):**  
+- Every unauthenticated endpoint appears as an **Appendix D row** with `Finding ID` + `Instance`.  
+- `sum(AUTH instance counts) == Appendix D unauthenticated endpoint rows`.  
+- Checklist AUTH row count == distinct AUTH finding IDs (not instance count).  
+- No inventory-only endpoints without a finding ID. `/health` without secrets → Low instance under the shared AUTH (or its own AUTH if root cause differs).
+
+**Same-finding merge (all finding types):** identical CWE + root cause + remediation family → **one finding, multiple instances** — never repeat AUTH-001/AUTH-002/… or LEAK-001/LEAK-002/… for the same pattern. Full rules: **`finding-instances.md`**.
 
 ---
 

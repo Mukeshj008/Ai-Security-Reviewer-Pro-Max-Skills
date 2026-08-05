@@ -4,6 +4,186 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.32.1] — 2026-08-05
+
+### Fixed — false-positive / exploitability gate precision (audit follow-up)
+
+- **`precision-false-positive-adjudication.md`** — SSRF Appendix A exclusions now cite **failed gate G3** (not G4); trace until authority found (no hop cap; untraced → Tentative); **G1+G3 both-pass** documented; **`.path()` vs `.pathSegment()`**; **SSRF-ADJ-01-F** redirect chain → Tentative/Low; **runtime-writable config** on question B; **Feign `@Url`**; LDAP **callee chain**; all `*-ADJ-*` marked mandatory when matching candidates exist.
+- **`effective-controls-catalogue.md` §2** — SSRF preconditions split into **authority control** (→ Appendix A G3), **blind egress**, and **redirect chain** rows.
+- **`finding-confidence-validation.md`**, **`manual-code-review.md`**, **`agent-execution.md`**, **`model-proof-operating-contract.md`**, **`scan-attestation-summary.md`**, **`sast_scan_manifest.md`**, **`extended-category-scans.md` §19.1**, **`patterns.md`** — aligned with v4.32.1 gates.
+- **`SKILL.md`** — v4.32.1; Phase 2a covers all `*-ADJ-*` gates.
+- **Org-neutral examples** — removed engagement-specific repo/class names from CHANGELOG, precision adjudication, manual review, patterns, and deeplink audit.
+
+### Why
+
+Internal audit of v4.32 found G3/G4 mislabeling on config-base RestTemplate SSRF exclusions, missing §2 authority precondition, `.path()` false-negative risk, and incomplete coverage (Feign, redirects, runtime config).
+
+## [4.32] — 2026-08-05
+
+### Added — precision false-positive adjudication (SSRF + LDAP namesakes)
+
+- **`references/precision-false-positive-adjudication.md`** — mandatory Stage-2 gates before CWE-918/CWE-90 findings:
+  - **SSRF-ADJ-01** — authority analysis (who controls scheme/host/port); config-fixed base + `UriComponentsBuilder.pathSegment` / query params → Appendix A; merge safe `buildUrl()` call sites into one finding with instances.
+  - **LDAP-ADJ-01** — disambiguate `.search()` (JMESPath `Expression.search`, Elasticsearch, Python `re.search`) from real LDAP sinks; require LDAP imports before CWE-90.
+  - Additional gates: INJ-ADJ-01 (ORM/prepared), DESER-ADJ-01 (JSON DTO), LOG-ADJ-01, AUTH-ADJ-01.
+- **`effective-controls-catalogue.md`** — expanded SSRF row with Java Spring safe patterns; new LDAP injection row; §3 **SSRF-ADJ-01** / **LDAP-ADJ-01** scan blocks.
+- **`sast_scan_manifest.md`** — SAST-OG-26 and SAST-OG-18 rewritten with two-stage queries + mandatory adjudication pointers (removed bare `.search(` LDAP pattern).
+- **`patterns.md`** — Java SSRF safe/unsafe examples; JMESPath vs LDAP distinction.
+- **`manual-code-review.md`** — forbidden exclusion reasons for "HTTP client present → SSRF" and "`.search(` → LDAP"; worked Appendix A examples (Spring RestTemplate + JMESPath class).
+- **`finding-confidence-validation.md`** — CWE-918 and CWE-90 micro-rubric addenda.
+- **`model-proof-operating-contract.md`** + **`agent-execution.md`** — compliance gates for SSRF-ADJ-01 / LDAP-ADJ-01 on every hit.
+- **`extended-category-scans.md` §19.1** — Spring RestTemplate/WebClient candidate + builder trace patterns.
+
+### Why
+
+Dogfooding on a Spring microservice (risk/rule engine) produced systematic false positives: ten `restTemplate.exchange(buildUrl(domain), …)` hits flagged as SSRF where `buildUrl()` fixed authority from config, and a JMESPath utility's `.search()` misclassified as LDAP. Pattern-only Stage-1 hits were reported without authority/sink-type analysis.
+
+## [4.31.1] — 2026-08-04
+
+### Added — XXE control row + XXE-01 pattern (found by dogfooding v4.31)
+
+- **`effective-controls-catalogue.md`** — new **XXE / XML external entities** row in §1. Explicitly rejects the anti-pattern *"typed/JAXB unmarshal, so XXE is residual/low"*: type binding constrains object mapping, not parser entity resolution. `Unmarshaller.unmarshal(Reader|String|InputStream)` builds a default entity-resolving parser and is **not** a control.
+- **Trust-boundary rule** — a third-party **response** is attacker-controlled whenever the transport is unauthenticated (trust-all `TrustStrategy`, `NoopHostnameVerifier`, cleartext HTTP, compromisable proxy). "It comes from the bank/partner" is not a control unless TLS validation is verified; chain the two findings instead.
+- **§3 `XXE-01`** — parser inventory + hardening-flag scan (`disallow-doctype-decl`, `FEATURE_SECURE_PROCESSING`, `SUPPORT_DTD`, …); hardening must be on the same factory instance.
+
+### Why
+
+Re-running the review of a Spring/SOAP bank-integration service surfaced a **false negative in the prior baseline report**, which had PASSed injection with "JAXB XXE residual low (typed unmarshal)" while that same report proved the outbound TLS client used trust-all + `NoopHostnameVerifier` — making the parsed bank response attacker-controlled. v4.31's §1 had rows for deserialization but none for XXE, so the incorrect reasoning was not explicitly blocked.
+
+## [4.31] — 2026-08-04
+
+### Added — evidence-based false-positive control
+
+- **`references/effective-controls-catalogue.md`** — §1 what genuinely neutralizes each class (bound params vs concat, framework auto-escaping vs `raw`/`utext`, canonicalize+confine vs strip-`../`, post-DNS allowlist vs blocklist, DTO deserialization vs default typing, header-auth vs cookie-auth for CSRF) with an explicit **NOT effective** column; §2 **exploitability preconditions** per class (e.g. JSON+nosniff response ⇒ no reflected XSS; Bearer-only auth ⇒ no CSRF) plus forbidden FP excuses ("needs rooted device", "needs an account"); §3 precision patterns; §4 reporting hooks.
+- **§3 new pattern classes:** `SIG-01` non-constant-time MAC/webhook-signature comparison (auth bypass, near-zero FP), `SIG-02` skipped signature verification, `SAML-01` (unsigned assertion, signature wrapping, missing `InResponseTo`/`Recipient`/`Destination`), `OAUTH-01` (prefix-matched `redirect_uri`, missing `state`, no PKCE, unvalidated `id_token`), `CI-01` GitHub Actions workflow injection (`pull_request_target` + PR-head checkout / `github.event.*` in `run:`, unpinned actions, self-hosted runners), `ARCHIVE-01` ZipSlip/zip bomb, `RAND-01` predictable tokens/OTP.
+
+### Added — missing language/stack packs
+
+- **`extended-category-scans.md` §19.8–§19.12** — **Go** (Gin/Echo/Fiber, `text/template` XSS, `math/rand` tokens, `InsecureSkipVerify`, per-route middleware gaps), **Ruby/Rails** (`skip_before_action`, `html_safe`, `permit!`, `Marshal.load`), **Rust** (`unsafe`, `&format!` into query, `danger_accept_invalid_certs`), **C/C++** (format string, `strcpy`/`gets`, unchecked `memcpy`), and **Elixir/Phoenix, Scala/Play, Salesforce Apex, shell/entrypoint scripts**. Previously only Spring/Node/PHP/Python/Java/.NET/mobile had blocks.
+
+### Fixed — internal contradictions that degraded precision
+
+- **Single canonical confidence enum.** `manual-code-review.md` had a second High/Medium/Low confidence scale conflicting with `Confirmed`/`Firm`/`Tentative` used by the report spec, register, and internal log — a `--strict` field-consistency hazard. Legacy scale removed; High/Medium/Low now unambiguously means **Severity**.
+- **Default posture reconciled.** "When in doubt, do not report" contradicted the mandatory fail-open policy; replaced with "report precisely, not sparsely" — exclusions require a cited control or unmet precondition, unknown preconditions stay Tentative.
+- **G3/G4 now have an evidence base** instead of unaided judgement.
+
+### Why
+
+Skill audit found: no per-CWE control/precondition knowledge (largest false-positive source for LLM adjudication), several high-yield exploitable classes with zero patterns (constant-time MAC compare, SAML, CI workflow injection), five widely deployed languages with no sink patterns, and two contradictory internal rules.
+
+## [4.30] — 2026-08-04
+
+### Added — full static mobile SAST (ATS, exported IPC, on-device storage)
+
+- **`references/mobile-sast-audit.md`** — mandatory when Android/iOS/RN/Flutter present: inventory manifests; exploitable exported **Activities / BroadcastReceivers / ContentProviders / Services**; PendingIntent; **ATS / cleartext / network_security_config**; sensitive data in prefs/DB/files/AsyncStorage; backup/debuggable chains; WebView; crypto; logs; permissions; RN/Flutter bridges. **Static only** — Frida/MITM = Residual.
+- **`mobile-sast-manifest.md`** expanded to **MOB-01…26**; **`extended-category-scans.md` §19.7**; taxonomy §16 Full for static classes.
+- Wired into SKILL (M1), model-proof, attestation, finding-templates (`### Mobile Component PoC`), platform-coverage, report-output-spec.
+
+### Why
+
+Bug-bounty and internal reviews need systematic static detection of mobile issues (ATS exceptions, exported components, plaintext tokens on device) without requiring dynamic instrumentation.
+
+## [4.29] — 2026-08-04
+
+### Added — deep-link / Universal Link / App Link session-theft audit
+
+- **`references/deeplink-audit.md`** — mandatory when mobile or deeplink minting/handling is present: inventory handlers; session/OTP/token in URL; unvalidated `redirect`/`url`; custom-scheme hijack; App Links `autoVerify` / AASA gaps; backend BFF minting; G1–G5; severity bands; `### Mobile Deep Link PoC` (`adb` / `simctl`); attestation block.
+- **MOB-09…11** in `mobile-sast-manifest.md`; **§6.8b** in `extended-category-scans.md`; **SAST-OG-22** expanded for deeplink triggers.
+- Coverage routing in `model-proof-operating-contract.md`; taxonomy + ASVS V7/V10 / OWASP A07; finding-templates + scan-attestation deep-link gate.
+
+### Why
+
+Bug-bounty programs frequently report **deeplink stealing user session** when apps accept auth tokens in deep-link query params or navigate without allowlists — previously only partially covered via open-redirect / mobile Partial rows.
+
+## [4.28] — 2026-08-04
+
+### Added — multi-instance findings (no duplicate IDs)
+
+- **`references/finding-instances.md`** — merge rule (same CWE + root cause + remediation → one finding); mandatory `### Instances` table with **per-instance Source and Sink**; AUTH/Appendix D Finding+Inst columns; secrets/TLS/CORS examples.
+- **`report-finding-completeness.md`**, **`finding-templates.md`** — Instances section required when N>1.
+
+### Changed — AUTH coverage without ID spam
+
+- **`report-output-spec.md`**, **`route_auth_audit.md`**, **`per-method-auth-audit.md`**, **`model-proof-operating-contract.md`**, **`scan-attestation-summary.md`**, **`report-findings-verification-register.md`** — every unauthenticated endpoint still covered; same root cause → **one AUTH-NNN** with instances; completion gate = Appendix D rows == sum(instances), not finding count.
+- **`SKILL.md`** — v4.28.
+
+## [4.27] — 2026-08-04
+
+### Added — Spring/Vault/TLS/CORS/Kafka/secret-log pattern pack
+
+- **`secrets-patterns.md` SAST-SECRET-12** — HashiCorp Vault `hvs.*`, `spring.cloud.vault.token`, cloud SM literals.
+- **`secret-type-labels.md`** — Vault / KMS secret type labels.
+- **`sast_scan_manifest.md`** — Java `NoopHostnameVerifier` / `TrustStrategy`; format-string Bearer/password logging; Spring CORS `setAllowedOrigins(*)` + credentials; header trust (`uid`/`tenantId`); Jackson mass-assignment.
+- **`extended-category-scans.md` §19.1** — expanded Spring Boot mandatory `rg` (TLS trust-all, CORS, Kafka `trusted.packages`, ddl-auto/H2/actuator, Vault HTTP, permitAll, secret logging, header impersonation).
+- **`multi-profile-config-audit.md`** — Vault token + cleartext Vault URI patterns.
+
+### Changed — every unauthenticated endpoint is an AUTH finding
+
+- **`report-output-spec.md`**, **`route_auth_audit.md`**, **`per-method-auth-audit.md`**, **`severity-calibration.md`**, **`finding-templates.md`**, **`report-findings-verification-register.md`**, **`model-proof-operating-contract.md`**, **`scan-attestation-summary.md`** — Appendix D inventory-only paths removed; **AUTH-NNN 1:1** with checklist + Detailed Findings (including Low `/health`); missing-auth + sensitive data keeps AUTH (optional separate VULN only for distinct CWE); global `permitAll` still emits per-method AUTH findings.
+
+## [4.26] — 2026-07-30
+
+### Added — IDOR/BOLA PII / PHI / PFI sensitivity
+
+- **`references/idor-bola-audit.md`** — Step 1b mandatory data-sensitivity labels (**PII** / **PHI** / **PFI** / **None**) on every object-ID candidate; object map + dual-session reporting carry labels.
+- **`report-impact-assessment.md`** — IDOR/BOLA impact guidance requiring sensitivity labels.
+- **`extended-category-scans.md` §4.3**, **`route_auth_audit.md`**, **`security-architect.md` ARCH-04** — aligned to the same taxonomy.
+
+## [4.25] — 2026-07-21
+
+### Changed — severity independent of verification status
+
+- **`references/severity-calibration.md`** — removed Step 1 cap tying **Not Verified** / skipped DAST to Medium max; DAST sets Verification Status and may upgrade Confidence only; worked example now **High** + Not Verified.
+- **`finding-confidence-validation.md`**, **`finding-templates.md`**, **`manual-code-review.md`**, **`report-finding-field-consistency.md`**, **`report-impact-assessment.md`**, **`model-proof-operating-contract.md`** — severity from four factors only.
+- **`dast-verification-flow.md`**, **`curl-dast-fallback.md`**, **`dast_scan_manifest.md`**, **`burp_poc_templates.md`**, **`route_auth_audit.md`**, **`report-finding-completeness.md`** — verdict matrices are verification-status only; removed AUTH severity columns.
+- **`SKILL.md`** — v4.25; Stage 2 adjudication explicitly separates severity from DAST.
+
+### Why
+
+Users reported that capping or defaulting to Medium when live probes were Not Verified understated real code-confirmed issues (e.g. fail-open webhooks with High impact). Severity should reflect impact and exploit conditions; verification status remains a separate, honest field.
+
+## [4.24] — 2026-07-21
+
+### Added — mandatory severity calibration (Impact × Exploitability × Exposure × Complexity)
+
+- **`references/severity-calibration.md`** — canonical severity decision matrix: four factors, Step 1 caps (~~AUTH Not Verified → Medium max~~ **removed in v4.25**; Local exposure → Medium max for IAC), Critical gate, mandatory **`### Severity Rationale`**, anti-pattern table, worked webhook example.
+- **C3** reference row in `SKILL.md` quick-start and reference stack.
+
+### Changed
+
+- **`SKILL.md`** — v4.24; Stage 2 adjudication + review sequence step **9a** include severity calibration; required finding sections add Severity Rationale.
+- **`finding-confidence-validation.md`** — severity step after CWE rubric; extended candidate ledger fields.
+- **`manual-code-review.md`** — AUTH verdict rules + senior notes link to calibration; forbid Critical on code-only missing auth.
+- **`finding-templates.md`** — AUTH severity table expanded; points to calibration before DAST table.
+- **`report-impact-assessment.md`** — Impact vs Severity vs Exploitable mapping; Severity Rationale gate.
+- **`report-finding-field-consistency.md`** — severity derivation workflow; forbidden Critical inflation patterns.
+- **`risk-score-rubric.md`** — severities must be calibrated before score aggregation.
+- **`model-proof-operating-contract.md`** — compliance gate + finding format example.
+
+### Why
+
+Field reviews (including webhook fail-open hubs) assigned **Critical** from pattern type alone without accounting for exposure (local compose), verification status (Not Verified), or complexity (optional header bypass). Risk score then hit 100/100 from inflated severities. v4.24 separates **Confidence** from **Severity** and makes severity reproducible.
+
+## [4.23] — 2026-07-13
+
+### Added — DAST verification with user consent + mandatory Burp PoC
+
+- **`references/dast-verification-flow.md`** — canonical Phase 7 decision tree: craft Burp PoC first → Burp MCP → **ask user permission** → curl only if approved → Burp PoC still mandatory when both skipped.
+- **User permission gate for curl** — agents must not run network probes silently; explicit Approve/Deny/Skip before any `curl` (`curl-dast-fallback.md`, `SKILL.md`).
+
+### Changed
+
+- **`SKILL.md`** — v4.23; Burp/DAST section rewritten; quick-start reads `dast-verification-flow.md`; reference stack adds **D4**; Phase 7/10 sequence updated.
+- **`curl-dast-fallback.md`** — curl is opt-in via user approval; user decline = `Not Verified (live probe skipped — user declined)` + mandatory Burp PoC.
+- **`burp_poc_templates.md`** — rule #10: always include `Live status` in PoC metadata; PoC required when verification skipped.
+- **`finding-templates.md`** — Burp PoC section strengthened; AUTH severity table adds user-declined row.
+- **`dast_scan_manifest.md`**, **`agent-execution.md`**, **`model-proof-operating-contract.md`** — aligned with permission flow and PoC-always rule.
+- **`scan-attestation-summary.md`**, **`report-findings-verification-register.md`**, **`report-output-spec.md`** — DAST backend enum + PoC column guidance.
+
+### Why
+
+Field reviews often skipped live verification when Burp MCP was unavailable or rejected, leaving findings without reproducible HTTP evidence. v4.23 ensures every HTTP finding ships a Burp Repeater-ready request while respecting user consent for outbound curl probes.
+
 ## [4.21] — 2026-06-30
 
 ### Changed — vendor-neutral examples

@@ -19,7 +19,7 @@ graphify query "admin internal cron worker queue consumer websocket grpc" --budg
 
 | Surface | Entry points | Auth model | Data sensitivity |
 |---------|--------------|------------|------------------|
-| Public HTTP | `/api/...` | SSO / none | PII / financial |
+| Public HTTP | `/api/...` | SSO / none | PII / PHI / PFI |
 | Internal | `/internal/...` | Basic / mTLS | ops |
 | Async | Kafka/SQS consumer | message trust | varies |
 
@@ -60,14 +60,16 @@ Only document threats with **code evidence** or **confirmed Burp** result.
 
 ---
 
-## ARCH-04 — Sensitive data flow (PII/secrets)
+## ARCH-04 — Sensitive data flow (PII / PHI / PFI / secrets)
+
+Classify assets as **PII** (identity), **PHI** (health), **PFI** (financial/payment), plus secrets/tokens.
 
 ```bash
-graphify query "password token ssn card pan email phone session cookie encrypt" --budget 1500
-rg -n "customer_id|order_id|pan|card|ssn|aadhaar|phone|email" routes api --glob "!*test*"
+graphify query "password token ssn card pan email phone medical patient diagnosis session cookie encrypt" --budget 1500
+rg -n -i "customer_id|order_id|pan|card|cvv|ssn|aadhaar|phone|email|patient|diagnosis|prescription|balance|iban" routes api --glob "!*test*"
 ```
 
-Map: **collect → store → log → transmit → display**. Flag logging/display without redaction.
+Map: **collect → store → log → transmit → display**. Flag logging/display without redaction. For ID-keyed APIs, also run `idor-bola-audit.md` Step 1b.
 
 ---
 

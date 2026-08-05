@@ -8,13 +8,14 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 
 | Section | Required | Notes |
 |---------|----------|-------|
-| `### Classification` | Yes | **Severity**, **AI Verdict**, **Exploitable**, Type, CWE, OWASP, **Source (full path)**, **Sink (full path)** |
+| `### Classification` | Yes | **Severity**, **AI Verdict**, **Exploitable**, Type, CWE, OWASP, **Source (full path)**, **Sink (full path)** — primary/worst instance when multi-instance |
+| `### Instances` | **Yes when N>1** | Per-instance Source + Sink — see **`finding-instances.md`**. Forbidden to emit duplicate finding IDs for the same root cause. |
 | `### Location & Data Flow` or `### Location Summary` | Yes | Full repo-relative paths with line numbers |
 | `### Description` | Yes | Checkmarx-style natural language (see SKILL.md) |
 | **`### Assumptions`** | **Yes (v4.15)** | G5 gate — table or bullets; see `finding-templates.md` |
 | **`### Vulnerable Code Snippet`** | **Yes** | Real code from repo — source + sink lines; see `report-vulnerable-code-dataflow.md` |
 | **`### Data Flow Trace`** | **Yes** | Full source → sink ASCII box + simplified flow; not optional for taint findings |
-| `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | **AUTH-NNN:** PoC **mandatory even when Not Verified** (Medium); write `Burp PoC: N/A — [reason]` only for non-HTTP |
+| `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | **AUTH-NNN:** PoC **mandatory even when Not Verified**; write `Burp PoC: N/A — [reason]` only for non-HTTP |
 | `Secret Type` in Classification | Yes for secrets | Per `secret-type-labels.md` — e.g. GitHub PAT, AWS key, RabbitMQ password |
 | `### Impact Assessment` | Yes | **CIA + Business table** — per `report-impact-assessment.md`; no generic one-liners |
 | **`### Remediation`** | **Yes — never omit** | See templates below |
@@ -81,7 +82,7 @@ Must appear in **`## Software Composition Analysis (SCA)`** summary table **and*
 
 ### AUTH-only (missing middleware)
 
-**Burp PoC required** whether Verified or Not Verified. Not Verified → Severity Medium; include manual test PoC.
+**Burp PoC required** whether Verified or Not Verified. **Severity** from `severity-calibration.md` — Not Verified does not imply Medium.
 
 ```markdown
 ### Remediation

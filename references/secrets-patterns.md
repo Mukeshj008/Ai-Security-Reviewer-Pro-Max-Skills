@@ -126,10 +126,27 @@ rg -n "apiKey\s*[:=]\s*['\"][A-Za-z0-9]{16,}['\"]" [SRC] -i
 
 ---
 
+## SAST-SECRET-12 — Vault / KMS / cloud secret-manager tokens
+
+```bash
+# HashiCorp Vault service tokens (hvs.*) and older client tokens (s.*)
+rg -n "hvs\.[A-Za-z0-9_-]{20,}" [SRC]
+rg -n "spring\.cloud\.vault\.token\s*:\s*\S+" [SRC]
+rg -n "VAULT_TOKEN\s*[:=]\s*['\"]?[A-Za-z0-9._-]{20,}" [SRC]
+# AWS Secrets Manager / SSM inline literals (not ARNs)
+rg -n "(aws_secret_access_key|secretAccessKey)\s*[:=]\s*['\"][^'\"]{16,}['\"]" [SRC] -i
+# Azure / GCP service-account JSON private_key blobs in source
+rg -n "\"private_key\"\s*:\s*\"-----BEGIN" [SRC]
+```
+
+**Flag:** Any Vault token or cloud SM credential embedded in `bootstrap-*.yml`, `application-*.yml`, `.properties`, or source. Prefer AppRole / K8s auth / short-lived tokens.
+
+---
+
 ## Reporting
 
-- Map findings to **SAST-OG-10** / **SAST-SECRET-01…11**.
-- **Mandatory:** Set **Secret Type** label per **`secret-type-labels.md`** (e.g. GitHub PAT, AWS Access Key ID, RabbitMQ password, MapMyIndia API key, Strapi token, JWT signing secret).
+- Map findings to **SAST-OG-10** / **SAST-SECRET-01…12**.
+- **Mandatory:** Set **Secret Type** label per **`secret-type-labels.md`** (e.g. HashiCorp Vault token, GitHub PAT, AWS Access Key ID, RabbitMQ password, MapMyIndia API key, Strapi token, JWT signing secret).
 - Include in `### Classification`: `Secret Type`, `Service / Vendor`, `Credential Role`.
-- Severity: **Critical** for live keys in `src/`; **High** for production config passwords; **Medium** for test-only if committed to main branch.
+- Severity: **Critical** for live keys in `src/` **and production Vault tokens**; **High** for production config passwords; **Medium** for test-only if committed to main branch.
 - **Redact** values in report — never paste full secret.

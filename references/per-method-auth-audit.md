@@ -105,21 +105,34 @@ If any of the three is missing → keep the finding at **Medium / Tentative** wi
 
 ---
 
-## Step 6 — Report each unauthenticated method as its own AUTH-NNN
+## Step 6 — Cover every unauthenticated method (instances under AUTH findings)
 
-Do **not** roll up "5 unauth methods on SignInOTPController" into one finding. Each unauth method gets its own ID so triage can prioritise and verify individually.
+**Do not** invent a new AUTH-NNN for every method when they share one root cause. **Do** ensure every unauth method is visible for triage.
 
-In Appendix D:
+**v4.28:**
+
+| Same root cause (e.g. global `permitAll`) | **One AUTH-NNN** + **`### Instances`** (one row per method; Source + Sink each) |
+| Different root causes | Separate AUTH-NNNs |
+| Checklist | One row per AUTH finding |
+| Appendix D | One row per endpoint with `Finding` + `Inst` |
+
+See **`finding-instances.md`**. `/health` without secrets → Low **instance**, still listed. **Forbidden:** Appendix D row without Finding ID.
+
+**Spring Boot actuator (v4.32):** run **`actuator-sensitive-endpoints-audit.md`**. Sensitive endpoints (`/actuator/env`, `/actuator/heapdump`, …) → **VULN-NNN or IAC-NNN** with per-endpoint Instances — **not** a High AUTH instance on `/actuator/**`. Probe-safe `/actuator/health` (especially `show-details: never`) → AUTH **Low** instance only; does **not** create a separate actuator VULN.
 
 ```markdown
-| ID | Method | Path | Controller method | Code auth | Status | Severity | Impact |
-|----|--------|------|-------------------|-----------|--------|----------|--------|
-| AUTH-014 | POST | /signin/validateOtp | SignInOTPController.signinValidateOtp:42 | None | Not Verified | Medium | Auth bypass — sign-in OTP |
-| AUTH-015 | POST | /signin/validateOtp/v2 | SignInOTPController.v2SigninValidateOtp:58 | None | Not Verified | Medium | Auth bypass — sign-in OTP v2 |
-| AUTH-016 | POST | /signin/validateOtp/v3 | SignInOTPController.v3SigninValidateOtp:74 | None | Not Verified | Medium | Auth bypass — sign-in OTP v3 |
-| AUTH-017 | POST | /forceDebBreak | DeBBreakController.forceDebBreak:31 | None | Not Verified | **High** | Admin force-break, no auth |
+| Finding | Inst | Method | Path | Controller method | Code auth | Status | Severity | Impact |
+|---------|------|--------|------|-------------------|-----------|--------|----------|--------|
+| AUTH-001 | 1 | POST | /signin/validateOtp | SignInOTPController.signinValidateOtp:42 | None | Not Verified | Medium | Auth bypass — sign-in OTP |
+| AUTH-001 | 2 | POST | /signin/validateOtp/v2 | SignInOTPController.v2SigninValidateOtp:58 | None | Not Verified | Medium | Auth bypass — sign-in OTP v2 |
+| AUTH-001 | 3 | POST | /signin/validateOtp/v3 | SignInOTPController.v3SigninValidateOtp:74 | None | Not Verified | Medium | Auth bypass — sign-in OTP v3 |
+| AUTH-002 | 1 | POST | /forceDebBreak | DeBBreakController.forceDebBreak:31 | None | Not Verified | **High** | Different root cause — admin force-break |
+| AUTH-001 | 4 | GET | /actuator/health | (actuator) | None | Not Verified | Low | Health — same permitAll root cause |
 ```
 
+\*Severity on the **finding** = worst instance (`severity-calibration.md`). Per-row Impact still documents each endpoint.
+
+When Spring Security uses global `.anyRequest().permitAll()`, emit **one** AUTH for that filter chain with **instances for every mapped controller method** — do not emit N AUTH IDs.
 ---
 
 ## Step 7 — Completion gate in attestation
@@ -131,8 +144,10 @@ In Appendix D:
 | Authenticated (class-level annotation that actually fires) | B |
 | Gateway-only (verified with manifest) | C |
 | Inline soft check (tentative) | D |
-| Unauthenticated | U  ← every entry = AUTH-NNN candidate |
+| Unauthenticated | U  ← every entry covered by an AUTH finding **instance** |
+| Distinct AUTH findings | F  ← checklist row count |
 | `A + B + C + D + U` must equal `N` | (check) |
+| `sum(instances across F) == U` | (v4.28 instance gate) |
 ```
 
 If `A + B + C + D + U != N`, the audit is incomplete → `--strict` failure.

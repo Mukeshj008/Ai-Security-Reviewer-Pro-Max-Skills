@@ -2,7 +2,7 @@
 
 > **Works with Cursor and Claude** — same skill, same prompts, same reports.
 
-**Version 4.21** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
+**Version 4.32.1** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
 **Repo:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills
 
@@ -17,7 +17,7 @@
 - Real **vulnerable code snippets** copied from your repo (not generic examples)
 - Full **data-flow traces** showing how attacker input reaches the dangerous sink
 - **Remediation** with BEFORE/AFTER code fixes for each issue
-- Burp/curl-ready PoC requests for live-verifiable findings
+- Burp Repeater-ready PoC requests in **every** HTTP finding (even when live verification skipped)
 - **Scan Attestation Summary**, **Completeness & Residual Risk Register**, and **Confidence** per finding
 
 **What it covers:**
@@ -28,9 +28,9 @@
 - Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
 - **Security-researcher pass** — issues outside the 109-check matrix, validated with the same G1–G5 bar
 
-> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.21**). See `CHANGELOG.md` for per-version behavior.
+> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.32.1**). See `CHANGELOG.md` for per-version behavior.
 
-**How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it falls back to **curl only**. Graphify speeds up discovery but is not required.
+**How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it **asks your permission** before **curl** fallback. Every HTTP finding includes a crafted Burp request regardless. Graphify speeds up discovery but is not required.
 
 **Best for:** Developers and security teams who want Checkmarx-quality findings inside Cursor or Claude — without installing Semgrep, Burp plugins, or a separate SAST pipeline.
 
@@ -55,9 +55,12 @@ This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`
 - **Scope completeness (v4.19+)** — every module, every config profile, every Dockerfile, per-endpoint-method auth audit
 - Senior manual review — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
 - **Two-stage confidence validation (v4.18+)** — Confirmed / Firm / Tentative; fail-open (never silently drop uncertain candidates)
+- **Precision false-positive adjudication (v4.32+)** — SSRF-ADJ-01 authority analysis, LDAP-ADJ-01 sink disambiguation, effective-controls catalogue (v4.31+)
+- **Severity calibration (v4.24+)** — Impact × Exploitability × Exposure × Complexity; **`### Severity Rationale`** per finding
+- **Severity ≠ DAST (v4.25+)** — Not Verified / skipped curl does **not** lower severity; verification status is reported separately
 - Every finding includes **Vulnerable Code Snippet**, **Data Flow Trace**, and **Remediation** (BEFORE/AFTER)
 - Unauthenticated endpoint audit (AUTH-NNN) + IaC misconfig scans + researcher-discovered issues
-- Live verification via **Burp MCP** — falls back to **curl** if Burp is not available
+- Live verification via **Burp MCP** — with **user-approved curl** fallback; **Burp PoC always** in findings
 - **Graphify** optional — faster discovery when installed; works without it using `rg` + reads
 - Delivers `<repo>_security_report.md` + `<repo>_security_report.html` via `derive_report_name.py`
 
@@ -97,7 +100,7 @@ ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.cursor/skills/ai-security
 | Tool | Role | If missing |
 |------|------|------------|
 | **Graphify** | Faster attack-surface mapping & source→sink paths | Agent uses `rg` + narrow file reads |
-| **Burp MCP** | Live DAST on code-derived hosts | Agent uses **curl** (`references/curl-dast-fallback.md`) |
+| **Burp MCP** | Live DAST on code-derived hosts | Agent **asks permission**, then **curl** (`curl-dast-fallback.md`); Burp PoC still in report |
 | **ripgrep (`rg`)** | Pattern scans | Use agent grep — slower but works |
 
 No external service is required to run a full review.
@@ -122,8 +125,8 @@ Check for SQL injection and XSS in the API controllers
 2. Module & profile enumeration (every module, every `application-*.yml`)
 3. Static scans (`rg` per manifest files in `references/`)
 4. IaC + route auth + per-method auth audit + researcher pass
-5. Data-flow trace + AI validation (G1–G5 gates) + confidence adjudication
-6. Live verify — Burp MCP or curl fallback
+5. Data-flow trace + AI validation (G1–G5 gates) + confidence + **severity calibration** adjudication
+6. Live verify — craft Burp PoC → Burp MCP → ask user → curl if approved (`dast-verification-flow.md`)
 7. Report — derive repo slug → `<repo>_security_report.md` → `<repo>_security_report.html`
 
 The AI agent is the scanner. Manifests are cookbooks — do not run bundled scan scripts for analysis.

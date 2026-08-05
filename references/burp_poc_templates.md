@@ -4,14 +4,16 @@ Use these templates for every **TRUE POSITIVE** with an HTTP attack surface. Ada
 
 ## Rules (MANDATORY)
 
-1. **One primary Burp request per finding** — copy-paste ready for Burp Repeater.
-2. **Include prerequisites** — auth cookies, tokens, headers, prior steps.
-3. **Mark injection points** — prefix tainted values with `§payload§` when suitable for Intruder.
-4. **Never include real secrets** — use placeholders: `[SSO_TOKEN]`, `[BASIC_AUTH]`, `[API_KEY]`.
-5. **Label environment** — `Host: staging.example.com` vs production; note if destructive.
-6. **Expected indicators** — status code, body substring, timing, or error that confirms exploit.
-7. **Skip section** — if finding is code-only (no HTTP), write `N/A — not HTTP-exploitable; see Attack Vectors`.
-8. **No sensitive infrastructure probes by default** — do not use cloud metadata IPs or internal admin hosts unless explicitly authorized.
+1. **Craft Burp PoC before any live probe** — per `dast-verification-flow.md`.
+2. **One primary Burp request per HTTP finding** — copy-paste ready for Burp Repeater — **required even when Burp MCP unavailable, curl skipped, or user declined live verification**.
+3. **Include prerequisites** — auth cookies, tokens, headers, prior steps.
+4. **Mark injection points** — prefix tainted values with `§payload§` when suitable for Intruder.
+5. **Never include real secrets** — use placeholders: `[SSO_TOKEN]`, `[BASIC_AUTH]`, `[API_KEY]`.
+6. **Label environment** — `Host: staging.example.com` vs production; note if destructive.
+7. **Expected indicators** — status code, body substring, timing, or error that confirms exploit.
+8. **Skip section** — only if finding is code-only (no HTTP route): write `Burp PoC: N/A — not HTTP-exploitable; see Attack Vectors`.
+9. **No sensitive infrastructure probes by default** — do not use cloud metadata IPs or internal admin hosts unless explicitly authorized.
+10. **Live status row** — in the PoC metadata table, always set `Live status` to one of: `Verified in Burp`, `Verified in curl`, `Not Verified (Burp MCP unavailable; user declined curl)`, `Not Verified (no target host in code)`, `Not Verified (auth at gateway)`, `Not Verified (WAF blocked)`.
 
 ---
 
@@ -247,13 +249,16 @@ Connection: close
 
 **MCP call:** `user-burp` → `send_http1_request` with `usesHttps: true`, `targetPort: 443`.
 
-**Verified in Burp (→ High):**
+**Verified in Burp / curl:**
 - HTTP 2xx with business JSON/HTML (order data, PII field names, not login redirect)
 - HTTP 4xx validation error **without** auth challenge (proves handler reached)
 
-**Not Verified (→ Medium):**
+**Not Verified:**
 - 401/403 auth error, login redirect, WAF block only
-- Burp MCP unavailable — code review only
+- Burp MCP unavailable and user declined curl — **still file full Burp PoC for manual Repeater retest**
+- No external host — use `[TARGET_HOST]` in Host header
+
+**Severity:** from `severity-calibration.md` — **not** from Verified vs Not Verified.
 
 **Comparer test:** duplicate request with victim `Cookie:` — if both return same data → IDOR + missing auth.
 

@@ -63,12 +63,13 @@ Also flag as **weak auth** (still report):
 For every route missing auth middleware, record:
 
 ```
-Method | Path | Router file:line | Auth present | Bypass notes | Sensitive? (PII/state-change/read-only)
+Method | Path | Router file:line | Auth present | Bypass notes | Sensitive? (PII/PHI/PFI/state-change/read-only)
 ```
 
-**Sensitive impact** (for remediation priority, not severity — severity follows verification rules below):
+**Sensitive impact** (for Impact Assessment / severity calibration — not verification status):
 
-- **Critical impact**: PII read, cancel/refund, payment, crypto, admin DB query
+- Classify data as **PII** (identity), **PHI** (health), **PFI** (financial/payment), and/or state-change vs read-only — same taxonomy as `idor-bola-audit.md` Step 1b
+- **Critical impact**: PII/PHI/PFI read, cancel/refund, payment, crypto, admin DB query
 - **High impact**: order details, user data, state change
 - **Medium impact**: public read metadata, notifications
 - **Low impact**: health, static config, metrics
@@ -118,20 +119,22 @@ CallMcpTool:
 
 Read tool schema from MCP descriptors before calling.
 
-### Verdict matrix
+### Verdict matrix (verification status only)
 
-| HTTP result (no auth) | Status | Severity |
-|----------------------|--------|----------|
-| **2xx** + app JSON/HTML/business body (not login page) | **Verified in Burp** | **High** |
-| **2xx** but empty/error schema only | Verified in Burp (limited) | High |
-| **401 / 403** + auth error body | Not Verified (gateway enforces auth) | Medium — note "auth at edge" |
-| **403** WAF / block page | Not Verified (WAF blocked) | Medium |
-| **302** → login | Not Verified (redirect to auth) | Medium |
-| **4xx** validation (missing param) but no auth challenge | **Verified in Burp** / **Verified in curl** (partial) | High — endpoint reachable without auth; params needed |
-| Burp MCP absent, curl **not run** (host exists) | **Review incomplete** | Re-run with terminal curl |
-| curl timeout / connection error after run | Not Verified | Medium |
-| **No external host in code** | **Not Verified (no target host in code)** | Medium |
-| **Only localhost in code** | **Not Verified (no target host in code)** | Medium |
+| HTTP result (no auth) | Status |
+|----------------------|--------|
+| **2xx** + app JSON/HTML/business body (not login page) | **Verified in Burp** / **Verified in curl** |
+| **2xx** but empty/error schema only | Verified in Burp (limited) |
+| **401 / 403** + auth error body | Not Verified (gateway enforces auth) |
+| **403** WAF / block page | Not Verified (WAF blocked) |
+| **302** → login | Not Verified (redirect to auth) |
+| **4xx** validation (missing param) but no auth challenge | **Verified in Burp** / **Verified in curl** (partial) |
+| Burp MCP absent, curl **not run** (host exists) | **Review incomplete** — re-run with terminal curl |
+| curl timeout / connection error after run | Not Verified |
+| **No external host in code** | **Not Verified (no target host in code)** |
+| **Only localhost in code** | **Not Verified (no target host in code)** |
+
+**Severity:** `severity-calibration.md` (four factors). **Do not** set Medium because status is Not Verified.
 
 **Verified in Burp** / **Verified in curl** means: an unauthenticated caller can reach the application handler (even if business validation fails). **Not Verified** means: code suggests missing auth but live test did not confirm, gateway blocked, or probe failed after curl/Burp attempt.
 
@@ -149,7 +152,6 @@ Read tool schema from MCP descriptors before calling.
 | Auth headers sent | None |
 | Response indicator | JSON with order_id / PII field names |
 | **Status** | Verified in curl |
-| **Severity** | High |
 ```
 
 Or when Burp MCP used:
@@ -165,28 +167,30 @@ Or when Burp MCP used:
 | Auth headers sent | None |
 | Response indicator | JSON with order_id / PII field names |
 | **Status** | Verified in Burp |
-| **Severity** | High |
 ```
+
+(Severity belongs in **`### Severity Rationale`**, not in Live Verification tables.)
 
 Or when not verified:
 
 ```markdown
 | **Status** | Not Verified |
-| **Severity** | Medium |
 | **Reason** | Returned 401 / WAF blocked / curl timeout (command logged) |
 ```
+
+(Severity is in **`### Severity Rationale`**, not here.)
 
 ### Mandatory Burp PoC when Not Verified (MANDATORY)
 
 When live verification **fails**, is **skipped**, or returns **401/403 at gateway**:
 
-1. **Severity = Medium** (per verdict matrix) — never omit the finding.
+1. **Still report** the finding — assign **Severity** via `severity-calibration.md` (Not Verified does **not** force Medium).
 2. **Still include** full `### Burp Suite PoC` with a **complete raw HTTP request** (method, path, Host, headers, body) ready for Repeater.
-3. **Still include** all required finding sections: Classification, Location, Description, Vulnerable Code Snippet, Data Flow Trace, Impact, Remediation.
+3. **Still include** all required finding sections: Classification, Location, Description, Vulnerable Code Snippet, Data Flow Trace, Impact, Severity Rationale, Remediation.
 4. Add `### Live Verification` table with **Status: Not Verified** and explicit reason.
 5. Add **Testing notes** for QA: expected confirmation if auth is missing at app layer (e.g. "HTTP 200 + business JSON, not 401").
 
-**Never** drop an AUTH candidate because Burp MCP was unavailable — run **terminal curl** first; if curl also fails, code-level missing auth → **AUTH-NNN** at Medium minimum with PoC to test manually.
+**Never** drop an AUTH candidate because Burp MCP was unavailable — run **terminal curl** first; if curl also fails, code-level missing auth → **AUTH-NNN** with severity from four factors + PoC for manual retest.
 
 ```markdown
 ### Burp Suite PoC (manual verification required)
@@ -208,23 +212,51 @@ Connection: close
 | **Auth sent in PoC** | None |
 | **Expected if vulnerable** | 2xx/4xx business body — **not** 401 Unauthorized |
 | **Live status** | Not Verified — [reason] |
-| **Severity** | Medium (code-only) |
 ```
+
+(Severity in **`### Severity Rationale`** — not in PoC metadata.)
 
 ---
 
-## Phase 1c: Promote to findings
+## Phase 1c: Promote to findings (MANDATORY — every unauthenticated endpoint covered)
 
-Each unauthenticated route → finding **AUTH-NNN** (separate ID series from VULN-NNN).
+**Rule (v4.28):** Every unauthenticated (or effectively unauthenticated) HTTP endpoint method **must** be covered by an **AUTH-NNN finding**:
 
-### Do NOT duplicate
+1. **Security Verification Checklist** — one row per **distinct AUTH finding** (not per endpoint)
+2. **Detailed Findings** — one write-up per AUTH finding, with **`### Instances`** table (Source + Sink **per endpoint**)
+3. **Appendix D** — one **row per endpoint**, columns `Finding ID` + `Instance`
 
-If the same route already has a VULN finding (e.g. XSS on `/order/details`), reference it in AUTH finding as related — one primary finding per issue type.
+There is **no** "Appendix D only" path. Health/readiness without secrets → **Low** instance (still listed).
+
+**Do not** create AUTH-001, AUTH-002, AUTH-003 for three routes that share the same root cause (e.g. one `permitAll()`). Merge into **AUTH-001** with Instance-1/2/3. Full merge rules: **`finding-instances.md`**.
+
+| Endpoint class | Coverage | Typical severity on worst instance |
+|----------------|----------|--------------------------------------|
+| Money / PII / PHI / PFI / admin / state-change | Instance under AUTH | High–Critical |
+| Business read (orders, profiles) | Instance under AUTH | Medium–High |
+| Debug / trace / swagger in non-dev | Instance under AUTH | Medium |
+| `/health`, `/ready`, `/live` (no details) | Instance under AUTH | Low |
+
+### Do NOT duplicate finding IDs
+
+Same root cause → **instances**, not new IDs. Different CWE on same route (e.g. missing auth + SQLi) → AUTH + VULN (two findings).
 
 ### Merge with injection findings
 
-Unauthenticated **+** SQLi on same route: keep both AUTH (access) and VULN (injection); AUTH severity follows verification rules above.
+Unauthenticated **+** SQLi on same route: keep both AUTH (access) and VULN (injection); each severity from `severity-calibration.md`.
 
+### Completion gate
+
+```
+Unauthenticated methods enumerated (U)
+  ==  sum of instance counts across all AUTH findings
+  ==  Appendix D endpoint rows
+Distinct AUTH finding IDs (A)  ==  checklist AUTH rows
+Every AUTH finding has ### Instances (if N>1) or a single Source/Sink (if N=1)
+Every instance has Source (full path) + Sink (full path)
+```
+
+If `U != sum(instances)`, the report is incomplete.
 ---
 
 ## Appendix D table (mandatory in report)
@@ -232,11 +264,15 @@ Unauthenticated **+** SQLi on same route: keep both AUTH (access) and VULN (inje
 ```markdown
 ## Appendix D: Unauthenticated Endpoint Inventory
 
-| ID | Method | Path | Router | Code auth | Burp status | Severity | Impact |
-|----|--------|------|--------|-----------|-------------|----------|--------|
-| AUTH-001 | GET | /order/details | routes/api/index.js:520 | None | Verified in Burp | High | PII read |
-| AUTH-002 | GET | /refund/details | routes/api/index.js:530 | None | Not Verified | Medium | PII read |
+| Finding | Inst | Method | Path | Router | Code auth | Burp status | Severity | Impact |
+|---------|------|--------|------|--------|-----------|-------------|----------|--------|
+| AUTH-001 | 1 | GET | /order/details | routes/api/index.js:520 | None | Verified in Burp | High | PII read |
+| AUTH-001 | 2 | GET | /refund/details | routes/api/index.js:530 | None | Not Verified | High* | PII read |
 ```
+
+Same Finding ID + Inst # must match `### Instances` in the Detailed Finding. See `finding-instances.md`.
+
+\*Severity from four factors — Not Verified does not imply Medium.
 
 ---
 
