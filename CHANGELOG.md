@@ -4,6 +4,17 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.33.1] — 2026-08-18
+
+### Added — public docs site so Google can find the GitHub repo
+
+GitHub `github.com` pages are slow to rank for generic “security reviewer skill” queries. This release adds a crawlable GitHub Pages landing page that names the product and links the canonical repository in visible text, sitemap, and JSON-LD.
+
+- **`docs/index.html`** — official page: https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/
+- **`docs/robots.txt`**, **`docs/sitemap.xml`** — allow crawl; include the GitHub repo URL
+- **`README.md`** — Official GitHub + docs site links above the fold
+- After push: enable Pages on `main` / `docs` and add repo Topics (`cursor-skill`, `claude-skill`, `sast`, `owasp`, `appsec`)
+
 ## [4.33.0] — 2026-08-18
 
 ### Strengthened — G3 false-positive and G4 not-exploitable gates

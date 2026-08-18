@@ -4,7 +4,10 @@
 
 **Version 4.33.0** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
-**Repo:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills
+**Official GitHub:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills  
+**Docs site (Google-indexable):** https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/
+
+Search terms that identify this project: `AI Security Reviewer Pro Max Skills`, `Mukeshj008 Ai-Security-Reviewer-Pro-Max-Skills`, `ai-security-reviewer Cursor Claude`.
 
 ---
 
@@ -153,6 +156,7 @@ Example: workspace `acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-us
 | `scripts/derive_report_name.py` | Derive clean repo slug from workspace folder |
 | `scripts/generate_html_report.py` | Markdown → HTML (formatting only) |
 | `scripts/push_to_github.sh` | Push skill updates to this repo (requires `GITHUB_TOKEN`) |
+| `scripts/publish_github_discoverability.sh` | Enable GitHub Pages + Topics + homepage (requires `GITHUB_TOKEN`) |
 | `CHANGELOG.md` | Version history |
 
 ---

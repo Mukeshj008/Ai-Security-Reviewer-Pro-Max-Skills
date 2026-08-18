@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/sitemap.xml
