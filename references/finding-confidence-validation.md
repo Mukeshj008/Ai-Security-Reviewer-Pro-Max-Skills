@@ -32,7 +32,9 @@ A real vulnerability degraded to "no finding" with no trace is the worst outcome
 
 | Confidence | Criteria | Typical Verification Status |
 |------------|----------|-----------------------------|
-| **Confirmed** | Live PoC succeeded (Burp/curl) **or** unambiguous static proof with full source→sink trace | Verified in Burp / curl / Code confirmed |
+| **Confirmed** | Live PoC succeeded **with the claimed effect** (foreign object fields, write side-effect, or auth bypass that yields a **subject**) **or** unambiguous static proof with full source→sink | Verified in Burp / curl / Code confirmed |
+
+**Confirmed is not:** HTTP `200` + empty `[]`, `500` missing-param, health `OK`, or a query ID that code never uses (see **IDOR-ADJ-01**, **AUTH-ADJ-02**). Those may still support **Firm AUTH** (route ran without a session) but **not** Confirmed BOLA/data-exfil.
 | **Firm** | Strong static evidence, G1–G5 pass, but no live verification (e.g., no reachable host) | Code confirmed / Not Verified |
 | **Tentative** | Plausible but missing a hop, control unclear, or reachability unproven | Not Verified — needs follow-up |
 
@@ -103,6 +105,14 @@ Before Confirmed/Firm SSRF:
 4. Fixed authority + redirect chain → **Tentative/Low** (SSRF-ADJ-01-F), not Appendix A.
 5. Merge multiple safe `buildUrl()` call sites → one finding with instances, not duplicate IDs.
 6. Builder not traced → **Tentative**, not Appendix A (fail-open).
+
+### CWE-639 (IDOR/BOLA) — mandatory micro-rubric addendum
+
+Before Confirmed/Firm **IDOR data leak**:
+1. Prove attacker ID is the **repository/query key** (`file:line`) **or** live body contains **another user's** fields.
+2. Token/session bind + unused request ID → **Appendix A (IDOR-ADJ-01, G3)**.
+3. Live `200 []` / empty orders → **AUTH** if no session required; IDOR **Tentative** until a real victim ID or query-key proof.
+4. Do not label Confirmed BOLA from a dummy PNR/`customer_id=1` empty response.
 
 ### CWE-90 (LDAP) — mandatory micro-rubric addendum
 

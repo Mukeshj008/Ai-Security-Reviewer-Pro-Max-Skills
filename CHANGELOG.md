@@ -4,6 +4,28 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.33.0] — 2026-08-18
+
+### Strengthened — G3 false-positive and G4 not-exploitable gates
+
+Dogfooding on post-booking APIs promoted **empty `200 []`**, **token-bound `userId`**, **health/status `OK`**, and **dummy SSO + dead next-hop** to Confirmed Critical IDOR. Those are now hard exclusions or AUTH-only.
+
+- **`precision-false-positive-adjudication.md`**
+  - **IDOR-ADJ-01** — unused / token-bound request IDs → Appendix A **G3**
+  - **AUTH-ADJ-02** — `200 []`, missing-param `500` ≠ Confirmed BOLA or Confirmed unauth success
+  - **AUTH-ADJ-03** — probe-safe `/health` `/status` never standalone High/Critical
+  - **EXPLOIT-ADJ-01** — dead sink, rejected dummy token, unused `order_id`
+  - **CORS-ADJ-01** — exact allowlist ≠ substring `contains(origin)`
+- **`manual-code-review.md`** — G3/G4 hard-gate table; forbidden reasons for empty-200 BOLA and "no Spring Security = every route Critical IDOR"
+- **`effective-controls-catalogue.md`** — IDOR effective-control row; §2 data-leak vs unused-ID preconditions
+- **`finding-confidence-validation.md`** — Confirmed requires claimed effect; CWE-639 addendum
+- **`idor-bola-audit.md`** — DAST table: empty body / token-bound / missing SSO
+- **`SKILL.md`**, **`model-proof-operating-contract.md`**, **`scan-attestation-summary.md`** — v4.33 compliance hooks
+
+### Why
+
+G3/G4 were strong for SSRF/LDAP pattern noise but weak for **access-control** false positives: live `200` was treated as Confirmed exploit even when the body had no victim object or the ID never reached the query.
+
 ## [4.32.1] — 2026-08-05
 
 ### Fixed — false-positive / exploitability gate precision (audit follow-up)

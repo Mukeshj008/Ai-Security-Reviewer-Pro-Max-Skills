@@ -70,9 +70,12 @@ curl -sS -w "\nHTTP:%{http_code}\n" --max-time 15 \
 
 | Result | Verdict | Finding |
 |--------|---------|---------|
-| 200 + A's data in body | **BOLA confirmed** | VULN-NNN High (calibrate with PII/PHI/PFI) |
+| 200 + **A's fields** in body (name, PNR, order lines, …) | **BOLA confirmed** | VULN-NNN (calibrate with PII/PHI/PFI) |
+| 200 + **empty** `[]` / `{orders:[]}` / no object fields | **Not Confirmed BOLA** | AUTH if unauthenticated (Firm); IDOR **Tentative** until victim ID or query-key proof — **IDOR-ADJ-01 / AUTH-ADJ-02** |
+| 200 + **B's own** data while requesting A's ID | **Token-bound** | Appendix A **G3** IDOR-ADJ-01 |
 | 403/404 | Likely protected | Appendix A or hardening note |
 | 401 | Auth required — retest with valid B token | — |
+| 500 missing `sso_token` / required param | Auth or schema gate | Not Confirmed unauth IDOR |
 
 When confirmed, note which **PII/PHI/PFI** fields appeared in B's response (redact values in the report; keep field names).
 

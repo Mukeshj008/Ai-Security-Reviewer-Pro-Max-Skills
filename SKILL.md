@@ -4,7 +4,9 @@ description: >-
   Agent-native SAST+DAST+IaC code review: 109 security checks · 85+ vulnerability classes ·
   760+ pattern signatures. v4.31: evidence-based false-positive control (effective-controls
   catalogue, exploitability preconditions) + Go/Ruby/Rust/C-C++/Elixir/Scala/Apex stack packs,
-  constant-time MAC, SAML, OAuth, CI workflow injection, ZipSlip, weak RNG. v4.32.1 gate-precision fixes
+  constant-time MAC, SAML, OAuth, CI workflow injection, ZipSlip, weak RNG. v4.33 G3/G4 hardened:
+  IDOR token-bind, empty-200, probe-safe, dummy-token (IDOR-ADJ-01, AUTH-ADJ-02/03, EXPLOIT-ADJ-01).
+  v4.32.1 gate-precision fixes
   (G3/G4 SSRF labels, pathSegment, Feign @Url, redirect chain). v4.30 static mobile
   SAST (ATS, exported IPC, on-device storage); v4.29 deeplink session theft. Burp/curl DAST.
   Code-only — no npm/OSV/Maven/trivy SCA; mobile runtime Frida/MITM = Residual.
@@ -12,7 +14,7 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.32.1** — **Gate precision fixes:** G3 vs G4 labels for SSRF exclusions; §2 authority precondition; `.path()` vs `.pathSegment()`; trace-until-found (no hop cap); LDAP callee chain; redirect/Feign `@Url`/runtime-config; all `*-ADJ-*` gates in Phase 2a. v4.32 SSRF/LDAP adjudication retained.
+**Version 4.33.0** — **Harder G3/G4:** IDOR-ADJ-01 (token-bound / unused attacker ID), AUTH-ADJ-02 (`200 []` ≠ Confirmed BOLA), AUTH-ADJ-03 (probe-safe), EXPLOIT-ADJ-01 (dead sink / dummy token), CORS-ADJ-01. v4.32.1 SSRF G3 labels retained.
 
 
 **Report contract (read first):** `references/report-output-spec.md`
@@ -27,7 +29,7 @@ Before scanning, read these references in this order. Do **not** read every refe
 4. `references/model-proof-operating-contract.md`
 5. `references/finding-confidence-validation.md`
 5b. `references/effective-controls-catalogue.md` — **read before excluding anything as a false positive (G3/G4 evidence)**
-5c. `references/precision-false-positive-adjudication.md` — **read before reporting SSRF (SAST-OG-26) or LDAP (SAST-OG-18) hits**
+5c. `references/precision-false-positive-adjudication.md` — **read before reporting SSRF, LDAP, IDOR, or unauth-success claims**
 6. `references/severity-calibration.md` — **read before assigning Critical/High/Medium**
 6b. `references/finding-instances.md` — **same root cause → instances, not duplicate IDs**
 7. `references/multi-module-enumeration.md`
@@ -116,7 +118,7 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | **C1** | **`standards-coverage-map.md`** | **MANDATORY** — OWASP/CWE/ASVS/LLM sweep + Completeness & Residual Risk Register |
 | **C2** | **`finding-confidence-validation.md`** | **MANDATORY** — two-stage validation, confidence levels, fail-open policy |
 | **C2b** | **`effective-controls-catalogue.md`** | **MANDATORY** — what truly neutralizes each CWE (G3), exploitability preconditions (G4), third-party-response trust-boundary rule, plus SIG/SAML/OAuth/CI/ZipSlip/RAND/XXE precision patterns |
-| **C2c** | **`precision-false-positive-adjudication.md`** | **MANDATORY** — SSRF-ADJ-01 authority analysis; LDAP-ADJ-01 `.search()` disambiguation; Stage-2 gates before reporting pattern-only HTTP/LDAP hits |
+| **C2c** | **`precision-false-positive-adjudication.md`** | **MANDATORY** — SSRF/LDAP/INJ/DESER plus **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**; Stage-2 before pattern-only or empty-200 findings |
 | **C3** | **`severity-calibration.md`** | **MANDATORY** — Impact × Exploitability × Exposure × Complexity; caps; `### Severity Rationale` |
 | **I1** | **`finding-instances.md`** | **MANDATORY** — same root cause → one finding with multi-instance Source/Sink; no duplicate IDs |
 | **S1** | **`multi-module-enumeration.md`** | **MANDATORY** (multi-module repos) — enumerate ALL modules, controllers, configs, Dockerfiles |
@@ -278,10 +280,9 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 1.  Attack surface          → graphify query OR rg recon — scope = ALL modules from −1c
 2.  SAST manifests          → rg per sast + LEAK + SECRET + INJ (scope = ALL modules)
 2a. **Precision adjudication** → `precision-false-positive-adjudication.md` on **every** matching candidate:
-                               **SSRF-ADJ-01** (SAST-OG-26), **LDAP-ADJ-01** (SAST-OG-18),
-                               **INJ-ADJ-01** (SAST-OG-25/SQL hits), **DESER-ADJ-01** (readValue/parse),
-                               **LOG-ADJ-01** (SAST-OG-21), **AUTH-ADJ-01** (route auth hits),
-                               **XXE-ADJ-01** (XML/JAXB) — authority/sink trace before VULN ID
+                               **SSRF-ADJ-01**, **LDAP-ADJ-01**, **INJ/DESER/LOG/AUTH/XXE-ADJ-***,
+                               **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**, **CORS-ADJ-01**
+                               — G3/G4 hard fails before VULN ID; `200 []` ≠ Confirmed BOLA
 2b. Extended scans          → extended-category-scans.md (§3.11–§3.12, §6.10–§6.12, §14.8–§14.9)
 2b.1 Stack pack             → extended-category-scans.md §19.x for EVERY language present
                                (Spring/Node/PHP/Python/Java/.NET/mobile/**Go/Ruby/Rust/C-C++/Elixir/Scala/Apex/shell**)

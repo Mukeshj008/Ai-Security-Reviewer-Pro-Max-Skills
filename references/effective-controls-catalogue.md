@@ -124,6 +124,16 @@ See **`actuator-sensitive-endpoints-audit.md`** for the sensitive vs probe-safe 
 
 **No in-app compensating control exists.** Only these are acceptable, each with cited manifest evidence, and they change **severity/verification status only — not the finding's existence**: gateway route policy (`route_auth_audit.md`), mesh `STRICT` mTLS, `NetworkPolicy` denying ingress. See the forbidden-exclusion table in `manual-code-review.md`.
 
+**IDOR exception (G3):** attacker-supplied `userId`/`customerId` that is **ignored** after SSO, with lookup+response bound to token subject — **Appendix A IDOR-ADJ-01**. Missing auth on that same route is still AUTH if SSO is not required.
+
+### IDOR / BOLA (CWE-639) — effective vs not
+
+| Effective (→ Appendix A G3, IDOR-ADJ-01) | NOT effective (→ keep IDOR or AUTH) |
+|------------------------------------------|-------------------------------------|
+| Query uses `SecurityContext` / SSO `userId` only; request ID unused or equality-checked then discarded | Query uses request `customerId`/`pnr`/`order_id` with no ownership check |
+| UUID never disclosed **and** no list endpoint leaks IDs — **does not** delete missing-authz; **may** cap severity | `200 []` on a guessed ID — **not** a control; AUTH may still stand |
+| Gateway requires service identity **and** cited in repo | "Ops will only call this internally" with no NetworkPolicy |
+
 ---
 
 ## §2 Exploitability preconditions (G4 — check before Critical/High)
@@ -140,7 +150,10 @@ Ask whether the condition holds. **Met** → proceed. **Not met** → Appendix A
 | SQLi | Sink executes against a live DB on a reachable route | Migration/CLI/dead code not wired to any route |
 | Path traversal | Process has read/write rights outside the base dir | Fully chrooted/read-only FS with base == mount root |
 | Deserialization RCE | Attacker controls the serialized bytes **before** any integrity check | Payload is HMAC-verified with a secret not in the repo |
-| IDOR/BOLA | Object IDs are guessable/enumerable **or** leaked elsewhere | 128-bit random IDs never disclosed — still report if authz is absent; severity reflects enumerability |
+| IDOR/BOLA **data leak** | Attacker ID is the **object query key** **and** response includes that object's fields (or live foreign PII/PFI) | Request ID unused / token-bound response (**IDOR-ADJ-01** → Appendix A **G3**); live `200 []` with no foreign fields (**AUTH-ADJ-02** → not Confirmed BOLA) |
+| IDOR/BOLA | Object IDs are guessable/enumerable **or** leaked elsewhere | 128-bit random IDs never disclosed — still report **AUTH** if authz is absent; **do not** Confirmed-BOLA without (A) or live foreign data |
+| Unauthenticated **sensitive** handler | Handler returns or mutates PII/PFI/privileged state without a session | `/status`/`/health` OK only (**AUTH-ADJ-03**); `500` missing SSO header (not Confirmed) |
+| Dummy credential | Forged token is accepted **as a subject** and authorizes the sink | Token ignored / SSO client 401 / next hop unused `order_id` (**EXPLOIT-ADJ-01**) |
 | Race/TOCTOU | Two requests can interleave on shared state | Single-writer with DB unique constraint or `SELECT … FOR UPDATE` covering the invariant |
 | ReDoS | Regex applied to attacker-length-controlled input | Input length-capped before the regex (cite the cap) |
 | Log injection | Logs render in a viewer that interprets the payload, or feed a parser | Structured JSON logging that escapes newlines |

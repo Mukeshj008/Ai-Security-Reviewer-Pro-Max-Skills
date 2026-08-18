@@ -53,7 +53,7 @@ For **each** row in `report-coverage-matrix.md` (109 checks):
 
 **Do not** paste 109 rows into `<repo>_security_report.md`. Summarize layers in the Verification Checklist `<details>` toggle only.
 
-**Reachability:** `graphify path` when graph exists; else manual file:line trace — **never report from `rg` alone**. For outbound HTTP, **never report SSRF from sink match alone** — authority trace to source is mandatory (SSRF-ADJ-01); Appendix A SSRF exclusions cite **failed gate G3**.
+**Reachability:** `graphify path` when graph exists; else manual file:line trace — **never report from `rg` alone**. For outbound HTTP, **never report SSRF from sink match alone** — authority trace to source is mandatory (SSRF-ADJ-01); Appendix A SSRF exclusions cite **failed gate G3**. For IDOR, **never Confirmed BOLA from `200 []` or unused `userId`** (IDOR-ADJ-01 / AUTH-ADJ-02); token-bound responses → Appendix A **G3**.
 
 ## Scan agent & matrices (mandatory in report)
 

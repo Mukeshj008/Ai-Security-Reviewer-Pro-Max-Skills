@@ -190,13 +190,95 @@ Spring custom interceptors often check **method** annotations only. Do not Appen
 
 ---
 
+## IDOR-ADJ-01 — Attacker ID unused / token-bound response (CWE-639)
+
+**Mandatory when:** any IDOR/BOLA candidate (`userId`, `customerId`, `orderId`, `pnr` on a route that also has session/SSO/JWT).
+
+A query/header/body ID is **not** IDOR if the handler **does not use it** to select the object, or uses it only after proving it equals the authenticated subject.
+
+### Mandatory questions (all must be answered)
+
+| # | Question | If YES → |
+|---|----------|----------|
+| A | Does the **data query / write** use the attacker-supplied ID as the object key (Mongo/SQL/cache lookup by that ID)? | Proceed toward IDOR |
+| B | After auth, does the code **replace** the request ID with `token.userId` / `UserDetails.getUserId()` / session subject for the lookup **and** the response? | **Appendix A (G3)** — IDOR-ADJ-01 |
+| C | Equality check `token.userId.equals(queryUserId)` then response still built from **token** subject only? | **Appendix A (G3)** for classic IDOR; missing-auth is a separate AUTH question |
+| D | `v2=true` (or similar) **skips** the equality check **but** lookup/response still bind to token subject? | **Appendix A (G3)** for IDOR — skip is not BOLA if the ID is unused |
+| E | Attacker ID is logged/validated only, never passed to repository? | **Appendix A (G3)** — unused parameter |
+
+### Live DAST — do **not** treat as Confirmed BOLA
+
+| Live result | Gate | What you may report |
+|-------------|------|---------------------|
+| `200` + **empty** `[]` / `{orders:[]}` with **no** victim object fields | **G4 fail for data-exfil IDOR** | AUTH unauth (if no session required) at most; IDOR stays **Tentative** until a **real victim ID** returns **foreign PII/PFI** **or** code proves the ID is the query key |
+| `200` + **your own** session user's data while you sent another `userId` | **G3** | Appendix A IDOR — token-bound |
+| `401`/`403` | Auth works | Not unauth IDOR |
+| `500` "missing `sso_token` / Required parameter" | Auth or schema gate | Not Confirmed unauth; not IDOR |
+| Dummy `sso_token=dummy` then **next hop fails** (localhost refused, 401 from SSO) | **G4** | Appendix A EXPLOIT-ADJ-01 — token not accepted as identity |
+
+**Forbidden:** "Confirmed Critical BOLA" from `200 []` on a guessed `customer_id` with **no** foreign record in the body.
+
+---
+
+## AUTH-ADJ-02 — HTTP 200 is not a vulnerability
+
+**Mandatory when:** live probe of an unauthenticated or IDOR route.
+
+| Result | Not a Finding when | May still be |
+|--------|--------------------|--------------|
+| `200` + `OK` / `"status":"UP"` / empty health | Probe-safe liveness | Low AUTH **instance** only if inventory requires it — never Critical/High VULN |
+| `200` + empty collection | No sensitive fields returned | AUTH (missing auth) **Firm** if handler has no auth; **not** Confirmed data leak |
+| `200` + validation error JSON | App reached, no object accessed | Not BOLA |
+| `500` missing required header/param | Request never entered business logic | Not Confirmed unauth **success**; code may still be AUTH Tentative |
+| `404` Spring "no mapping" | Route not deployed / wrong prefix | Appendix A G2 — not reachable |
+
+---
+
+## AUTH-ADJ-03 — Probe-safe / non-sensitive surfaces
+
+**Appendix A (G4)** or **Low AUTH instance only** (never standalone High/Critical VULN):
+
+- `/status`, `/health`, `/ping`, `/ready`, `/live` returning `OK` / UP without secrets
+- Public catalog / category lists with **no** PII/PFI
+- Static marketing config (`getcategory` style) with no authz object
+
+**Keep AUTH/VULN** when the same path returns env, heap, tokens, PII, or triggers privileged jobs (queue process, refund cron, mailer).
+
+---
+
+## EXPLOIT-ADJ-01 — Hard G4 fail (not practically exploitable)
+
+**Appendix A (failed gate G4)** when **any** of these is proven with `file:line` or live evidence. Unknown → Tentative, not a silent drop.
+
+| # | Hard fail | Evidence required |
+|---|-----------|-------------------|
+| 1 | Sink is **dead** — method never called from a reachable route, or `@GetMapping` commented out | Call graph or commented mapping |
+| 2 | Required auth **is** enforced (filter/interceptor/gateway **in repo**) and probe got 401/403 | Cite filter + live status |
+| 3 | Attacker input never reaches sink (parsed then discarded; response uses another source) | Trace |
+| 4 | Dummy/forged token is **not** treated as a subject — SSO client rejects or next hop 401 | Live or SSO client code |
+| 5 | "SSO param present" but value **never validated** — **keep AUTH/VULN** (this is **not** a G4 fail) | — |
+| 6 | Exploit requires writing a **real** refund/cancel/PNR on prod with no test ID and user did not approve destructive DAST | Do not Confirmed-write; **Tentative** + Burp PoC only |
+| 7 | Finding is "could be SSRF" solely because `RestTemplate` exists | Must pass SSRF-ADJ-01 first; else G3/G4 already covers |
+
+Row 5 is a **keep-finding** reminder: unused dummy-token **parameter** that is never checked is still missing auth (AUTH), but is **not** IDOR and **not** Confirmed invoice theft if the outbound call never uses `order_id`.
+
+---
+
+## CORS-ADJ-01 — ACAO echo ≠ always High
+
+**Appendix A or Low** when reflected `Origin` is limited to an **exact allowlist** of trusted hosts (cite the list).
+
+**Keep High/Medium** when `allowed.origins.contains(origin)` (substring) or `*` + `Allow-Credentials: true`, or attacker-controlled origin is echoed with credentials.
+
+---
+
 ## Candidate ledger terminal statuses (precision)
 
 | Outcome | When |
 |---------|------|
 | **Finding** | G1–G5 pass; authority/sink type confirmed |
 | **Tentative** | Builder not fully traced; config trust unknown; redirect chain plausible (SSRF-ADJ-01-F) |
-| **Appendix A** | G3 control present (cite `file:line`) **or** G4 precondition demonstrably unmet — **name the gate** (e.g. SSRF-ADJ-01, LDAP-ADJ-01) |
+| **Appendix A** | G3 control present (cite `file:line`) **or** G4 precondition demonstrably unmet — **name the gate** (`SSRF-ADJ-01`, `IDOR-ADJ-01`, `EXPLOIT-ADJ-01`, …) |
 | **N/A** | No web/outbound surface in scope |
 
 ---
@@ -205,7 +287,7 @@ Spring custom interceptors often check **method** annotations only. Do not Appen
 
 - Tag checklist rows adjudicated with `[Adj: SSRF-ADJ-01]` in internal scan log Notes.
 - Appendix A table must include **Failed Gate** column: `G3` / `G4` + adjudication ID (`SSRF-ADJ-01`, `LDAP-ADJ-01`, …).
-- Scan Attestation Summary: `Precision adjudication: all *-ADJ-* gates applied (v4.32.1+)`.
+- Scan Attestation Summary: `Precision adjudication: all *-ADJ-* gates applied (v4.33+)` including **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**.
 - Do **not** publish "zero SSRF" — publish "N candidates adjudicated; M excluded per SSRF-ADJ-01 with cited builders".
 
 ---
@@ -214,6 +296,6 @@ Spring custom interceptors often check **method** annotations only. Do not Appen
 
 - [ ] Every SAST-OG-26 hit has documented **authority analysis** (who controls host/scheme/port).
 - [ ] Every SAST-OG-18 hit has **LDAP sink confirmation in file or callee chain** or LDAP-ADJ-01 exclusion.
-- [ ] **INJ/DESER/LOG/AUTH/XXE-ADJ-*** applied when matching SAST candidates exist.
+- [ ] **INJ/DESER/LOG/AUTH/XXE-ADJ-*** and **IDOR-ADJ-01 / AUTH-ADJ-02 / AUTH-ADJ-03 / EXPLOIT-ADJ-01 / CORS-ADJ-01** applied when matching candidates exist.
 - [ ] Same safe `buildUrl()` / base-URL helper merged into one finding with instances, not N duplicate VULN IDs.
 - [ ] Builder not traced → **Tentative**, not Appendix A.

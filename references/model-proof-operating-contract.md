@@ -71,6 +71,8 @@ Before final answer and before HTML export, verify:
 - [ ] **Every SAST-OG-26 hit has SSRF-ADJ-01 authority analysis**; builder untraced → **Tentative**, not Appendix A; SSRF exclusions cite **failed gate G3**.
 - [ ] **Every SAST-OG-18 hit has LDAP-ADJ-01 sink confirmation** (file or callee chain) or Appendix A exclusion.
 - [ ] **Every Appendix A exclusion cites** a control (`effective-controls-catalogue.md` §1) or an unmet precondition (§2); no bare "false positive".
+- [ ] **IDOR/BOLA:** no Confirmed data-exfil from `200 []` or unused `userId` (IDOR-ADJ-01 / AUTH-ADJ-02); token-bound responses → Appendix A G3.
+- [ ] **G4 hard fails applied** (EXPLOIT-ADJ-01, AUTH-ADJ-03 probe-safe) — health/status not standalone High/Critical.
 - [ ] **Confidence uses `Confirmed`/`Firm`/`Tentative` only** — no High/Medium/Low in a confidence field.
 - [ ] Candidate ledger is closed.
 - [ ] Every finding has Source, Sink, Assumptions, Vulnerable Code, Data Flow, Impact, **Severity Rationale**, Remediation.

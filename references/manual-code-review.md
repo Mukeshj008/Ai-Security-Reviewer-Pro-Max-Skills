@@ -204,6 +204,23 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 **G3/G4 evidence rule:** an exclusion is valid only when you name the control (§1) or the unmet precondition (§2) **with a citation**. Unknown precondition → **Tentative**, not Appendix A.
 
+### G3 / G4 hard gates (v4.33 — apply before every VULN/AUTH ID)
+
+These **override** pattern severity and live `200` excitement. Cite `file:line` or the HTTP status+body.
+
+| Fail this → Appendix A | Gate | Typical mis-report |
+|------------------------|------|---------------------|
+| Response/lookup binds to **session/token subject**, not attacker `userId`/`customerId` | **G3** IDOR-ADJ-01 | "IDOR because query has userId" |
+| Live `200` with **empty** array/object and **no** foreign PII/PFI fields | **G4** for BOLA *data leak* | "Confirmed Critical IDOR" |
+| Live `500`/`400` "required `sso_token` / parameter missing" | **G4** Confirmed-unauth | "Unauth because app error JSON" |
+| Probe-safe `/health` `/status` `OK` with no secrets | **G4** AUTH-ADJ-03 | Standalone Critical AUTH |
+| Dummy token **rejected** by SSO or next hop never uses the ID | **G4** EXPLOIT-ADJ-01 | "Invoice IDOR, dummy SSO accepted" |
+| SSRF/LDAP from sink name only | **G3** SSRF-ADJ-01 / LDAP-ADJ-01 | Pattern-only VULN |
+
+**Still a finding (do not Appendix-A):** missing auth on a **data or privileged** handler (even if today's probe returned `[]`) → **AUTH** Firm, not Confirmed BOLA. `200 []` proves the route ran **without** a session; it does **not** prove cross-user data.
+
+**Confirmed BOLA / data-exfil** requires **one** of: (1) live body contains another user's fields, or (2) code trace shows attacker ID is the **query key** **and** that object is serialized in the response. Otherwise IDOR ≤ **Tentative**.
+
 ### Verdict rules
 
 | Outcome | Action |
@@ -283,6 +300,9 @@ The following exclusion reasons are **not allowed** because past reviews used th
 | "`.search(` method call → LDAP injection" | Run **LDAP-ADJ-01**: require LDAP imports (`LdapTemplate`, `InitialDirContext`, etc.). JMESPath `Expression.search`, Elasticsearch, Python `re.search` → Appendix A. |
 | "Outbound call uses user-derived `domain` in URL → SSRF" | Distinguish **authority** vs **path segment**. `UriComponentsBuilder.fromHttpUrl(configBase).pathSegment(domain)` does not retarget host — Appendix A via **G3** (SSRF-ADJ-01). **G1 may still pass.** |
 | "`.path()` with user input is safe like pathSegment" | **Forbidden.** `.path(userInput)` injects slashes/`..` — not an SSRF authority bypass but not a safe dynamic segment; do not Appendix A on SSRF authority grounds alone if `.path()` used |
+| "200 empty JSON = Confirmed IDOR/BOLA" | **Forbidden.** Apply **IDOR-ADJ-01** + **AUTH-ADJ-02**. Empty body → AUTH (if no session) and/or Tentative IDOR, never Confirmed data-exfil. |
+| "Query/header `userId` present = IDOR" | Trace whether that ID is the **repository key**. Token-bound response → Appendix A **G3** (IDOR-ADJ-01). |
+| "Missing Spring Security = every route is Critical IDOR" | One AUTH finding with instances; IDOR only where object ID is used unsafely. Health/status → AUTH-ADJ-03. |
 
 When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed Findings with explicit `### Assumptions` block listing what would have to be true for the finding to be a false positive. Reviewers will downgrade later; silent drops cannot be recovered.
 

@@ -2,7 +2,7 @@
 
 > **Works with Cursor and Claude** — same skill, same prompts, same reports.
 
-**Version 4.32.1** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
+**Version 4.33.0** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
 **Repo:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills
 
@@ -28,7 +28,7 @@
 - Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
 - **Security-researcher pass** — issues outside the 109-check matrix, validated with the same G1–G5 bar
 
-> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.32.1**). See `CHANGELOG.md` for per-version behavior.
+> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.33.0**). See `CHANGELOG.md` for per-version behavior.
 
 **How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it **asks your permission** before **curl** fallback. Every HTTP finding includes a crafted Burp request regardless. Graphify speeds up discovery but is not required.
 
@@ -55,7 +55,7 @@ This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`
 - **Scope completeness (v4.19+)** — every module, every config profile, every Dockerfile, per-endpoint-method auth audit
 - Senior manual review — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
 - **Two-stage confidence validation (v4.18+)** — Confirmed / Firm / Tentative; fail-open (never silently drop uncertain candidates)
-- **Precision false-positive adjudication (v4.32+)** — SSRF-ADJ-01 authority analysis, LDAP-ADJ-01 sink disambiguation, effective-controls catalogue (v4.31+)
+- **Precision false-positive adjudication (v4.33+)** — IDOR-ADJ-01 / AUTH-ADJ-02/03 / EXPLOIT-ADJ-01 (empty `200` ≠ Confirmed BOLA); SSRF-ADJ-01 / LDAP-ADJ-01; effective-controls catalogue (v4.31+)
 - **Severity calibration (v4.24+)** — Impact × Exploitability × Exposure × Complexity; **`### Severity Rationale`** per finding
 - **Severity ≠ DAST (v4.25+)** — Not Verified / skipped curl does **not** lower severity; verification status is reported separately
 - Every finding includes **Vulnerable Code Snippet**, **Data Flow Trace**, and **Remediation** (BEFORE/AFTER)

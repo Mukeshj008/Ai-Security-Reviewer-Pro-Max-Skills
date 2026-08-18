@@ -15,7 +15,7 @@
 **Do not conflate them:**
 - A **Firm** finding can be **High** severity even when **Not Verified**.
 - **Not Verified** means live DAST did not confirm — it does **not** mean Medium severity.
-- **Verified in Burp/curl** may upgrade **Confidence** to Confirmed; it does **not** automatically upgrade **Severity** (severity still follows the four factors).
+- **Verified in Burp/curl** may upgrade **Confidence** to Confirmed **only for the claimed effect** (empty `200` ≠ Confirmed BOLA — AUTH-ADJ-02); it does **not** automatically upgrade **Severity** (severity still follows the four factors).
 
 ---
 
@@ -141,9 +141,19 @@ Common cases (including when **Not Verified**):
 |-----------|----------|------------------------------|
 | High/Severe impact + Practical exploit + Public/Internal exposure + Firm | **High**–**Critical** (per Step 2–3) | `Not Verified` or `Verified in Burp` — **does not change severity** |
 | Medium impact or Local exposure | **Medium** | Any verification status |
-| Read-only `/health` / `/ready` / liveness (no secrets, no PII) | **Low** AUTH-NNN — **still a finding** (never Appendix D–only) | Any verification status |
+| Read-only `/health` / `/ready` / `/status` / liveness (no secrets, no PII) | **Low** AUTH-NNN — **still a finding** (never Appendix D–only); **AUTH-ADJ-03** — never standalone High/Critical | Any verification status |
+| Unauth data route + live `200 []` / empty orders, no foreign fields | **AUTH Medium–High** by handler privilege (ops/refund/PNR vs catalog); **not** Critical BOLA | Verified reachability ≠ Confirmed data-exfil |
 
 Mandatory **Burp PoC** for every AUTH finding regardless of severity or verification status.
+
+### IDOR / BOLA (CWE-639)
+
+| Condition | Severity / disposition |
+|-----------|------------------------|
+| Attacker ID is query key **and** response has foreign object fields (or live PII/PFI) | **High**–**Critical** per Steps 2–3 |
+| Live `200 []` / empty collection, no victim fields | **Not Confirmed BOLA** — AUTH if unauth; IDOR **Tentative** (AUTH-ADJ-02) |
+| Lookup+response bound to token subject; request `userId` unused | **Appendix A G3** IDOR-ADJ-01 — not a VULN |
+| Dummy SSO / unused `order_id` / dead next hop | **Appendix A G4** EXPLOIT-ADJ-01 |
 
 ### VULN-NNN (injection, SSRF, XSS, etc.)
 

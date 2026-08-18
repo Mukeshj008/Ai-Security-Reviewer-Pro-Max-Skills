@@ -137,10 +137,14 @@ Connection: close
 
 **Severity is independent of live verification** (`severity-calibration.md`). DAST sets **Verification Status** and may upgrade **Confidence** — not Severity.
 
+**Confirmed upgrade is effect-specific (v4.33):** live `200` only Confirms the **claimed effect** if that effect is in the body or code path. `200 []` Confirms "route ran without a session" (AUTH) — it does **not** Confirm BOLA/data-exfil (AUTH-ADJ-02 / IDOR-ADJ-01). Dummy token + next-hop fail does **not** Confirm identity spoof (EXPLOIT-ADJ-01).
+
 | Live result | Verification Status | Confidence (typical) |
 |-------------|---------------------|----------------------|
-| Verified in Burp | Verified in Burp | Confirmed |
-| Verified in curl | Verified in curl | Confirmed |
+| Verified in Burp **and** body/trace shows claimed effect | Verified in Burp | Confirmed |
+| Verified in curl **and** body/trace shows claimed effect | Verified in curl | Confirmed |
+| Live `200` empty / health `OK` / unused attacker ID | Verified in Burp (route reachable) | **AUTH Firm**; IDOR **Tentative** or Appendix A G3 — never Confirmed BOLA |
+| Dummy token rejected or next hop unused | Verified in Burp (negative) | Appendix A **G4** EXPLOIT-ADJ-01 |
 | Not Verified (user declined) | Not Verified (live probe skipped) | Firm (if static proof strong) |
 | Not Verified (no host) | Not Verified (no target host in code) | Firm / Tentative |
 | Not Verified (gateway/WAF) | Not Verified (auth at gateway) | Firm — severity still from four factors |
