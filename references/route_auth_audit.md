@@ -5,6 +5,10 @@ Systematic detection of **unauthenticated or weakly authenticated HTTP endpoints
 > **v4.19 — per-method audit:** For annotation-based frameworks (Spring, Spring Security, Quarkus, ASP.NET, NestJS), you MUST also run **`per-method-auth-audit.md`** which walks **every endpoint method** individually. Counting annotations per controller file is forbidden — past reviews missed unauthenticated `v1`/`v2`/`v3` variants whose `v4` peers were annotated.
 >
 > **v4.19 — scope:** Before this audit, you MUST have run **`multi-module-enumeration.md`** Step 2 to find HTTP controllers in **every** module — not just the obvious "api" one.
+>
+> **v4.35 — Express:** When `app.` / `router.` HTTP is present, you MUST run **`express-auth-audit.md`** (glob vs path, `next('route')`, no-op `restricted`, TestSSO, Host as auth, inbound webhooks).
+>
+> **v4.35 — AUTH-ADJ-04:** Empty `access_token` / missing API key that **defaults to a config secret** or **skips the check** is AUTH, not "the service has a token."
 
 ---
 

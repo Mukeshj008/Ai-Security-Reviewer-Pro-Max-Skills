@@ -80,8 +80,25 @@ Align with **Exploitable** + G4, but rate trigger ease:
 | **Exposure: Local** (compose/dev-only, not prod path) | **Medium** max for IAC/AUTH unless prod manifest proves otherwise |
 | **Exploitable: Hardening** | **High** max (usually Medium) |
 | **Exploitable: No** | Do not report — Appendix A |
+| **Hardcoded credentials** (`LEAK-NNN`, `SAST-SECRET-01…12`, `SAST-OG-10`) | **Critical forbidden** — see **§ Hardcoded credentials severity cap** below |
 
 **Forbidden cap:** `Not Verified`, `no Burp/curl`, `user declined curl`, `401 at gateway on probe`, `WAF blocked`, `no target host in code` — **none of these may lower severity**. They belong in **Verification Status** / **DAST Status** / **Confidence** only.
+
+### Hardcoded credentials severity cap (MANDATORY — LEAK / SAST-SECRET)
+
+**Never assign Critical** to findings whose primary issue is a **committed credential** (password, API key, token, private key, connection string with embedded password, Vault/cloud SM literal in config/source). Use **`LEAK-NNN`** (preferred) or existing secret IDs — not inflated to Critical because impact narrative mentions “production database” or “live Stripe key.”
+
+| Situation | Max severity | Notes |
+|-----------|--------------|--------|
+| Credential in **production** deploy path (`application-prod*`, `config/production/**`, prod K8s/Helm values, `sk_live_`, prod JDBC URL to non-local host) | **High** | Rotate + vault/env; cite profile/manifest for Exposure |
+| **Staging / preprod / QA** profile or shared non-prod host with real-shaped secret | **High** or **Medium** | **High** if same secret reused in prod or artifact ships to prod-like env; else **Medium** |
+| **Local / dev-only** profile (`local`, `dev`, `docker-compose` not in prod path), or developer machine defaults | **Medium** | Step 1 **Exposure: Local** cap still applies |
+| **Test fixtures** under `tests/`, `*Test*`, `__mocks__` with obvious dummy (`changeme`, `password123`, `YOUR_*_HERE`) | **Low** or Appendix A | Skip per `secrets-patterns.md` when clearly non-production |
+| Pattern match only; cannot confirm prod path or real credential shape | **Medium** max (Tentative) | Confidence Tentative cap stacks |
+
+**Impact note:** Secret exposure can rate **Impact: Severe** in `### Impact Assessment` (credential theft, DB access) — that does **not** override this cap. **Severity** for hardcoded secrets stays **High** or **Medium** per table above.
+
+**Not covered by this cap:** injection/RCE, missing auth on routes, SSRF, **runtime** secret dump via actuator/env endpoint (`IAC-NNN` / misconfig) — those still use Steps 2–3 and may reach Critical when all Step 2 gates pass.
 
 ### Step 2 — Critical (all must be true)
 
@@ -95,9 +112,19 @@ Assign **Critical** only when **every** row passes:
 | 4 | **Complexity** = Low or Medium |
 | 5 | **Confidence** = Confirmed **or** Firm with unambiguous static proof (full source→sink) |
 
-**Typical Critical examples:** SQLi with Firm trace to DB dump on public route; hardcoded prod DB password in deploy artifact; fail-open webhook on public bind with Severe pipeline/agent hijack impact (Firm code proof — live probe optional).
+**Typical Critical examples:** SQLi with Firm trace to DB dump on public route; fail-open webhook on public bind with Severe pipeline/agent hijack impact (Firm code proof — live probe optional).
+
+**Not Critical (use LEAK + cap):** hardcoded DB password, API keys, JWT signing secrets, or Vault tokens in `application-*.properties` / source — **High** (prod path) or **Medium** (local/staging-only) per hardcoded-credentials cap.
 
 **Not Critical by default:** low-impact misconfig; local-only compose Mongo; read-only `/health` without sensitive data.
+
+**v4.35 — also not Critical by default:**
+
+| Pattern | Max unless Step 2 **and** cited public/Ingress bind |
+|---------|-----------------------------------------------------|
+| Spring module with no `SecurityFilterChain` / no `spring-boot-starter-security` | **High** |
+| `LEAK` / CWE-321 hardcoded AES/key in source (use LEAK + v4.34 cap) | **High** |
+| Exposure rated **Local** in Severity Rationale | **Medium** (existing Step 1) |
 
 ### Step 3 — High
 
@@ -166,10 +193,10 @@ Mandatory **Burp PoC** for every AUTH finding regardless of severity or verifica
 
 | Condition | Severity |
 |-----------|----------|
-| Prod Dockerfile/K8s exposes admin/actuator/secrets | **High**–**Critical** by Impact |
+| Prod Dockerfile/K8s exposes admin/actuator/secrets | **High**–**Critical** by Impact (misconfig — not LEAK cap) |
 | `docker-compose.yml` local Mongo, no auth | **Medium** max (Exposure Local) |
 | Container runs as root | **Medium** (amplifier) |
-| Hardcoded secret in **deployed** config | **Critical**–**High** per `secrets-patterns.md` |
+| Hardcoded secret in config/source (`LEAK-NNN`, SAST-SECRET) | **High** or **Medium** only — **never Critical** (hardcoded-credentials cap) |
 
 ---
 
@@ -213,6 +240,7 @@ confidence=..., verification_status=..., dast_status=..., rationale=one line
 | Medium because Not Verified | Conflates DAST with severity | Calibrate four factors; Not Verified → Verification Status only |
 | High/Critical only after Burp | Severity ≠ live proof | Firm static proof can justify High |
 | Critical because "missing auth" | Ignores impact/exposure | Complete Severity Rationale |
+| Critical for hardcoded AWS/DB/JWT in config | LEAK cap forbids Critical | **High** (prod) or **Medium** (local/staging); cite cap in Rationale |
 | Severity = Confidence | Independent dimensions | Firm + Not Verified + High is valid |
 | Downgrade because 401 on curl | Gateway may block probe; code may still be vulnerable | Not Verified + severity from code |
 | Skip Severity Rationale | Not reproducible | Mandatory section |
@@ -224,7 +252,8 @@ confidence=..., verification_status=..., dast_status=..., rationale=one line
 - [ ] `### Severity Rationale` present with four factors + Severity row
 - [ ] Title `[SEVERITY]` matches Rationale + Checklist + Classification
 - [ ] **No** severity chosen because of Not Verified / skipped curl / no host
-- [ ] Step 1 caps honored (Tentative, Local, Hardening only)
+- [ ] Step 1 caps honored (Tentative, Local, Hardening, **hardcoded-credentials**)
+- [ ] No **LEAK-NNN** / SAST-SECRET finding labeled **Critical**
 - [ ] Verification Status / DAST Status populated separately from Severity
 
 ---

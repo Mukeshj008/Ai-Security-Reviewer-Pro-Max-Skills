@@ -9,11 +9,13 @@ Replaces **Appendix E** in `security_report.md`. Execute all 109 checks; record 
 
 ## Where to record
 
-Choose one (never commit to repo unless user asks):
+Choose one for the **109 worksheet** (never commit unless user asks):
 
-1. **Agent working notes** in the session (preferred)
+1. **Agent working notes** in the session (preferred for the matrix)
 2. **Optional file** `.security-review/internal-scan-log.md` (gitignored) in the project under review
 3. **Collapsed toggle** in user report — layer summary only (PASS/FINDING counts), not 109 rows
+
+**Walk inventory (v4.35.1 — different file):** `.security-review/scan-session-memory.md` **must** be written on large repos so a compacted chat can resume. Spec: `scan-session-memory.md`. Do **not** put 109 rows in session memory.
 
 ---
 

@@ -10,14 +10,16 @@ Status (Appendix F): `PASS` | `FAIL` | `SKIP` | `PARTIAL`
 
 ---
 
-## Quick inventory (109 checks)
+## Quick inventory (~109 defined checks)
+
+> **Count note:** "109" is the **defined superset**. Active count varies by mode — in default code-only mode CVE/OSV/DEPS/SCA-MAVEN rows are **N/A** (~89 active). See `vulnerability-coverage-overview.md` for the canonical mode-adjusted count; do not treat the sum below as an exact code-only total.
 
 | ID range | Count | Manifest |
 |----------|-------|----------|
 | SAST-OG-01 … SAST-OG-28 | 28 | `sast_scan_manifest.md` |
 | SAST-BUS-01 | 1 | `sast_scan_manifest.md` bus § |
 | SAST-LEAK-01 … 08 | 8 | `frontend-stacktrace-leaks.md` |
-| SAST-SECRET-01 … 11 | 11 | `secrets-patterns.md` |
+| SAST-SECRET-01 … 12 | 12 | `secrets-patterns.md` |
 | SAST-INJ-XSS, RCE, CMD, XXE, XML | 5 | `injection-deep-scan.md` |
 | SAST-EXT-01 … 07 | 7 | `additional_vulns.md` |
 | CVE-DEPS/REACH/CODE | 14 | `cve-exploitability.md` |

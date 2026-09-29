@@ -1,6 +1,8 @@
 # Secret Type Labels (SAST-SECRET reporting)
 
-When reporting **hardcoded secrets** (VULN-NNN or SAST-OG-10), you **must** name the **secret type** in plain language — not generic "hardcoded credential".
+When reporting **hardcoded secrets** (`LEAK-NNN`, VULN-NNN, or SAST-OG-10), you **must** name the **secret type** in plain language — not generic "hardcoded credential".
+
+**Severity:** **`severity-calibration.md` hardcoded-credentials cap** — **never Critical**. **High** for production-path credentials; **Medium** for local/staging/dev-only profiles.
 
 ---
 

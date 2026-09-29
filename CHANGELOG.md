@@ -4,6 +4,52 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.35.2] — 2026-09-29
+
+### Added — weak-model parity card (Mythos-class AUTH without a frontier model)
+
+Small models skip glob/`TestSSO`/fail-open/Spring-no-filter because they optimize for finishing 109 on P0. Quality is restored by **mechanical `rg` + one module per turn**, not a longer SKILL.md.
+
+- **`weak-model-parity.md`** — skip/fail table, scoped parity `rg`, hard stops, pasteable user prompt
+- **`SKILL.md` 0b / −1w**, **`model-proof-operating-contract.md`**, **`agent-execution.md`**, **`large-repo-playbook.md`**
+
+## [4.35.1] — 2026-09-28
+
+### Added — repo-local scan session memory (resume after context compact)
+
+A compacted chat used to re-run whole-repo `find`/`rg` and lose Residual. The agent now **writes** walk state into the **cloned workspace**.
+
+- **`scan-session-memory.md`** — canonical path `.security-review/scan-session-memory.md`; Read first; rewrite after each HTTP module; stale rules vs `git_head` / skill version; no secrets; ~200 line cap
+- **`SKILL.md`**, **`agent-execution.md`**, **`model-proof-operating-contract.md`**, **`large-repo-playbook.md`**, **`multi-module-enumeration.md`**, **`internal-scan-log.md`**, **`scan-attestation-summary.md`**
+
+Default: gitignore `.security-review/` in the **target** repo (still works in the same clone). Commit a redacted copy only if resume on a fresh clone is required.
+
+## [4.35.0] — 2026-09-28
+
+### Added — Express AUTH audit, fail-open tokens, large-repo honesty, `--strict` Critical
+
+Dogfood on a 27-service Bus monorepo: Composer without the skill missed glob/`TestSSO`/webhooks; Composer *with* the skill still claimed 109 checks after five apps and labeled book-service **Critical**; Grok skipped IMS/OD admin; Opus found fail-open empty `access_token`.
+
+- **`express-auth-audit.md`** — mandatory `rg` for `app.all` vs later routes, `next('route')`, no-op `restricted`, `TestSSO`, Host/`X-Forwarded-Host` as API-key skip, inbound webhooks vs outbound `VerifyKey`
+- **`precision-false-positive-adjudication.md` AUTH-ADJ-04** — empty header → config secret / skip-if-unset is AUTH, not G3
+- **`large-repo-playbook.md` + `multi-module-enumeration.md` Step 2b + `scan-attestation-summary.md`** — P3 shallow AUTH required; `### HTTP module walk`; no fake `Checks executed: 109`
+- **`per-method-auth-audit.md` Step 3b** — Spring module with no `SecurityFilterChain` → one AUTH + instances; **High max** without cited Ingress
+- **`generate_html_report.py --strict`** — fail LEAK/CWE-321 Critical, Local-exposure Critical, no-Spring-Security Critical without public bind, 109-without-module-walk
+- **`severity-calibration.md`**, **`manual-code-review.md`**, **`route_auth_audit.md`**, **`model-proof-operating-contract.md`**, **`extended-category-scans.md` §19.1–19.2**, **`SKILL.md`**, **`agent-execution.md`**
+
+### Why
+
+Skill text already required per-method AUTH; models still skipped modules and inflated Critical. Gates must be **rg + `--strict`**, not memory.
+
+## [4.34.0] — 2026-09-28
+
+### Changed — hardcoded secret severity cap (never Critical)
+
+Committed credentials (`LEAK-NNN`, `SAST-SECRET-01…12`, `SAST-OG-10`) must not be rated **Critical**. Calibrate **High** (production deploy path) or **Medium** (local/staging/dev); impact may still be Severe in Impact Assessment.
+
+- **`severity-calibration.md`** — Step 1 cap + **§ Hardcoded credentials severity cap**; IAC/LEAK table and reconciliation gate updated
+- **`secrets-patterns.md`**, **`secret-type-labels.md`**, **`finding-templates.md`**, **`patterns.md`** — aligned severity guidance (pattern tables: typical max **High**, not Critical)
+
 ## [4.33.1] — 2026-08-18
 
 ### Added — public docs site so Google can find the GitHub repo

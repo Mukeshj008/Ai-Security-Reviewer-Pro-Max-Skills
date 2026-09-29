@@ -525,6 +525,8 @@ rg -n "buildUrl|UriComponentsBuilder|fromHttpUrl|fromUriString|new URL\(|URI\.cr
 rg -n "io\.burt\.jmespath|Expression\.search" --glob "*.{java,kt}"
 ```
 
+If `@RestController` exists in a module **and** the SecurityFilterChain `rg` is empty **and** that module's POM/Gradle has no `spring-boot-starter-security` → **one AUTH + instances** (`per-method-auth-audit.md` Step 3b). Not default Critical.
+
 **Mandatory when Spring detected:** every hit above that reaches a reachable HTTP path or secret store → candidate ledger entry (Finding / Tentative / Appendix A). Do not skip because "gateway protects it."
 
 **SSRF hits:** trace URL builder until authority source found (or **Tentative**). Config base + **`pathSegment`/`queryParam` only** (not `.path(userInput)`) → Appendix A **G3**. Feign `@Url` user URL → Finding. Redirect chain → Tentative/Low (SSRF-ADJ-01-F).
@@ -535,6 +537,8 @@ rg -n "io\.burt\.jmespath|Expression\.search" --glob "*.{java,kt}"
 rg -n "eval\s*\(|new Function\s*\(|child_process\.(exec|execSync|spawn)\s*\([^)]*\+|require\s*\(\s*req\.|__proto__|constructor\.prototype" --glob "*.{js,ts}" -g '!node_modules/**'
 rg -n "merge\s*\(|deepmerge|lodash\.merge|extend\s*\(\s*true.*req\.body" --glob "*.{js,ts}" -g '!node_modules/**'
 ```
+
+**When `app.` / `router.` HTTP exists:** also run **`express-auth-audit.md`** (mandatory `rg` block). Do not skip because "internal API."
 
 ### §19.3 PHP
 

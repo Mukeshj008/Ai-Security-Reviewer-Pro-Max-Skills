@@ -246,6 +246,23 @@ A query/header/body ID is **not** IDOR if the handler **does not use it** to sel
 
 ---
 
+## AUTH-ADJ-04 — Fail-open default token / skip-if-unset (CWE-287)
+
+**Keep AUTH (do not Appendix A as "config has a token")** when missing/empty attacker-controlled auth input is replaced with a **server default** or the check is **skipped**:
+
+| Pattern | Example | Verdict |
+|---------|---------|---------|
+| Empty header → config secret | `if token == "" { token = config.App_access_token }` then compare | **Finding** — unauthenticated caller is treated as the service identity |
+| Unset env → skip auth | `if (!process.env.API_KEY) return next()` | **Finding** — fail-open when secret missing |
+| Missing SSO → `next()` | `if (!sso_token) return next()` in oauth middleware | **Finding** unless every downstream handler 401s (then Tentative + cite handlers) |
+| Outbound partner key on a **client** call | `VerifyKey: Config.verify_key` when **calling** Bitla | **Not** G3 for an **inbound** unauthenticated `POST /callback` |
+
+**G3 (Appendix A)** only when a **repository** gateway/ingress **rejects** empty `Authorization` / `access_token` for that exact path (cite manifest `file:line`). "ALB exists" is forbidden (same as `manual-code-review.md` gateway rule).
+
+**G4:** still exploitable on cluster-internal HTTP (other pods). Do not drop because "not on the internet."
+
+---
+
 ## EXPLOIT-ADJ-01 — Hard G4 fail (not practically exploitable)
 
 **Appendix A (failed gate G4)** when **any** of these is proven with `file:line` or live evidence. Unknown → Tentative, not a silent drop.
@@ -287,7 +304,7 @@ Row 5 is a **keep-finding** reminder: unused dummy-token **parameter** that is n
 
 - Tag checklist rows adjudicated with `[Adj: SSRF-ADJ-01]` in internal scan log Notes.
 - Appendix A table must include **Failed Gate** column: `G3` / `G4` + adjudication ID (`SSRF-ADJ-01`, `LDAP-ADJ-01`, …).
-- Scan Attestation Summary: `Precision adjudication: all *-ADJ-* gates applied (v4.33+)` including **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**.
+- Scan Attestation Summary: `Precision adjudication: all *-ADJ-* gates applied (v4.35+)` including **IDOR-ADJ-01**, **AUTH-ADJ-02/03/04**, **EXPLOIT-ADJ-01**.
 - Do **not** publish "zero SSRF" — publish "N candidates adjudicated; M excluded per SSRF-ADJ-01 with cited builders".
 
 ---
@@ -296,6 +313,6 @@ Row 5 is a **keep-finding** reminder: unused dummy-token **parameter** that is n
 
 - [ ] Every SAST-OG-26 hit has documented **authority analysis** (who controls host/scheme/port).
 - [ ] Every SAST-OG-18 hit has **LDAP sink confirmation in file or callee chain** or LDAP-ADJ-01 exclusion.
-- [ ] **INJ/DESER/LOG/AUTH/XXE-ADJ-*** and **IDOR-ADJ-01 / AUTH-ADJ-02 / AUTH-ADJ-03 / EXPLOIT-ADJ-01 / CORS-ADJ-01** applied when matching candidates exist.
+- [ ] **INJ/DESER/LOG/AUTH/XXE-ADJ-*** and **IDOR-ADJ-01 / AUTH-ADJ-02 / AUTH-ADJ-03 / AUTH-ADJ-04 / EXPLOIT-ADJ-01 / CORS-ADJ-01** applied when matching candidates exist.
 - [ ] Same safe `buildUrl()` / base-URL helper merged into one finding with instances, not N duplicate VULN IDs.
 - [ ] Builder not traced → **Tentative**, not Appendix A.

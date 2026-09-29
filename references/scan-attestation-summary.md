@@ -24,15 +24,15 @@
 | **FINDING** | Y (linked finding IDs) |
 | **N/A** | Z (stack not present — list layers) |
 | **SKIP/FAIL** | 0 at handoff (or explain in Notes) |
-| **Internal log** | session notes / `.security-review/internal-scan-log.md` / layer toggle |
+| **Internal log** | session notes / `.security-review/internal-scan-log.md` / layer toggle; **walk resume:** `.security-review/scan-session-memory.md` |
 | **Researcher-discovered findings** | N (validated outside 109 matrix; `Discovery: Researcher`) |
 | **DAST backend** | Burp MCP \| curl (user approved) \| None — Burp PoC only (user declined / no host) |
 | **HTTP findings with Burp PoC crafted** | N / N (must equal HTTP AUTH+VULN count) |
 | **Deep-link audit** | Completed (`deeplink-audit.md`) \| N/A (no mobile/deeplink surfaces) — never silent skip when triggers match |
 | **Mobile SAST (static)** | Completed (`mobile-sast-audit.md`) \| N/A (no mobile code) — ATS/exported IPC/storage reviewed; Frida/MITM Residual |
-| **Precision adjudication (v4.33+)** | All `*-ADJ-*` including IDOR-ADJ-01 / AUTH-ADJ-02/03 / EXPLOIT-ADJ-01; SSRF-ADJ-01: N (M excluded **G3**); empty-200 BOLA claims excluded or Tentative |
+| **Precision adjudication (v4.35+)** | All `*-ADJ-*` including IDOR-ADJ-01 / AUTH-ADJ-02/03/**04** / EXPLOIT-ADJ-01; SSRF-ADJ-01: N (M excluded **G3**); empty-200 BOLA claims excluded or Tentative |
 | **Actuator sensitive endpoints audit** | Completed (`actuator-sensitive-endpoints-audit.md`) \| N/A (no Spring/management endpoints) — sensitive-only reporting; health/info probe-safe |
-| **Attestation** | All applicable 109 checks run + security-researcher pass completed; G1–G5 on every finding |
+| **Attestation** | Applicable checks on **walked** HTTP modules + researcher pass; G1–G5 on every finding. Do **not** claim 109 executed unless `### HTTP module walk` Y==X or Residual lists every skipped HTTP module. |
 
 ### Example
 
@@ -65,8 +65,21 @@
 - [ ] Logged in **Appendix F** Phase 1 (SAST manifests) = PASS
 - [ ] **AUTH coverage gate:** Appendix D endpoint rows == sum of AUTH instance counts; checklist AUTH rows == distinct AUTH finding IDs; multi-instance findings include `### Instances` with per-instance Source/Sink (`finding-instances.md`)
 - [ ] **No duplicate finding IDs** for the same CWE + root cause (secrets, TLS trust-all, CORS, Vault tokens, etc. → instances)
-- [ ] **Precision adjudication:** SSRF/LDAP plus **IDOR-ADJ-01** (no Confirmed BOLA from empty body / token-bind); AUTH-ADJ-02/03; EXPLOIT-ADJ-01 (`precision-false-positive-adjudication.md` v4.33+)
+- [ ] **Precision adjudication:** SSRF/LDAP plus **IDOR-ADJ-01** (no Confirmed BOLA from empty body / token-bind); AUTH-ADJ-02/03/**04**; EXPLOIT-ADJ-01 (`precision-false-positive-adjudication.md` v4.35+)
+- [ ] **HTTP module walk (v4.35):** table below present; `enumerated == walked` OR Residual names every skipped HTTP module; never `Checks executed: 109` after a partial slice
+- [ ] **Session memory (v4.35.1, large repo):** `.security-review/scan-session-memory.md` exists and matches the HTTP module walk table
 - [ ] **Mobile SAST (static)** completed or N/A justified (`mobile-sast-audit.md`) — exported components, ATS, on-device storage
+
+### HTTP module walk (v4.35 — mandatory when 2+ HTTP modules)
+
+```markdown
+### HTTP module walk
+| HTTP modules enumerated | N |
+| HTTP modules AUTH-walked | M |
+| Residual (AUTH not walked) | none \| `mod-a, mod-b` |
+```
+
+`--strict` fails if the report claims `Checks executed: 109` and this table is missing, or `M < N` with Residual `none` / empty.
 
 **`--strict` HTML export:** warns if `## Scan Attestation Summary` is missing (does not fail export — additive recommendation). Missing attestation is logged to stderr.
 

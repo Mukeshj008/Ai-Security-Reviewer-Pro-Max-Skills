@@ -407,7 +407,7 @@ Use when **SAST-SECRET-01…12** or **SAST-OG-10** confirms a committed credenti
 | **Credential Role** | API key / password / connection string / private key / OAuth token |
 | CWE ID | CWE-798 |
 | OWASP Category | A07:2021 - Identification and Authentication Failures |
-| Severity | Critical / High / Medium (see `secrets-patterns.md`) |
+| Severity | **High** or **Medium** only — **never Critical** (`severity-calibration.md` hardcoded-credentials cap; see `secrets-patterns.md`) |
 | AI Verdict | ✅ TRUE POSITIVE |
 
 ### Description template

@@ -4,48 +4,50 @@ Quick reference for static pattern detection used by the AI Security Reviewer.
 
 ## Hardcoded Secrets (40+ Patterns)
 
+**Severity (all rows):** Calibrate with **`severity-calibration.md` hardcoded-credentials cap** — **Critical is forbidden** for committed credentials. Use **High** (production deploy path) or **Medium** (local/staging/dev profile). Pattern tables below use **High** / **Medium** as typical ceilings, not Critical.
+
 ### Cloud Provider Keys
-| Pattern | Regex | Severity |
-|---------|-------|----------|
-| AWS Access Key | `AKIA[0-9A-Z]{16}` | Critical |
-| AWS Secret Key | `aws_secret.*[=:]\s*["']?[A-Za-z0-9/+=]{40}` | Critical |
+| Pattern | Regex | Typical max |
+|---------|-------|-------------|
+| AWS Access Key | `AKIA[0-9A-Z]{16}` | High |
+| AWS Secret Key | `aws_secret.*[=:]\s*["']?[A-Za-z0-9/+=]{40}` | High |
 | GCP API Key | `AIza[0-9A-Za-z\-_]{35}` | High |
-| Azure Storage Key | `azure.*storage.*key.*[=:].*[A-Za-z0-9+/=]{88}` | Critical |
-| DigitalOcean Token | `dop_v1_[a-f0-9]{64}` | Critical |
+| Azure Storage Key | `azure.*storage.*key.*[=:].*[A-Za-z0-9+/=]{88}` | High |
+| DigitalOcean Token | `dop_v1_[a-f0-9]{64}` | High |
 
 ### Authentication Tokens
-| Pattern | Regex | Severity |
-|---------|-------|----------|
-| GitHub Token | `gh[pousr]_[A-Za-z0-9_]{36,}` | Critical |
-| GitLab PAT | `glpat-[A-Za-z0-9\-_]{20,}` | Critical |
-| Slack Token | `xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}` | Critical |
-| Discord Bot Token | `[MN][A-Za-z\d]{23,}\.[\w-]{6}\.[\w-]{27}` | Critical |
+| Pattern | Regex | Typical max |
+|---------|-------|-------------|
+| GitHub Token | `gh[pousr]_[A-Za-z0-9_]{36,}` | High |
+| GitLab PAT | `glpat-[A-Za-z0-9\-_]{20,}` | High |
+| Slack Token | `xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}` | High |
+| Discord Bot Token | `[MN][A-Za-z\d]{23,}\.[\w-]{6}\.[\w-]{27}` | High |
 | NPM Token | `npm_[A-Za-z0-9]{36}` | High |
 
 ### Payment & SaaS
-| Pattern | Regex | Severity |
-|---------|-------|----------|
-| Stripe Live Key | `sk_live_[0-9a-zA-Z]{24,}` | Critical |
+| Pattern | Regex | Typical max |
+|---------|-------|-------------|
+| Stripe Live Key | `sk_live_[0-9a-zA-Z]{24,}` | High |
 | Stripe Test Key | `sk_test_[0-9a-zA-Z]{24,}` | Medium |
-| SendGrid API Key | `SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}` | Critical |
+| SendGrid API Key | `SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}` | High |
 | Twilio API Key | `SK[0-9a-fA-F]{32}` | High |
 | Mailgun API Key | `key-[0-9a-zA-Z]{32}` | High |
 
 ### Database Connection Strings
-| Pattern | Regex | Severity |
-|---------|-------|----------|
-| MongoDB URI | `mongodb(\+srv)?://[^/\s]+:[^@/\s]+@` | Critical |
-| PostgreSQL URI | `postgres(ql)?://[^/\s]+:[^@/\s]+@` | Critical |
-| MySQL URI | `mysql://[^/\s]+:[^@/\s]+@` | Critical |
-| Redis URI | `redis://[^/\s]+:[^@/\s]+@` | Critical |
+| Pattern | Regex | Typical max |
+|---------|-------|-------------|
+| MongoDB URI | `mongodb(\+srv)?://[^/\s]+:[^@/\s]+@` | High |
+| PostgreSQL URI | `postgres(ql)?://[^/\s]+:[^@/\s]+@` | High |
+| MySQL URI | `mysql://[^/\s]+:[^@/\s]+@` | High |
+| Redis URI | `redis://[^/\s]+:[^@/\s]+@` | High |
 
 ### Cryptographic Keys
 | Pattern | Regex | Severity |
 |---------|-------|----------|
-| RSA Private Key | `-----BEGIN RSA PRIVATE KEY-----` | Critical |
-| OpenSSH Private Key | `-----BEGIN OPENSSH PRIVATE KEY-----` | Critical |
-| EC Private Key | `-----BEGIN EC PRIVATE KEY-----` | Critical |
-| PGP Private Key | `-----BEGIN PGP PRIVATE KEY BLOCK-----` | Critical |
+| RSA Private Key | `-----BEGIN RSA PRIVATE KEY-----` | High |
+| OpenSSH Private Key | `-----BEGIN OPENSSH PRIVATE KEY-----` | High |
+| EC Private Key | `-----BEGIN EC PRIVATE KEY-----` | High |
+| PGP Private Key | `-----BEGIN PGP PRIVATE KEY BLOCK-----` | High |
 
 ---
 

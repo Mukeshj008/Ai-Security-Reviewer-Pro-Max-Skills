@@ -75,7 +75,22 @@ For each row in the worksheet, mark `Auth status` as one of:
 | Some methods annotated, others not (mixed) | **Each unannotated method is a separate AUTH-NNN candidate** — do not let the annotated peer mask it |
 | `V1`/`V2`/`V3` variant unannotated, `V4_SV1` annotated | Highly suspicious — typical refactor leftover. **Report v1/v2/v3** as AUTH candidates |
 | `*_INTERNAL`, `*Intenal`, `internal*` paths | Report as AUTH candidate **and** an architectural risk: internal-only routes mounted on the same servlet as public routes |
-| Method named `forceX`, `adminX`, `resetX`, `flushX`, `reloadX` without annotation | High-risk admin operation — promote to **Critical** AUTH-NNN |
+| Method named `forceX`, `adminX`, `resetX`, `flushX`, `reloadX` without annotation | High-risk admin operation — **High AUTH** (Critical only if Step 2 Critical gates in `severity-calibration.md` all pass, including cited Public/Internal exposure) |
+
+---
+
+## Step 3b — Spring module with **no** security filter (v4.35)
+
+If the module has `@RestController` / `@Controller` HTTP mappings **and**:
+
+- no `SecurityFilterChain` / `WebSecurityConfigurerAdapter` / `WebSecurityCustomizer` in **that module**, **and**
+- `pom.xml` / Gradle for **that module** does not depend on `spring-boot-starter-security` (or equivalent),
+
+then **every non-health mapping is Unauthenticated**. Emit **one AUTH** with `### Instances` (do not invent N IDs).
+
+**Severity:** **High** typical. **Critical forbidden** unless Step 2 Critical gates pass **and** Exposure is cited from **Ingress / public bind in this repo** (`severity-calibration.md` v4.35). "No Spring Security" alone is not Critical.
+
+Health/ping → AUTH-ADJ-03 Low instances.
 
 ---
 

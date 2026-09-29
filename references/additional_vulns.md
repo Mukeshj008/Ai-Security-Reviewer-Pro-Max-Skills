@@ -2,6 +2,76 @@
 
 These patterns are derived from the llm-sast-scanner skill to enhance coverage.
 
+**This file is the manifest for `SAST-EXT-01 … 07`.** Run the executable `rg` detection below (Stage 1 wide net), then adjudicate each hit with G1–G5 + `finding-confidence-validation.md` before any finding. Descriptive per-class patterns follow in §1–§7.
+
+Replace `[SRC]` with `src` or your source root. Exclude: `node_modules`, `test`, `tests`, `dist`, `build`.
+
+---
+
+## Executable detection (SAST-EXT-01 … 07)
+
+### SAST-EXT-01 — Trust Boundary Violation (request → session) · CWE-501
+```bash
+rg -n "session\.(setAttribute|set)\s*\([^)]*(request\.getParameter|request\.getHeader|req\.(body|query|params|headers)|getCookies)" [SRC] --glob '*.{java,kt,js,ts}'
+rg -n "\$_SESSION\[[^]]*\]\s*=\s*\$_(GET|POST|REQUEST|COOKIE)" [SRC] --glob '*.php'
+```
+Flag: untrusted request data stored into server-side session without validation/allowlist.
+
+### SAST-EXT-02 — HTTP Request Smuggling (CL/TE desync) · CWE-444
+```bash
+# Reverse-proxy configs missing HTTP/1.1 + Connection/TE normalization
+rg -n "proxy_pass\s+http" [SRC] -g '*.conf' -g '*.nginx' -A6 | rg -n "proxy_pass|proxy_http_version|Connection|Transfer-Encoding"
+rg -n "proxy_pass\s+http" [SRC] -g '*.conf' -g '*.nginx' -L
+# App servers behind proxy that historically mishandle CL+TE
+rg -n "createServer\(|app\.run\(\s*host|gunicorn|gevent|eventlet|worker[-_]class" [SRC]
+```
+Flag: `proxy_pass` blocks **without** both `proxy_http_version 1.1;` and `proxy_set_header Connection "";`; ambiguous CL/TE handling at any hop.
+
+### SAST-EXT-03 — JNDI Injection / Log4Shell · CWE-917
+```bash
+# Direct JNDI lookup with request-influenced name
+rg -n "(InitialContext|JndiTemplate|Context)\s*[\s\S]{0,80}?\.lookup\s*\(" [SRC] --glob '*.{java,kt}'
+rg -n "\.lookup\s*\(\s*[^\"')]*\b(request|req|getParameter|getHeader|params|query|body)\b" [SRC] --glob '*.{java,kt}'
+# Log4Shell: user-controlled data logged on vulnerable log4j2, or lookups enabled
+rg -n "(LogManager\.getLogger|org\.apache\.logging\.log4j)" [SRC] --glob '*.{java,kt}'
+rg -n "log(ger)?\.(info|warn|error|debug)\s*\([^)]*(getHeader|getParameter|User-Agent|req\.|request\.)" [SRC] --glob '*.{java,kt}'
+rg -n "\$\{jndi:" [SRC]
+```
+**CVE-override (mandatory):** never suppress a `${jndi:` sink or user-input-into-lookup on reachability grounds alone — flag for human review (`finding-confidence-validation.md`).
+
+### SAST-EXT-04 — Session Fixation · CWE-384
+```bash
+rg -n "sessionFixation\s*\(\s*\)\s*\.none\(\)" [SRC] --glob '*.{java,kt}'
+rg -n "(getSession\(|session_start\(|req\.session\.)" [SRC] -A5 | rg -n "setAttribute|_SESSION|session\.\w+\s*=" 
+# Presence of login handlers WITHOUT regeneration is the signal — verify by Read:
+rg -n "changeSessionId\(|session\.invalidate\(|session_regenerate_id\(|req\.session\.regenerate\(" [SRC]
+```
+Flag: authentication success path that does **not** rotate the session id (missing `changeSessionId` / `session_regenerate_id(true)` / `regenerate`).
+
+### SAST-EXT-05 — ReDoS (catastrophic backtracking) · CWE-1333
+```bash
+rg -n "new RegExp\(\s*(req\.|request|input|user)|Pattern\.compile\(\s*[^\"')]*\b(request|req|getParameter)\b" [SRC]
+rg -n "\((?:\.\*|\.\+|\[[^]]+\]\+|\\w\+)\)[+*]|\)\+\)\+|\(\.\*\)\*" [SRC]
+```
+Flag: user-supplied regex, or literal nested quantifiers `(a+)+`, `(.*)*`, `([a-z]+)*`.
+
+### SAST-EXT-06 — XML Bomb / Billion Laughs · CWE-776
+```bash
+rg -n "DocumentBuilderFactory|SAXParserFactory|XMLInputFactory|XMLReader" [SRC] --glob '*.{java,kt}'
+rg -n "disallow-doctype-decl|FEATURE_SECURE_PROCESSING|setExpandEntityReferences|XMLConstants\.FEATURE_SECURE_PROCESSING" [SRC]
+```
+Flag: XML parser constructed **without** doctype/entity-expansion limits (no `disallow-doctype-decl` / secure-processing). Overlaps SAST-INJ-XXE.
+
+### SAST-EXT-07 — Decompression / Zip Bomb · CWE-409
+```bash
+rg -n "ZipInputStream|ZipFile|GZIPInputStream|tarfile\.open|zipfile\.ZipFile|unzip|extractall\(" [SRC]
+rg -n "getNextEntry\(|extractall\(" [SRC] -A6 | rg -n "getSize|MAX|limit|total|count"
+```
+Flag: archive extraction loops with **no** per-entry size / total-bytes / entry-count cap (also check ZipSlip path — `effective-controls-catalogue.md` ARCHIVE-01).
+
+### Completion gate
+Every `SAST-EXT-01 … 07` row must appear in the internal scan log / Appendix E with `PASS` / `FINDING` / `N/A`. `N/A` requires a stack reason (e.g. no XML parsing, no archive handling).
+
 ---
 
 ## 1. Stack Trace Leaking / Information Disclosure (CWE-209)

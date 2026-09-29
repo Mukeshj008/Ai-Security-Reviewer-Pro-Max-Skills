@@ -148,5 +148,5 @@ rg -n "\"private_key\"\s*:\s*\"-----BEGIN" [SRC]
 - Map findings to **SAST-OG-10** / **SAST-SECRET-01…12**.
 - **Mandatory:** Set **Secret Type** label per **`secret-type-labels.md`** (e.g. HashiCorp Vault token, GitHub PAT, AWS Access Key ID, RabbitMQ password, MapMyIndia API key, Strapi token, JWT signing secret).
 - Include in `### Classification`: `Secret Type`, `Service / Vendor`, `Credential Role`.
-- Severity: **Critical** for live keys in `src/` **and production Vault tokens**; **High** for production config passwords; **Medium** for test-only if committed to main branch.
+- Severity: **`severity-calibration.md` hardcoded-credentials cap** — **never Critical**. **High** max for production-path secrets (live API keys, prod JDBC passwords, Vault tokens in prod profile); **Medium** for local/dev/staging-only or narrow exposure; **Low**/Appendix A for obvious test dummies per Never report rules.
 - **Redact** values in report — never paste full secret.

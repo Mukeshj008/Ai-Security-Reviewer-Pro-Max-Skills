@@ -2,7 +2,7 @@
 
 > **Works with Cursor and Claude** — same skill, same prompts, same reports.
 
-**Version 4.33.0** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
+**Version 4.35.2** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
 
 **Official GitHub:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills  
 **Docs site (Google-indexable):** https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/
@@ -31,7 +31,7 @@ Search terms that identify this project: `AI Security Reviewer Pro Max Skills`, 
 - Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
 - **Security-researcher pass** — issues outside the 109-check matrix, validated with the same G1–G5 bar
 
-> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.33.0**). See `CHANGELOG.md` for per-version behavior.
+> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.35.2**). See `CHANGELOG.md` for per-version behavior.
 
 **How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it **asks your permission** before **curl** fallback. Every HTTP finding includes a crafted Burp request regardless. Graphify speeds up discovery but is not required.
 
@@ -56,9 +56,12 @@ This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`
 
 - Agent-native static analysis — 750+ patterns, 85+ vulnerability classes, 109-check matrix
 - **Scope completeness (v4.19+)** — every module, every config profile, every Dockerfile, per-endpoint-method auth audit
+- **Large-repo honesty (v4.35+)** — AUTH-walk every HTTP module or name it Residual; never `Checks executed: 109` after a 5-app slice; `--strict` Critical policy (LEAK never Critical)
+- **Scan session memory (v4.35.1)** — `.security-review/scan-session-memory.md` in the cloned target repo so a compacted chat resumes Residual modules
+- **Weak-model parity (v4.35.2)** — `weak-model-parity.md`: one HTTP module per turn, mandatory AUTH `rg` (glob / `TestSSO` / fail-open / Spring-no-filter)
 - Senior manual review — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
 - **Two-stage confidence validation (v4.18+)** — Confirmed / Firm / Tentative; fail-open (never silently drop uncertain candidates)
-- **Precision false-positive adjudication (v4.33+)** — IDOR-ADJ-01 / AUTH-ADJ-02/03 / EXPLOIT-ADJ-01 (empty `200` ≠ Confirmed BOLA); SSRF-ADJ-01 / LDAP-ADJ-01; effective-controls catalogue (v4.31+)
+- **Precision false-positive adjudication (v4.35+)** — IDOR-ADJ-01 / AUTH-ADJ-02/03/04 / EXPLOIT-ADJ-01 (empty `200` ≠ Confirmed BOLA; fail-open config token is AUTH); SSRF-ADJ-01 / LDAP-ADJ-01; Express glob/`next('route')` audit; large-repo HTTP Residual; **scan session memory** in `.security-review/` to resume after context compact; **weak-model parity** (`weak-model-parity.md`) so small models still AUTH-walk; effective-controls catalogue (v4.31+)
 - **Severity calibration (v4.24+)** — Impact × Exploitability × Exposure × Complexity; **`### Severity Rationale`** per finding
 - **Severity ≠ DAST (v4.25+)** — Not Verified / skipped curl does **not** lower severity; verification status is reported separately
 - Every finding includes **Vulnerable Code Snippet**, **Data Flow Trace**, and **Remediation** (BEFORE/AFTER)
@@ -120,17 +123,26 @@ Run comprehensive security audit and generate security_report.html
 Check for SQL injection and XSS in the API controllers
 ```
 
+**Small / cheap model (keep AUTH quality):**
+
+```
+Follow ~/.cursor/skills/ai-security-reviewer/references/weak-model-parity.md
+Resume .security-review/scan-session-memory.md
+One HTTP module this turn. Do not re-enumerate. Do not claim 109.
+```
+
 ---
 
 ## Workflow
 
 1. Application context → trust boundaries, auth, assets
-2. Module & profile enumeration (every module, every `application-*.yml`)
-3. Static scans (`rg` per manifest files in `references/`)
-4. IaC + route auth + per-method auth audit + researcher pass
-5. Data-flow trace + AI validation (G1–G5 gates) + confidence + **severity calibration** adjudication
-6. Live verify — craft Burp PoC → Burp MCP → ask user → curl if approved (`dast-verification-flow.md`)
-7. Report — derive repo slug → `<repo>_security_report.md` → `<repo>_security_report.html`
+2. **Session memory** (if present) → resume Residual HTTP modules (`scan-session-memory.md`)
+3. Module & profile enumeration (every module, every `application-*.yml`) — skip full re-enumerate when memory is fresh
+4. Static scans (`rg` per manifest files in `references/`) — **Express:** `express-auth-audit.md`; **small models:** `weak-model-parity.md` first
+5. IaC + route auth + per-method auth audit + researcher pass
+6. Data-flow trace + AI validation (G1–G5 gates) + confidence + **severity calibration** adjudication
+7. Live verify — craft Burp PoC → Burp MCP → ask user → curl if approved (`dast-verification-flow.md`)
+8. Report — derive repo slug → `<repo>_security_report.md` → `<repo>_security_report.html`
 
 The AI agent is the scanner. Manifests are cookbooks — do not run bundled scan scripts for analysis.
 
@@ -152,6 +164,9 @@ Example: workspace `acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-us
 |------|---------|
 | `SKILL.md` | Main skill instructions (entry point for Cursor & Claude) |
 | `references/` | SAST manifests, taxonomy, DAST rules, report templates |
+| `references/weak-model-parity.md` | Small-model AUTH loop (v4.35.2) |
+| `references/scan-session-memory.md` | Repo-local resume file spec (v4.35.1) |
+| `references/express-auth-audit.md` | Express glob / `next('route')` / TestSSO (v4.35.0) |
 | `references/report-naming-convention.md` | Mandatory `<repo>_security_report.*` filename spec |
 | `scripts/derive_report_name.py` | Derive clean repo slug from workspace folder |
 | `scripts/generate_html_report.py` | Markdown → HTML (formatting only) |

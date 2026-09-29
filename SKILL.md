@@ -2,10 +2,18 @@
 name: ai-security-reviewer
 description: >-
   Agent-native SAST+DAST+IaC code review: 109 security checks · 85+ vulnerability classes ·
-  760+ pattern signatures. v4.31: evidence-based false-positive control (effective-controls
+  750+ pattern signatures. v4.31: evidence-based false-positive control (effective-controls
   catalogue, exploitability preconditions) + Go/Ruby/Rust/C-C++/Elixir/Scala/Apex stack packs,
-  constant-time MAC, SAML, OAuth, CI workflow injection, ZipSlip, weak RNG. v4.33 G3/G4 hardened:
-  IDOR token-bind, empty-200, probe-safe, dummy-token (IDOR-ADJ-01, AUTH-ADJ-02/03, EXPLOIT-ADJ-01).
+  constant-time MAC, SAML, OAuth, CI workflow injection, ZipSlip, weak RNG.   v4.35: Express glob/`next('route')`/no-op middleware, AUTH-ADJ-04 fail-open
+  tokens, large-repo Residual per skipped HTTP module, Spring-no-filter AUTH
+  instances, --strict Critical policy. v4.35.1 repo scan-session memory
+  (.security-review/scan-session-memory.md) to resume after context compact.
+  v4.35.2 weak-model parity card (Mythos-class AUTH rg loop) so small
+  models do not skip glob/TestSSO/fail-open/Spring-no-filter.
+  v4.34 hardcoded-secret severity cap
+  (High/Medium only, never Critical for LEAK/SAST-SECRET).
+  v4.33 G3/G4 hardened:
+  IDOR token-bind, empty-200, probe-safe, dummy-token (IDOR-ADJ-01, AUTH-ADJ-02/03/04, EXPLOIT-ADJ-01).
   v4.32.1 gate-precision fixes
   (G3/G4 SSRF labels, pathSegment, Feign @Url, redirect chain). v4.30 static mobile
   SAST (ATS, exported IPC, on-device storage); v4.29 deeplink session theft. Burp/curl DAST.
@@ -14,7 +22,7 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.33.0** — **Harder G3/G4:** IDOR-ADJ-01 (token-bound / unused attacker ID), AUTH-ADJ-02 (`200 []` ≠ Confirmed BOLA), AUTH-ADJ-03 (probe-safe), EXPLOIT-ADJ-01 (dead sink / dummy token), CORS-ADJ-01. v4.32.1 SSRF G3 labels retained.
+**Version 4.35.2** — **Weak-model parity:** `weak-model-parity.md` (one HTTP module, mandatory AUTH `rg`, no fake 109). **v4.35.1** session memory. **v4.35.0** Express AUTH, AUTH-ADJ-04, Residual, `--strict` Critical. **v4.34** LEAK never Critical.
 
 
 **Report contract (read first):** `references/report-output-spec.md`
@@ -23,18 +31,21 @@ description: >-
 
 Before scanning, read these references in this order. Do **not** read every reference eagerly; use progressive disclosure.
 
+0. **Repo memory:** `Read` `.security-review/scan-session-memory.md` if it exists (`scan-session-memory.md`). Resume Residual / `next_http_module`. Do **not** re-enumerate the whole repo unless memory is stale.
+0b. **`references/weak-model-parity.md`** — **default loop for any non-frontier model** (and recommended for all large repos). One HTTP module; parity `rg`; do not load the rest of this list until AUTH for that module is ledger-closed.
 1. `references/agent-execution.md`
 2. `references/report-output-spec.md`
 3. `references/manual-code-review.md`
 4. `references/model-proof-operating-contract.md`
 5. `references/finding-confidence-validation.md`
 5b. `references/effective-controls-catalogue.md` — **read before excluding anything as a false positive (G3/G4 evidence)**
-5c. `references/precision-false-positive-adjudication.md` — **read before reporting SSRF, LDAP, IDOR, or unauth-success claims**
-6. `references/severity-calibration.md` — **read before assigning Critical/High/Medium**
+5c. `references/precision-false-positive-adjudication.md` — **read before reporting SSRF, LDAP, IDOR, unauth-success, or fail-open token claims**
+6. `references/severity-calibration.md` — **read before assigning Critical/High/Medium** (hardcoded credentials: **no Critical**)
 6b. `references/finding-instances.md` — **same root cause → instances, not duplicate IDs**
 7. `references/multi-module-enumeration.md`
 8. `references/multi-profile-config-audit.md`
 9. `references/per-method-auth-audit.md`
+9b. `references/express-auth-audit.md` — **when Express/Koa/`app.`/`router.` HTTP is present**
 10. `references/async-second-order-audit.md`
 10b. `references/deeplink-audit.md` — **when mobile / deeplink / Linking / App Links triggers match**
 10c. `references/mobile-sast-audit.md` — **when Android/iOS/RN/Flutter mobile code present (static)**
@@ -108,6 +119,8 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | 0b | `manual-code-review.md` | Context, taint, G1–G5 gates |
 | 1 | `agent-execution.md` | Agent-only loop + internal scan log |
 | 2–5 | SAST manifests (sast, LEAK, SECRET, INJ) | Core patterns |
+| 5b | `patterns.md` | Quick safe/unsafe pattern reference (secrets, INJ, SSRF/LDAP, mobile, config) — cross-language |
+| 5c | `additional_vulns.md` | **SAST-EXT-01…07 manifest** — trust boundary (CWE-501), request smuggling (CWE-444), JNDI/Log4Shell (CWE-917), session fixation (CWE-384), ReDoS/XML-bomb/zip-bomb |
 | 6 | `extended-category-scans.md` | Spring/Node/Java supplemental `rg` |
 | 7–8 | `vulnerability-coverage-overview.md`, `scan-scope-metrics.md` | Coverage + files/LOC |
 | 12–14 | `secret-type-labels.md`, `iac-misconfig-scan.md`, `security-architect.md` | Secrets, IaC (code), ARCH |
@@ -118,17 +131,20 @@ Do **not** claim "zero vulnerabilities" or "100% coverage" in any report. Claim 
 | **C1** | **`standards-coverage-map.md`** | **MANDATORY** — OWASP/CWE/ASVS/LLM sweep + Completeness & Residual Risk Register |
 | **C2** | **`finding-confidence-validation.md`** | **MANDATORY** — two-stage validation, confidence levels, fail-open policy |
 | **C2b** | **`effective-controls-catalogue.md`** | **MANDATORY** — what truly neutralizes each CWE (G3), exploitability preconditions (G4), third-party-response trust-boundary rule, plus SIG/SAML/OAuth/CI/ZipSlip/RAND/XXE precision patterns |
-| **C2c** | **`precision-false-positive-adjudication.md`** | **MANDATORY** — SSRF/LDAP/INJ/DESER plus **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**; Stage-2 before pattern-only or empty-200 findings |
+| **C2c** | **`precision-false-positive-adjudication.md`** | **MANDATORY** — SSRF/LDAP/INJ/DESER plus **IDOR-ADJ-01**, **AUTH-ADJ-02/03/04**, **EXPLOIT-ADJ-01**; Stage-2 before pattern-only or empty-200 findings |
 | **C3** | **`severity-calibration.md`** | **MANDATORY** — Impact × Exploitability × Exposure × Complexity; caps; `### Severity Rationale` |
 | **I1** | **`finding-instances.md`** | **MANDATORY** — same root cause → one finding with multi-instance Source/Sink; no duplicate IDs |
 | **S1** | **`multi-module-enumeration.md`** | **MANDATORY** (multi-module repos) — enumerate ALL modules, controllers, configs, Dockerfiles |
+| **M1** | **`scan-session-memory.md`** | **MANDATORY on large repos / likely compact** — persist inventory in `.security-review/scan-session-memory.md`; resume instead of re-scanning |
 | **S2** | **`multi-profile-config-audit.md`** | **MANDATORY** (multi-profile configs) — read EVERY `application-*.{yml,properties}`, not a sample |
 | **S3** | **`per-method-auth-audit.md`** | **MANDATORY** — per-endpoint-method walk; prevents per-controller-annotation masking |
+| **S3b** | **`express-auth-audit.md`** | **MANDATORY when Express** — glob vs path, `next('route')`, no-op `restricted`, TestSSO, Host auth, inbound webhooks |
 | **N1** | **`report-naming-convention.md`** | **MANDATORY (Phase 4)** — derive `<repo>_security_report.{md,html}` slug; rename legacy `security_report.*` on entry |
 | **A1** | **`async-second-order-audit.md`** | **MANDATORY** — queues, cron, Lambda/EMR/Spark, stored filters, save-now-exploit-later flows |
 | **DL1** | **`deeplink-audit.md`** | **MANDATORY when triggered** — deep-link session theft, unvalidated handlers, App Links gaps |
 | **M1** | **`mobile-sast-audit.md`** | **MANDATORY when mobile code present** — static ATS, exported IPC, on-device storage (no Frida) |
 | **Q1** | **`model-proof-operating-contract.md`** | **MANDATORY** — token-efficient execution, candidate ledger, final compliance gate |
+| **Q1b** | **`weak-model-parity.md`** | **MANDATORY on small models / large repos** — Mythos-class AUTH hunt via scoped `rg` + one module per turn |
 | **D4** | **`dast-verification-flow.md`** | **MANDATORY (Phase 7)** — Burp PoC always; curl only with user permission |
 | **SCA1** | `sca-dependency-audit.md` | Explicit SCA mode only — dependency health/advisory findings |
 | **19+** | **v4.15 additive (code-only)** | See table below |
@@ -272,16 +288,18 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 
 ```
 −1. Application context     → manual-code-review.md → internal ARCH notes
+−1mem. **Session memory**   → scan-session-memory.md — Read/create `.security-review/scan-session-memory.md` **before** full enumerate
+−1w. **Weak-model parity** → weak-model-parity.md — one HTTP module AUTH `rg` before the long sequence
 −1b. Scan scope             → scan-scope-metrics.md (+ large-repo-playbook.md if huge)
 −1c. **Module enumeration** → multi-module-enumeration.md — list EVERY module, controller, profile, Dockerfile
 −1d. **Profile config audit** → multi-profile-config-audit.md — read every application-*.{yml,properties}
 0a. Tool bootstrap          → dependency-install-policy.md (curl, rg, python3 only)
 0.  Host discovery          → burp-host-discovery.md
 1.  Attack surface          → graphify query OR rg recon — scope = ALL modules from −1c
-2.  SAST manifests          → rg per sast + LEAK + SECRET + INJ (scope = ALL modules)
+2.  SAST manifests          → rg per sast + LEAK + SECRET + INJ + **EXT (`additional_vulns.md` SAST-EXT-01…07)** (scope = ALL modules)
 2a. **Precision adjudication** → `precision-false-positive-adjudication.md` on **every** matching candidate:
                                **SSRF-ADJ-01**, **LDAP-ADJ-01**, **INJ/DESER/LOG/AUTH/XXE-ADJ-***,
-                               **IDOR-ADJ-01**, **AUTH-ADJ-02/03**, **EXPLOIT-ADJ-01**, **CORS-ADJ-01**
+                               **IDOR-ADJ-01**, **AUTH-ADJ-02/03/04**, **EXPLOIT-ADJ-01**, **CORS-ADJ-01**
                                — G3/G4 hard fails before VULN ID; `200 []` ≠ Confirmed BOLA
 2b. Extended scans          → extended-category-scans.md (§3.11–§3.12, §6.10–§6.12, §14.8–§14.9)
 2b.1 Stack pack             → extended-category-scans.md §19.x for EVERY language present
@@ -298,6 +316,7 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 5.  Architect review        → security-architect.md → Top 3 risks (+ attack chains optional)
 6.  Route auth audit        → route_auth_audit.md
 6a. **Per-method auth audit** → per-method-auth-audit.md — one row per HTTP method, NOT per controller
+6a.1 **Express AUTH** → express-auth-audit.md when Node HTTP present
 6b. + IDOR/BOLA audit       → idor-bola-audit.md (if object IDs)
 6c. + JWT deep test         → jwt-deep-test.md (if JWT)
 6d. + Business logic        → business-logic-abuse-checklist.md (if commerce)

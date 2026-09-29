@@ -25,9 +25,9 @@ This is the **completeness backbone** of the skill. The 109-check matrix is *imp
 | A02 | Cryptographic Failures | `secrets-patterns.md`, SAST-OG-07/16, crypto review, **`mobile-sast-audit.md`** (weak crypto / plaintext device storage) | Weak hash/cipher/IV, hardcoded keys |
 | A05 | Security Misconfiguration | `iac-misconfig-scan.md`, config review, CORS/filter review, **mobile ATS/cleartext/exported IPC** | Source/config only; mobile when present |
 | A07 | Identification & Auth Failures | `jwt-deep-test.md`, auth interceptor review, session checks, **`deeplink-audit.md`**, **mobile exported login bypass** | |
-| A08 | Software & Data Integrity Failures | Deserialization (SAST-OG-15), **CI-01 workflow injection**, **SIG-01/SIG-02 signature verification**, update integrity | Library-side gadgets = Residual |
+| A08 | Software & Data Integrity Failures | Deserialization (SAST-OG-15), **JNDI/Log4Shell SAST-EXT-03 (CWE-917)**, **CI-01 workflow injection**, **SIG-01/SIG-02 signature verification**, update integrity | Library-side gadgets = Residual |
 | A09 | Security Logging & Monitoring Failures | `frontend-stacktrace-leaks.md`, log review (ASVS V16) | Often Manual |
-| A10 | SSRF | SAST-OG-22, outbound-fetch trace | |
+| A10 | SSRF | SAST-OG-26, outbound-fetch trace (SSRF-ADJ-01) | Open Redirect = SAST-OG-22 (distinct) |
 
 ---
 
@@ -41,7 +41,7 @@ This is the **completeness backbone** of the skill. The 109-check matrix is *imp
 | API4 | Unrestricted Resource Consumption | Rate-limit / pagination review (ASVS V2/V4) — often Manual |
 | API5 | Broken Function Level Authorization (BFLA) | Admin-vs-user route audit |
 | API6 | Unrestricted Access to Sensitive Business Flows | `business-logic-abuse-checklist.md` |
-| API7 | Server Side Request Forgery | SAST-OG-22 |
+| API7 | Server Side Request Forgery | SAST-OG-26 |
 | API8 | Security Misconfiguration | `iac-misconfig-scan.md`, headers/CORS |
 | API9 | Improper Inventory Management | Shadow/debug/ops endpoint hunt (researcher pass) |
 | API10 | Unsafe Consumption of APIs | Outbound-trust review; library CVEs = **Residual** |
@@ -66,9 +66,23 @@ This is the **completeness backbone** of the skill. The 109-check matrix is *imp
 | CWE-287 / 269 | Improper Authentication / Privilege Mgmt | auth + role review |
 | CWE-502 | Deserialization of Untrusted Data | SAST-OG-15 |
 | CWE-200 | Sensitive Info Exposure | SAST-LEAK-*, SAST-OG-21 |
-| CWE-918 | SSRF | SAST-OG-22 |
+| CWE-918 | SSRF | SAST-OG-26 |
 | CWE-798 | Hardcoded Credentials | SAST-SECRET-*, `secrets-patterns.md` |
 | CWE-400 | Uncontrolled Resource Consumption | DoS/ReDoS review (SAST-OG-09) |
+
+### Supplementary CWEs (outside CWE Top 25 but must be swept — `additional_vulns.md`)
+
+| CWE | Name | Coverage |
+|-----|------|----------|
+| CWE-917 | Expression Language / JNDI Injection (Log4Shell) | SAST-EXT-03, `additional_vulns.md` §4, CVE-override rule |
+| CWE-444 | HTTP Request Smuggling (CL/TE desync) | SAST-EXT-02, `additional_vulns.md` §3 |
+| CWE-1333 | ReDoS (catastrophic backtracking) | SAST-EXT-05, SAST-OG-09, `additional_vulns.md` §6 |
+| CWE-776 | XML Entity Expansion (Billion Laughs) | SAST-EXT-06, SAST-INJ-XXE |
+| CWE-409 | Decompression Bomb (Zip/Tar) | SAST-EXT-07, `additional_vulns.md` §6 |
+| CWE-501 | Trust Boundary Violation (request→session) | SAST-EXT-01, `additional_vulns.md` §2 |
+| CWE-384 | Session Fixation | SAST-EXT-04, `additional_vulns.md` §5 |
+| CWE-209 | Information Exposure via Error/Stack Trace | SAST-LEAK-*, `additional_vulns.md` §1 |
+| CWE-524 | Web Cache Poisoning / Deception | **Manual/Researcher** — unkeyed input reflected via cache; no static ID (register if CDN/proxy caching present) |
 
 ---
 

@@ -8,6 +8,8 @@ This reference **supplements** (does not replace) graphify recon, SAST manifests
 
 **v4.17 — Security researcher mandate:** The 109 checks are a **minimum coverage floor**. You **must** also perform an independent researcher review (`SKILL.md` § Security researcher layer) and report validated issues even when no check ID applies. Researcher findings use the same G1–G5 bar and normal VULN/AUTH/IAC/LEAK IDs.
 
+**v4.35 — Express + fail-open + Spring-no-filter:** Run `express-auth-audit.md` when Node HTTP exists. Empty header → config token is AUTH-ADJ-04. A Spring module with no `SecurityFilterChain` is one AUTH + instances, High unless Ingress is cited — not default Critical.
+
 > **v4.15 note:** Record Phase −1 context in **agent working notes** and **Top Structural Risks** / optional **Attack Chain Analysis** in the user report. Legacy **Appendix G** references below remain valid for internal architect work.
 
 ---
@@ -214,6 +216,7 @@ These **override** pattern severity and live `200` excitement. Cite `file:line` 
 | Live `200` with **empty** array/object and **no** foreign PII/PFI fields | **G4** for BOLA *data leak* | "Confirmed Critical IDOR" |
 | Live `500`/`400` "required `sso_token` / parameter missing" | **G4** Confirmed-unauth | "Unauth because app error JSON" |
 | Probe-safe `/health` `/status` `OK` with no secrets | **G4** AUTH-ADJ-03 | Standalone Critical AUTH |
+| Empty auth header replaced with **config token** / skip-if-unset | **keep AUTH** AUTH-ADJ-04 | "Not a bug — service has App_access_token" |
 | Dummy token **rejected** by SSO or next hop never uses the ID | **G4** EXPLOIT-ADJ-01 | "Invoice IDOR, dummy SSO accepted" |
 | SSRF/LDAP from sink name only | **G3** SSRF-ADJ-01 / LDAP-ADJ-01 | Pattern-only VULN |
 
@@ -302,7 +305,8 @@ The following exclusion reasons are **not allowed** because past reviews used th
 | "`.path()` with user input is safe like pathSegment" | **Forbidden.** `.path(userInput)` injects slashes/`..` — not an SSRF authority bypass but not a safe dynamic segment; do not Appendix A on SSRF authority grounds alone if `.path()` used |
 | "200 empty JSON = Confirmed IDOR/BOLA" | **Forbidden.** Apply **IDOR-ADJ-01** + **AUTH-ADJ-02**. Empty body → AUTH (if no session) and/or Tentative IDOR, never Confirmed data-exfil. |
 | "Query/header `userId` present = IDOR" | Trace whether that ID is the **repository key**. Token-bound response → Appendix A **G3** (IDOR-ADJ-01). |
-| "Missing Spring Security = every route is Critical IDOR" | One AUTH finding with instances; IDOR only where object ID is used unsafely. Health/status → AUTH-ADJ-03. |
+| "Missing Spring Security = every route is Critical IDOR" | One AUTH finding with instances; IDOR only where object ID is used unsafely. Health/status → AUTH-ADJ-03. **Severity High max** unless Ingress/public bind cited (`per-method-auth-audit.md` Step 3b). |
+| "Empty access_token is OK because config has App_access_token" | AUTH-ADJ-04 — that **is** fail-open AUTH |
 
 When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed Findings with explicit `### Assumptions` block listing what would have to be true for the finding to be a false positive. Reviewers will downgrade later; silent drops cannot be recovered.
 

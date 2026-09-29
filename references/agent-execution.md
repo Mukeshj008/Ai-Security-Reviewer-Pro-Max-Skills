@@ -31,6 +31,8 @@
 ## Review order (mandatory)
 
 0. **Phase 0a** — Tool bootstrap (`dependency-install-policy.md`).
+0mem. **Phase 0-memory** — `Read` `.security-review/scan-session-memory.md` if present (`scan-session-memory.md`). Resume Residual modules; rewrite after each HTTP AUTH walk. Do not re-circle the repo when memory is fresh.
+0w. **Phase 0-parity** — On large repos or a non-frontier model, run **`weak-model-parity.md`** (one module per turn) before the long SAST sequence.
 0b. **Phase 0b — Derive report slug (mandatory, `report-naming-convention.md`)** — Run `python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py` once at the start of the review and capture the output as `<repo>`. All final artifacts must be written as `<repo>_security_report.md` / `<repo>_security_report.html` (and `<repo>_security_report_gap_analysis.md` if a gap pass is done). If the workspace already contains legacy `security_report.{md,html}` from earlier runs, rename them to the new convention before writing new content (script in `report-naming-convention.md` § Migration). Use `--project "<Free-form>"` to override when the user supplied an explicit project name.
 1. **Phase −1** — Application context + scan scope (`scan-scope-metrics.md` → Executive Summary + Coverage Overview).
 1a. **Phase −1c — Module enumeration (mandatory for multi-module repos)** — Run `multi-module-enumeration.md`. Build module inventory; every subsequent `rg`/`Read` MUST cover **every** module in the inventory, not just one. Populate `### Module & Profile Enumeration` block in the Scan Attestation.
@@ -53,7 +55,7 @@ For **each** row in `report-coverage-matrix.md` (109 checks):
 
 **Do not** paste 109 rows into `<repo>_security_report.md`. Summarize layers in the Verification Checklist `<details>` toggle only.
 
-**Reachability:** `graphify path` when graph exists; else manual file:line trace — **never report from `rg` alone**. For outbound HTTP, **never report SSRF from sink match alone** — authority trace to source is mandatory (SSRF-ADJ-01); Appendix A SSRF exclusions cite **failed gate G3**. For IDOR, **never Confirmed BOLA from `200 []` or unused `userId`** (IDOR-ADJ-01 / AUTH-ADJ-02); token-bound responses → Appendix A **G3**.
+**Reachability:** `graphify path` when graph exists; else manual file:line trace — **never report from `rg` alone**. For outbound HTTP, **never report SSRF from sink match alone** — authority trace to source is mandatory (SSRF-ADJ-01); Appendix A SSRF exclusions cite **failed gate G3**. For IDOR, **never Confirmed BOLA from `200 []` or unused `userId`** (IDOR-ADJ-01 / AUTH-ADJ-02); token-bound responses → Appendix A **G3**. Express: run **`express-auth-audit.md`**. Empty header → config token → **AUTH-ADJ-04**.
 
 ## Scan agent & matrices (mandatory in report)
 

@@ -70,6 +70,17 @@ rg -l '(chi|mux|gin|echo|http)\.(Get|Post|Put|Delete|Patch|HandleFunc)' --type g
 
 Every match's directory must appear in the module inventory. If a module has 0 controllers, mark "no HTTP" — but still scan it for **secrets** and **deserialization sinks** (some controllers live in cache-consumers / migration jobs / cron services).
 
+### Step 2b — HTTP module walk vs Residual (v4.35)
+
+After Step 2, fill Scan Attestation **`### HTTP module walk`**:
+
+- **AUTH-walked:** route files + auth middleware `rg` (Express: `express-auth-audit.md`; Spring: `per-method-auth-audit.md` including Step 3b).
+- **Residual:** any HTTP module not AUTH-walked — name it in Completeness Register. **Forbidden:** omit the row and still write `Checks executed: 109`.
+
+`--strict` (`generate_html_report.py`) fails a 109 claim without this table, or `walked < enumerated` with empty Residual.
+
+Write the same enumerated/walked/residual numbers into `.security-review/scan-session-memory.md` after **every** module (`scan-session-memory.md`).
+
 ---
 
 ## Step 3 — Find ALL configuration profiles (do not sample)

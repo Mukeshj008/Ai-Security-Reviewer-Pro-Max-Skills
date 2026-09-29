@@ -2,8 +2,11 @@
 
 Purpose: make the review reliable across weaker/smaller models without loading every reference into context.
 
+**Small / cheap models:** execute **`weak-model-parity.md` first** (one HTTP module, parity `rg`). Do not treat the rest of this file as a reason to skip AUTH probes.
+
 ## Mandatory First 10 Minutes
 
+0. **Session memory** — `Read` `.security-review/scan-session-memory.md` (`scan-session-memory.md`). If present and not stale, skip whole-repo enumerate; continue `next_http_module`.
 1. Derive report slug (`derive_report_name.py`).
 2. Enumerate repository shape:
    - modules/packages
@@ -34,6 +37,7 @@ Rule: no candidate may disappear silently. If a pattern hit is filtered, record 
 ## Token-Efficient Execution
 
 - Prefer scoped `rg` searches over broad file reads.
+- **Persist walk state** in `.security-review/scan-session-memory.md` so compact/new chat does not reload the monorepo inventory.
 - Read source/sink files only around relevant lines, then widen if the trace needs it.
 - Do not paste full 109-check matrices into chat or report.
 - Do not read legacy SCA/CVE references in code-only mode.
@@ -43,7 +47,7 @@ Rule: no candidate may disappear silently. If a pattern hit is filtered, record 
 
 | Detected surface | Must run |
 |------------------|----------|
-| Spring/Express/FastAPI/Django/etc. | route auth + per-method auth; every unauth method covered as AUTH **instance** (merge same root cause — `finding-instances.md`) |
+| Spring/Express/FastAPI/Django/etc. | route auth + per-method auth; **Express → `express-auth-audit.md`**; every unauth method covered as AUTH **instance** (merge same root cause — `finding-instances.md`) |
 | Object IDs in routes/body | IDOR/BOLA audit |
 | JWT/Bearer auth | JWT deep test |
 | Commerce/fintech/payments/KYC/PII | business logic checklist |
@@ -57,6 +61,10 @@ Rule: no candidate may disappear silently. If a pattern hit is filtered, record 
 
 Before final answer and before HTML export, verify:
 
+- [ ] **HTTP modules:** attestation `### HTTP module walk` — enumerated == walked **or** each skipped HTTP module is **Residual** (`large-repo-playbook.md` v4.35). Do **not** write `Checks executed: 109` after a 5-app slice. File `.security-review/scan-session-memory.md` matches that table (`scan-session-memory.md`).
+- [ ] **Express AUTH rg** (`express-auth-audit.md`) when Node HTTP present — glob/`next('route')`/no-op restricted/TestSSO/Host/webhooks: Finding, Tentative, or Appendix A each.
+- [ ] **AUTH-ADJ-04** on empty-header → config token and skip-if-unset API keys.
+- [ ] **Spring module without SecurityFilterChain** → one AUTH + instances (`per-method-auth-audit.md` Step 3b); Critical only per `severity-calibration.md`.
 - [ ] Every module/package in scope was included.
 - [ ] Every config/profile file was read or explicitly marked inaccessible.
 - [ ] Every Dockerfile/IaC file was read or N/A justified.
@@ -73,6 +81,7 @@ Before final answer and before HTML export, verify:
 - [ ] **Every Appendix A exclusion cites** a control (`effective-controls-catalogue.md` §1) or an unmet precondition (§2); no bare "false positive".
 - [ ] **IDOR/BOLA:** no Confirmed data-exfil from `200 []` or unused `userId` (IDOR-ADJ-01 / AUTH-ADJ-02); token-bound responses → Appendix A G3.
 - [ ] **G4 hard fails applied** (EXPLOIT-ADJ-01, AUTH-ADJ-03 probe-safe) — health/status not standalone High/Critical.
+- [ ] **AUTH-ADJ-04** fail-open defaults not excluded as "config token exists".
 - [ ] **Confidence uses `Confirmed`/`Firm`/`Tentative` only** — no High/Medium/Low in a confidence field.
 - [ ] Candidate ledger is closed.
 - [ ] Every finding has Source, Sink, Assumptions, Vulnerable Code, Data Flow, Impact, **Severity Rationale**, Remediation.
