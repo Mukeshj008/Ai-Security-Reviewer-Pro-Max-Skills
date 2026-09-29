@@ -1,9 +1,35 @@
-# Finding Templates (v4.14)
+# Finding Templates (v4.35.3)
 
 Full Checkmarx-style formats for VULN, AUTH, CVE, IAC, and secrets. Referenced from `SKILL.md` — do not duplicate in the skill body.
 
+## Narrative quality (v4.35.3 — every finding)
 
+Write for a reader who will **fix** the issue. Do not restate the title in one sentence.
 
+| Section | Required content | Forbidden |
+|---------|------------------|-----------|
+| **Title** | Root cause + component (`Book service REST APIs have no Spring Security`) | A single-path nickname when several routes share the cause (`Unauthenticated Guava cache clear` while `/ttl` and `/bus/service/enable` are the same bug) |
+| **Description** | Who can call it, which control is missing or wrong, what the code does next, what the attacker gets | "This endpoint is unauthenticated" with no path, file, or effect |
+| **Affected endpoints** | Every HTTP route for this finding (see below) | Only the first path when Instances lists more |
+| **Impact** | Concrete effect (bookings created, config reloaded, partner key skipped, env leaked) | Only the words High/Severe with no object |
+| **Remediation** | The change in this repo (middleware, `SecurityFilterChain` matcher, remove `next('route')`, verify HMAC) | "Add authentication" with no location |
+
+### Affected endpoints (mandatory when the issue is HTTP)
+
+Place **after Description**, before Vulnerable Code. One row per method+path. Same root cause stays **one finding**; this table is the list (do not open a second AUTH ID per row).
+
+```markdown
+### Affected endpoints
+
+| Method | Path | Auth today | Instance |
+|--------|------|------------|----------|
+| POST | `/api/v1/imsBook` | None | 1 |
+| POST | `/api/v1/merchantCancel` | None | 2 |
+```
+
+Non-HTTP findings (LEAK, Dockerfile, TLS on outbound client): one line `N/A — not an HTTP route` plus the file path. Do not invent a URL.
+
+Burp PoC stays **one** raw request for the highest-impact row. Do not paste a full request per row unless the bodies differ in a way that changes the bug.
 
 ## Vulnerability Description Format (MANDATORY)
 

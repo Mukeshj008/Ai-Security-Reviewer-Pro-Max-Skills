@@ -1,181 +1,84 @@
 # AI Security Reviewer Pro Max Skills
 
-> **Works with Cursor and Claude** — same skill, same prompts, same reports.
+Cursor and Claude agent skill. The agent is the scanner: it reads your code, traces source to sink, and writes a security report. No Semgrep, Burp plugin, or separate SAST pipeline.
 
-**Version 4.35.2** | Agent-native SAST + DAST | Checkmarx-style findings | HTML export
+**Version 4.35.3**
 
-**Official GitHub:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills  
-**Docs site (Google-indexable):** https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/
+**GitHub:** https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills  
+**Docs:** https://mukeshj008.github.io/Ai-Security-Reviewer-Pro-Max-Skills/
 
-Search terms that identify this project: `AI Security Reviewer Pro Max Skills`, `Mukeshj008 Ai-Security-Reviewer-Pro-Max-Skills`, `ai-security-reviewer Cursor Claude`.
-
----
-
-## Description
-
-**AI Security Reviewer** is a Cursor and Claude agent skill that turns your AI coding assistant into a senior application security engineer. Instead of running a separate scanner, the agent **is** the scanner — it reads your codebase, traces tainted data from source to sink, validates findings with AI, and produces enterprise-grade security reports.
-
-**What you get:**
-- `<repo>_security_report.md` + styled `<repo>_security_report.html` (repo slug derived automatically from the workspace folder)
-- Real **vulnerable code snippets** copied from your repo (not generic examples)
-- Full **data-flow traces** showing how attacker input reaches the dangerous sink
-- **Remediation** with BEFORE/AFTER code fixes for each issue
-- Burp Repeater-ready PoC requests in **every** HTTP finding (even when live verification skipped)
-- **Scan Attestation Summary**, **Completeness & Residual Risk Register**, and **Confidence** per finding
-
-**What it covers:**
-- Injection (SQL, NoSQL, XSS, RCE, CMD, XXE, SSTI, CRLF, log injection)
-- Authentication & authorization (missing auth routes, IDOR/BOLA, session flaws, per-method auth gaps)
-- Secrets leakage, stack-trace disclosure, crypto weaknesses, JWT/CORS misconfigs
-- IaC misconfigs from source (Docker, K8s, Terraform, Nginx, CI/CD)
-- Standards completeness sweep: OWASP Top 10 2021 · OWASP API Top 10 2023 · CWE Top 25 2024 · OWASP ASVS 5.0 · OWASP LLM Top 10 2025
-- **Security-researcher pass** — issues outside the 109-check matrix, validated with the same G1–G5 bar
-
-> **Code-only mode (v4.16+):** third-party dependency/CVE scanning (OSV, npm audit, Maven SCA, trivy) is **disabled** — those classes are reported as **Residual — not assessed**, not as PASS. Operative spec is `SKILL.md` (currently **v4.35.2**). See `CHANGELOG.md` for per-version behavior.
-
-**How it works:** The agent follows manifests in `references/` — running pattern scans, manual taint analysis, pre-report gates (G1–G5), confidence adjudication, and optional live verification. Burp MCP is used when available; otherwise it **asks your permission** before **curl** fallback. Every HTTP finding includes a crafted Burp request regardless. Graphify speeds up discovery but is not required.
-
-**Best for:** Developers and security teams who want Checkmarx-quality findings inside Cursor or Claude — without installing Semgrep, Burp plugins, or a separate SAST pipeline.
+Search: `AI Security Reviewer Pro Max Skills` · `Mukeshj008 Ai-Security-Reviewer-Pro-Max-Skills`
 
 ---
 
-## Supported AI agents
+## What you get
 
-| Platform | Install path | How to use |
-|----------|--------------|------------|
-| **Cursor** | `~/.cursor/skills/ai-security-reviewer` | Attach skill or paste prompt in chat |
-| **Claude Code** | `~/.claude/skills/ai-security-reviewer` | Skill auto-loads from skills folder |
-| **Claude Desktop** | `~/.claude/skills/ai-security-reviewer` | Enable skill in project settings |
-| **Claude (project)** | `.claude/skills/ai-security-reviewer` | Per-repo skill in project root |
+`<repo>_security_report.md` and `.html`. Each finding has a root-cause title, description, **affected API list** (method, path, auth), real code snippet, data-flow trace, concrete impact, remediation, and one Burp request for the worst HTTP instance. Confidence is Confirmed, Firm, or Tentative. Live curl runs only after you approve it.
 
-This is **not Cursor-only**. Any Claude or Cursor agent that can read `SKILL.md`, run shell commands, and write files can run a full security review.
+Default mode is **code-only**. Dependency CVE tools (OSV, npm audit, trivy) are not run; those classes are **Residual — not assessed**.
 
----
+## What it looks for
 
-## What it does
+Injection, missing auth, IDOR/BOLA, JWT/session flaws, secrets in source, TLS and crypto misuse, CORS, open redirects, Docker/K8s/Terraform misconfig, and issues outside the 109-check list (same G1–G5 bar). Express gets a dedicated auth audit (glob vs later routes, `next('route')`, no-op middleware, test SSO, Host-header key skip, inbound webhooks). A Spring module with no `SecurityFilterChain` is one AUTH finding plus instances, High unless a public bind is cited. Hardcoded secrets are never Critical.
 
-- Agent-native static analysis — 750+ patterns, 85+ vulnerability classes, 109-check matrix
-- **Scope completeness (v4.19+)** — every module, every config profile, every Dockerfile, per-endpoint-method auth audit
-- **Large-repo honesty (v4.35+)** — AUTH-walk every HTTP module or name it Residual; never `Checks executed: 109` after a 5-app slice; `--strict` Critical policy (LEAK never Critical)
-- **Scan session memory (v4.35.1)** — `.security-review/scan-session-memory.md` in the cloned target repo so a compacted chat resumes Residual modules
-- **Weak-model parity (v4.35.2)** — `weak-model-parity.md`: one HTTP module per turn, mandatory AUTH `rg` (glob / `TestSSO` / fail-open / Spring-no-filter)
-- Senior manual review — taint analysis, OWASP/API taxonomy, pre-report gates G1–G5
-- **Two-stage confidence validation (v4.18+)** — Confirmed / Firm / Tentative; fail-open (never silently drop uncertain candidates)
-- **Precision false-positive adjudication (v4.35+)** — IDOR-ADJ-01 / AUTH-ADJ-02/03/04 / EXPLOIT-ADJ-01 (empty `200` ≠ Confirmed BOLA; fail-open config token is AUTH); SSRF-ADJ-01 / LDAP-ADJ-01; Express glob/`next('route')` audit; large-repo HTTP Residual; **scan session memory** in `.security-review/` to resume after context compact; **weak-model parity** (`weak-model-parity.md`) so small models still AUTH-walk; effective-controls catalogue (v4.31+)
-- **Severity calibration (v4.24+)** — Impact × Exploitability × Exposure × Complexity; **`### Severity Rationale`** per finding
-- **Severity ≠ DAST (v4.25+)** — Not Verified / skipped curl does **not** lower severity; verification status is reported separately
-- Every finding includes **Vulnerable Code Snippet**, **Data Flow Trace**, and **Remediation** (BEFORE/AFTER)
-- Unauthenticated endpoint audit (AUTH-NNN) + IaC misconfig scans + researcher-discovered issues
-- Live verification via **Burp MCP** — with **user-approved curl** fallback; **Burp PoC always** in findings
-- **Graphify** optional — faster discovery when installed; works without it using `rg` + reads
-- Delivers `<repo>_security_report.md` + `<repo>_security_report.html` via `derive_report_name.py`
+Same root cause is **one finding** with an instances table, not a new ID per path.
 
----
+## How a review runs
+
+1. Read `.security-review/scan-session-memory.md` in the target repo if it exists, and resume Residual modules.
+2. Enumerate HTTP modules. Deep-trace P0; every other HTTP module is AUTH-walked or named Residual. Do not claim 109 checks after a partial slice.
+3. Pattern `rg`, then G1–G5. Empty `200` is not confirmed BOLA. An empty header that falls back to a config token is AUTH.
+4. Write the report. HTML drops scanner metadata, the verification checklist, the 109-check toggle, and Appendices B/C/D/F (those repeat the findings). Markdown keeps them for the agent.
+
+Small or cheap models should follow `references/weak-model-parity.md`: one HTTP module per turn.
 
 ## Install
-
-### Option A — Cursor
 
 ```bash
 git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
 cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.cursor/skills/ai-security-reviewer
+# Claude: ~/.claude/skills/ai-security-reviewer
 ```
 
-Restart Cursor → attach skill or type: `Review this code for security vulnerabilities`
+Restart the app, attach the skill, and ask: `Review this code for security vulnerabilities`.
 
-### Option B — Claude
+Optional: Graphify for call paths, Burp MCP for live requests, ripgrep for faster pattern scans. The review still runs with file reads and grep.
 
-```bash
-git clone https://github.com/Mukeshj008/Ai-Security-Reviewer-Pro-Max-Skills.git
-cp -r Ai-Security-Reviewer-Pro-Max-Skills ~/.claude/skills/ai-security-reviewer
-```
-
-Restart Claude → skill loads from `SKILL.md`. Same prompts as Cursor.
-
-**Symlink (either platform):**
-
-```bash
-ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.claude/skills/ai-security-reviewer   # Claude
-ln -sf "$(pwd)/Ai-Security-Reviewer-Pro-Max-Skills" ~/.cursor/skills/ai-security-reviewer   # Cursor
-```
-
----
-
-## Optional enhancements
-
-| Tool | Role | If missing |
-|------|------|------------|
-| **Graphify** | Faster attack-surface mapping & source→sink paths | Agent uses `rg` + narrow file reads |
-| **Burp MCP** | Live DAST on code-derived hosts | Agent **asks permission**, then **curl** (`curl-dast-fallback.md`); Burp PoC still in report |
-| **ripgrep (`rg`)** | Pattern scans | Use agent grep — slower but works |
-
-No external service is required to run a full review.
-
----
-
-## Usage (Cursor or Claude)
+## Prompts
 
 ```
 Review this code for security vulnerabilities
-
-Run comprehensive security audit and generate security_report.html
-
-Check for SQL injection and XSS in the API controllers
 ```
 
-**Small / cheap model (keep AUTH quality):**
-
 ```
-Follow ~/.cursor/skills/ai-security-reviewer/references/weak-model-parity.md
+Follow references/weak-model-parity.md
 Resume .security-review/scan-session-memory.md
 One HTTP module this turn. Do not re-enumerate. Do not claim 109.
 ```
 
----
-
-## Workflow
-
-1. Application context → trust boundaries, auth, assets
-2. **Session memory** (if present) → resume Residual HTTP modules (`scan-session-memory.md`)
-3. Module & profile enumeration (every module, every `application-*.yml`) — skip full re-enumerate when memory is fresh
-4. Static scans (`rg` per manifest files in `references/`) — **Express:** `express-auth-audit.md`; **small models:** `weak-model-parity.md` first
-5. IaC + route auth + per-method auth audit + researcher pass
-6. Data-flow trace + AI validation (G1–G5 gates) + confidence + **severity calibration** adjudication
-7. Live verify — craft Burp PoC → Burp MCP → ask user → curl if approved (`dast-verification-flow.md`)
-8. Report — derive repo slug → `<repo>_security_report.md` → `<repo>_security_report.html`
-
-The AI agent is the scanner. Manifests are cookbooks — do not run bundled scan scripts for analysis.
-
-**Report naming (v4.20):**
+Report name:
 
 ```bash
-REPO=$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)
-MD="${REPO}_security_report.md"
-HTML="${REPO}_security_report.html"
+python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py
 ```
 
-Example: workspace `acmeteam-oauth-user-mgmt-service-48e5b67f7489` → `oauth-user-mgmt-service_security_report.md`
+A workspace folder like `acmeteam-oauth-user-mgmt-service-48e5b67f7489` becomes `oauth-user-mgmt-service_security_report.md`.
 
----
+## Layout
 
-## Key files
-
-| File | Purpose |
-|------|---------|
-| `SKILL.md` | Main skill instructions (entry point for Cursor & Claude) |
-| `references/` | SAST manifests, taxonomy, DAST rules, report templates |
-| `references/weak-model-parity.md` | Small-model AUTH loop (v4.35.2) |
-| `references/scan-session-memory.md` | Repo-local resume file spec (v4.35.1) |
-| `references/express-auth-audit.md` | Express glob / `next('route')` / TestSSO (v4.35.0) |
-| `references/report-naming-convention.md` | Mandatory `<repo>_security_report.*` filename spec |
-| `scripts/derive_report_name.py` | Derive clean repo slug from workspace folder |
-| `scripts/generate_html_report.py` | Markdown → HTML (formatting only) |
-| `scripts/push_to_github.sh` | Push skill updates to this repo (requires `GITHUB_TOKEN`) |
-| `scripts/publish_github_discoverability.sh` | Enable GitHub Pages + Topics + homepage (requires `GITHUB_TOKEN`) |
+| Path | Role |
+|------|------|
+| `SKILL.md` | Entry instructions |
+| `references/` | Manifests, gates, templates |
+| `references/finding-templates.md` | Description, endpoints, impact, remediation |
+| `references/express-auth-audit.md` | Express route-table auth |
+| `references/weak-model-parity.md` | Small-model AUTH loop |
+| `references/scan-session-memory.md` | Resume file in the scanned repo |
+| `scripts/generate_html_report.py` | Markdown to HTML (`--strict`) |
 | `CHANGELOG.md` | Version history |
 
----
+Full behavior is `SKILL.md`. History is `CHANGELOG.md`.
 
 ## Author
 
-[Mukeshj008](https://github.com/Mukeshj008) — use responsibly; only scan systems you are authorized to test.
+[Mukeshj008](https://github.com/Mukeshj008) — scan only systems you are authorized to test.

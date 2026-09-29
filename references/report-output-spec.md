@@ -70,7 +70,18 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | Appendix I (platform checklist) | Agent attestation + `platform-coverage-checklist.md` |
 | Duplicate AUTH + VULN rows for same route/root cause | Dedup rules below |
 
-HTML export suppresses Appendix E, G, I if present in markdown (unchanged behavior).
+HTML export (`generate_html_report.py`, v4.35.3) **omits process and duplicate sections**. Keep them in the markdown for the agent; they do not belong in the reader HTML:
+
+| Omitted from HTML | Why |
+|-------------------|-----|
+| Scan Agent & Backend Attribution, Scan Matrices Executed | Scanner metadata, not a finding |
+| Vulnerability Coverage Overview | Repeats Executive Summary counts |
+| Security Verification Checklist (and legacy register names) | Same IDs, severity, source, and sink as Detailed Findings |
+| Collapsible "109 internal checks" toggle | Internal matrix |
+| Appendix B (languages), C (DAST notes), D (endpoint inventory), F (phase log) | Appendix D repeats **Affected endpoints** / Instances; B/C/F are workflow |
+| Appendix E, G, I | Already suppressed |
+
+HTML **keeps:** Executive Summary, Scan Attestation (including HTTP module walk and Residual), Completeness & Residual Risk Register, Top Structural Risks, Detailed Findings, Remediation Priority, Appendix A (filtered false positives).
 
 ---
 

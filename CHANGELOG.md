@@ -4,6 +4,16 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.35.3] — 2026-09-29
+
+### Changed — finding narrative and slimmer HTML
+
+Titles and IDs were drifting across reports, and the HTML repeated the checklist, Appendix D, and scanner metadata next to Detailed Findings.
+
+- **`finding-templates.md`** — title = root cause + component; Description, **Affected endpoints** (method/path/auth/instance), concrete Impact, concrete Remediation
+- **`report-output-spec.md`** — markdown keeps the full agent pack; HTML omits attribution, matrices, coverage overview, verification checklist, 109-check toggle, Appendices B/C/D/F
+- **`generate_html_report.py`** — those sections are not rendered
+
 ## [4.35.2] — 2026-09-29
 
 ### Added — weak-model parity card (Mythos-class AUTH without a frontier model)

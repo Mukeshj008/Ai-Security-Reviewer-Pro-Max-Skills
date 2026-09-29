@@ -22,7 +22,7 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.35.2** — **Weak-model parity:** `weak-model-parity.md` (one HTTP module, mandatory AUTH `rg`, no fake 109). **v4.35.1** session memory. **v4.35.0** Express AUTH, AUTH-ADJ-04, Residual, `--strict` Critical. **v4.34** LEAK never Critical.
+**Version 4.35.3** — Finding narrative: root-cause titles, **Affected endpoints** on every HTTP finding, concrete impact and remediation. HTML drops duplicate checklist, coverage overview, scan-agent tables, and Appendices B/C/D/F. **v4.35.2** weak-model parity. **v4.35.1** session memory. **v4.34** LEAK never Critical.
 
 
 **Report contract (read first):** `references/report-output-spec.md`
@@ -342,7 +342,9 @@ Record applicable checks in **internal scan log**; mark SCA/CVE/DEPS rows **N/A 
 
 ## Finding formats
 
-Required sections: **Classification** (Source/Sink), **Description**, **Assumptions**, **Vulnerable Code Snippet**, **Data Flow Trace**, **Impact Assessment**, **`### Severity Rationale`**, **Remediation**, **`### Burp Suite PoC`** for every HTTP finding (mandatory even when live verification skipped), plus `### Live Verification (Burp MCP)` or `### Live Verification (curl)` when a probe actually ran.
+Required sections: **Classification** (Source/Sink), **Description** (attacker, missing control, effect — not a title restatement), **`### Affected endpoints`** (method, path, auth today, instance — every HTTP route for this finding; `N/A` for LEAK/IAC), **Assumptions**, **Vulnerable Code Snippet**, **Data Flow Trace**, **Impact Assessment** (name the data or action), **`### Severity Rationale`**, **Remediation** (the change in this repo), **`### Burp Suite PoC`** for every HTTP finding (one request for the worst instance).
+
+**Title:** root cause + component, not a single-path nickname when several routes share the cause (`finding-templates.md` v4.35.3).
 
 Templates: **`finding-templates.md`**, **`report-vulnerable-code-dataflow.md`**, **`report-impact-assessment.md`**.
 
