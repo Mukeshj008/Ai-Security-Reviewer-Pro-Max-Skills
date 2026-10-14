@@ -1,6 +1,8 @@
 # Deep Injection Scan — XSS, RCE, Command Injection, XXE, XML (SAST-INJ)
 
-Agent-native `rg` + `graphify path` + AI validation. Run **all** sections.
+Agent-native `rg` + `graphify path` + AI validation.
+
+> **v4.42:** superseded for languages with an active lang pack (L01–L13 rows). Run sections here only for files no active pack covers. Never run both on the same file.
 
 ---
 

@@ -2,15 +2,16 @@
 
 **When:** Files Analyzed > 500 OR LOC > 100k OR monorepo with many unrelated modules.
 
-**Does not reduce** required checks — prioritizes **order** and **depth** to fit context limits.
+**Does not reduce** required exploration — only **order**. Follow `exploration-first.md`. Do not substitute a 109-row `rg` pass.
 
 ---
 
 ## Phase 0 — Triage
 
 1. Read README, ARCHITECTURE.md, `pom.xml` / package.json roots.
-2. Identify **production entrypoints** only (exclude `test/`, `scripts/`, `docs/` unless user scope includes them).
-3. Record scope decision in Appendix F.
+2. List **every** HTTP module and **every** config/profile (including `.properties` / `.env`).
+3. Identify production entrypoints. Still **Read** `scripts/` and test resources if they contain live-looking credentials — finding or Residual, not silent skip.
+4. Record scope decision in Appendix F.
 
 ---
 
@@ -18,8 +19,8 @@
 
 | Priority | Surface |
 |----------|---------|
-| P0 | Public HTTP controllers, auth filters, payment/order paths |
-| P1 | Config (`application*.properties`, env), Dockerfile, CI |
+| P0 | **All config/profile/secret files (Read)** + public HTTP + auth filters + payment/order |
+| P1 | Dockerfile, CI |
 | P2 | Shared libs used by P0 handlers |
 | P3 | Admin/internal routes, batch jobs — **AUTH inventory still mandatory** (v4.35) |
 
@@ -27,36 +28,35 @@
 
 ## Sampling rule
 
-- **109 checks:** still run all **applicable** checks on P0+P1 files; mark N/A for irrelevant stacks (mobile, GraphQL).
-- **Deep trace:** full G1–G5 on top 15 manifest hits by severity, not every rg match.
-- **graphify query** budget: 1500–2000 per query, max 3 queries before scoped rg.
+- **Do not** treat “top 15 manifest hits” as the secret review. Secrets come from **reading configs**.
+- Deep G1–G5 injection traces may wait on P3 after a **shallow AUTH walk** of every HTTP module.
+- graphify query budget: 1500–2000 per query, max 3 queries.
 
 ### v4.35 — P3 / skipped HTTP modules are Residual, not "later"
 
-Large-repo **order** does **not** waive `multi-module-enumeration.md` Step 2.
-
 | Allowed | Forbidden |
 |---------|-----------|
-| Deep G1–G5 only on P0/P1 **after** a **shallow AUTH walk** of **every** HTTP module (route files + auth middleware `rg` from `express-auth-audit.md` / `per-method-auth-audit.md`) | Walking 5 of 27 services then writing `Checks executed: 109` |
-| Listing an HTTP module as **Residual — AUTH not walked** in Completeness Register **and** Scan Attestation `### HTTP module walk` | Silent skip of `*-admin-*`, `*-automation*`, `*-transactions*` because they are "P3" |
-| Shallow = enumerate methods + auth chain; one AUTH or Residual row | Claiming Appendix D is complete for the monorepo |
+| Deep G1–G5 only on P0/P1 **after** opening **every** HTTP module’s routes + auth | Walking 5 of 27 services then writing `Checks executed: 109` |
+| Listing an HTTP module as **Residual — AUTH not walked** | Silent skip of `*-admin-*`, `*-automation*` |
+| Unread configs as **Residual — LEAK/SECRET not read** | `LEAK/SECRET 12/12 PASS` after a P0 slice |
 
-Admin/internal (P3) is where fail-open tokens, unauth `register` / `onboard-admin`, and Go `IsAuthorisedRequest` bugs live. **Shallow AUTH is required; deep injection traces may wait.**
+Admin/internal (P3) is where fail-open tokens live. **Shallow AUTH is required; deep injection traces may wait.**
 
 ---
 
 ## Report honesty
 
 ```markdown
-**Scope note:** Deep manual trace on P0/P1 paths (N files). Pattern scan covered M files per scan-scope-metrics.md.
+**Scope note:** Explored by reading N config files and Y HTTP modules. Unread: [list].
 **HTTP modules enumerated:** X. **AUTH-walked:** Y. **Residual (not walked):** [list or none].
+**Configs enumerated / read:** M / K.
 ```
 
-`Checks executed` (MX-COV) must **not** be `109` unless Y == X **or** every skipped HTTP module is named Residual. Fake 109 after a 5-app slice is an attestation defect (`scan-attestation-summary.md` v4.35).
+`Checks executed` must **not** be `109` unless Y == X **or** every skipped HTTP module is named Residual.
 
-**Session memory (v4.35.1):** After each HTTP module walk, rewrite `.security-review/scan-session-memory.md` (`scan-session-memory.md`). Next session Reads it first — Residual list is the work queue. Do not re-triage P0 from README when memory is fresh.
+**Session memory (v4.35.1):** After each HTTP module walk, rewrite `.security-review/scan-session-memory.md`. Record `configs_read`.
 
-**Weak model (v4.35.2):** Follow `weak-model-parity.md` — one HTTP module, parity AUTH `rg`. Depth may wait; AUTH Residual may not.
+**Large repo (v4.51):** one agent, `large-repo-runner.md`. Walk every production file and every route in the same session. No shard workers. No fake 109. Never ask the user to continue.
 
 Do not claim line-by-line review of entire monorepo unless performed.
 
@@ -64,4 +64,8 @@ Do not claim line-by-line review of entire monorepo unless performed.
 
 ## Stop conditions
 
-Hand off when: checklist complete, P0 surfaces reviewed, attestation summary filled, `--strict` HTML passes.
+**Complete review:** every HTTP module walked, every config read, every production file read. Then `status: complete` and write the report. Unread tests are an appendix note, not a pause.
+
+**Partial handoff:** only if the user said `stop and ship partial`. Do not invent that pause yourself. Never end a turn by asking the user to say continue.
+
+Never hand off as complete after P0-only. See `large-repo-runner.md`.

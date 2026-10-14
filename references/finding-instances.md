@@ -31,7 +31,7 @@ Merge candidates into **one finding ID** when **all** of the following match:
 
 ## Required structure on every multi-instance finding
 
-In **Detailed Findings**, after Classification (use primary/worst instance paths in the Source/Sink table fields for HTML compatibility), add:
+In **Detailed Findings**, after Classification (use primary/worst instance paths in the Source/Sink table fields for HTML compatibility), add **both** tables when the issue is HTTP:
 
 ```markdown
 ### Instances
@@ -41,16 +41,27 @@ In **Detailed Findings**, after Classification (use primary/worst instance paths
 | 1 | `src/.../SecurityConfig.java:29` | `BankTransactionController.processTransaction:47` | POST fund transfer |
 | 2 | `src/.../SecurityConfig.java:29` | `BankTransactionController.confirmTransaction:74` | POST statusCheck |
 | 3 | `src/.../SecurityConfig.java:29` | `MyController.traceEndpoint:11` | GET /trace |
+
+### Affected endpoints
+
+| Method | Path | Auth today | Instance |
+|--------|------|------------|----------|
+| POST | `/v1/bank/{bank}/processTransaction` | None | 1 |
+| POST | `/v1/bank/{bank}/statusCheck` | None | 2 |
+| GET | `/trace` | None | 3 |
 ```
+
+HTML and Jira use this order: **Description → Instances → Vulnerable endpoints → Burp requests → Vulnerable code → Impact → Remediation**. Every HTTP instance number must appear in the endpoints table. Non-HTTP findings use `N/A — not an HTTP route` and skip the endpoints table.
 
 Rules:
 
 1. **Every instance** must have its own **Source (full path)** and **Sink (full path)** with `file:line`.
 2. Primary Classification Source/Sink = **highest-severity instance** (or Instance 1 if equal).
-3. Vulnerable Code Snippet: show root-cause snippet once; optionally add short per-instance sink snippets under `#### Instance N`.
-4. Data Flow Trace: one shared root-cause hops table, then **per-instance** sink hop (or a column/section `Instance N → sink`).
-5. Burp PoC: at least one PoC for the highest-impact instance; additional instance PoCs optional under `#### Instance N Burp PoC`.
-6. Severity: calibrate on the **worst** instance (Impact/Exposure of the most sensitive endpoint or secret).
+3. **Narrative per instance (N ≥ 2):** mandatory **`#### Instance N`** blocks under **Description**, **Vulnerable Code Snippet**, **Impact Assessment**, and **Remediation** — see **`per-instance-narrative.md`**. Single-instance findings use one block each (no subheading required).
+4. **Vulnerable Code Snippet:** verbatim code per instance (source + sink lines); add **`#### Shared root cause`** once when all instances share one config/middleware line.
+5. Data Flow Trace: one shared root-cause hops table, then **per-instance** sink hop (or a column/section `Instance N → sink`).
+6. Burp PoC: **one raw HTTP/1.1 request per Affected endpoints row**, labeled `#### Instance N — METHOD /path`. Do not ship a single request for a multi-endpoint finding.
+7. Severity: calibrate on the **worst** instance (Impact/Exposure of the most sensitive endpoint or secret).
 
 ---
 

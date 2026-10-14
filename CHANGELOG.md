@@ -4,6 +4,242 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.57.0] — 2026-10-14
+
+### Added — XML injection and privilege-escalation completeness
+
+- **`references/xml-security-audit.md`** — mandatory parser-instance XXE/entity-expansion audit plus structural XML/XPath/XSLT injection and XML signature-wrapping checks; runs even when a language pack is active.
+- **`references/authorization-privilege-escalation-audit.md`** — principal/role/action matrix for horizontal IDOR/BOLA, vertical BFLA, cross-tenant access, role manipulation, and privileged-field mass assignment.
+- **`precision-false-positive-adjudication.md`** — `XSS-ADJ-01`, `XML-ADJ-01`, and `PRIV-ADJ-01`; SQLi clarification for bound `LIKE`/Sequelize `Op.like`.
+
+### Changed
+
+- **XXE precision:** `FEATURE_SECURE_PROCESSING=true` alone is no longer accepted as proof that external entities are disabled; complete parser-specific hardening is required.
+- **XSS precision:** sanitizer version/config, browser context, URI policy, stored-taint write→render flow, and post-sanitize mutation/reparse must be checked.
+- **Authorization:** object-reference enumeration now includes UUIDs, slugs, PNR/order/account numbers, tokens, filenames/keys, composite and GraphQL IDs; every authenticated application runs a separate vertical/BFLA audit.
+- **Language packs:** L13 now includes structural XML injection; Java/Kotlin, Node.js, Python, and browser packs include concrete XML construction guidance.
+
+## [4.56.0] — 2026-10-14
+
+### Changed — post-quantum / HNDL findings excluded
+
+- **`references/quantum-crypto-out-of-scope.md`** — do not report VULN/AUTH/IAC/LEAK for quantum-only, HNDL, or PQC-migration issues; classical crypto breaks unchanged.
+- **`severity-calibration.md`** — removed v4.54 “Low max” for quantum hygiene; replaced with out-of-scope rules.
+- **`SKILL.md`**, **`ai-validate-precision-pass.md`** — Out of scope table and adjudication updated.
+
+## [4.55.0] — 2026-10-09
+
+### Changed — actionable narrative required for every finding
+
+- **`SKILL.md`** and **`finding-templates.md`** — every finding now requires a 3–6 sentence issue-specific Description, 2–5 sentence concrete Impact Assessment, and repository-specific Remediation with fix location, secure pattern, all-instance coverage, and regression verification.
+- **`report-finding-completeness.md`**, **`report-output-spec.md`**, and **`ai-validate-precision-pass.md`** — promotion and report gates reject title restatements, generic impact, and one-line advice.
+- **`generate_html_report.py --strict`** — now fails on missing/generic Description, Impact, or insufficiently actionable Remediation; footer updated to v4.55.0.
+
+## [4.54.0] — 2026-10-09
+
+### Changed — severity defaults for internal surfaces and quantum-era crypto
+
+- **`references/severity-calibration.md`** — **Medium** default (High/Critical forbidden for auth-only) on missing auth for **internal routes**, **webhooks**, and **cron/worker** HTTP triggers (v4.54); **Low** max for **quantum-only / HNDL** crypto hygiene when no classical break applies; updated worked examples and reconciliation checklist.
+- **`references/per-method-auth-audit.md`**, **`references/async-second-order-audit.md`**, **`SKILL.md`** — cross-linked v4.54 severity rules.
+
+## [4.53.0] — 2026-10-08
+
+### Added — AI Validate–style precision pass (fewer false positives in findings)
+
+- **`references/ai-validate-precision-pass.md`** — per call-site TP/FP adjudication; stored-taint before FP; exploitability aligned to verdict; **False Positive → Appendix A only** (never Detailed Findings); proof bars for TP (`data_flow`) and FP (cited control); Needs Manual Review capped at &lt;5% of candidates.
+- **`SKILL.md`** — Phase B loads precision pass first; Stage 2b promote rules; review sequence step 9 updated.
+- **`finding-confidence-validation.md`**, **`manual-code-review.md`**, **`coverage-complete-gate.md`** (G4b), **`scan-attestation-summary.md`** — cross-linked to precision pass.
+
+## [4.52.0] — 2026-10-08
+
+### Changed — fast reads, still every file
+
+- Speed was being bought by dropping tests and by opening one file per turn. Both are gone.
+- `scripts/next_read_batch.py` prints the next unread `must_read_files` in full (~120KB per call, tests included, no truncation). `--ack` appends those paths to `.security-review/files-read.log` only after that output. Loop until `BATCH_EMPTY`.
+- `check_coverage_gate.py` no longer trusts a typed `files_read` counter. G1 fails while any inventory path is missing from the log.
+
+## [4.51.0] — 2026-10-08
+
+### Fixed — the review must not stop and ask the user to continue
+
+- The runner, weak-model card, and sample prompts told the agent to end the turn with `CONTINUE LARGE-REPO` or to stop after one HTTP module. That paused real reviews and made the user type "continue".
+- Those instructions are removed. A review finishes in the same session: every production file, every config, every HTTP module, then the report.
+- Test files are no longer a completion blocker. They are opened when they prove or disprove a control. Unread tests are Appendix B.
+- `enumerate_inventory.py` writes `production_must_read_files` separately from optional tests.
+- `check_coverage_gate.py` reads inventory `counts` (it was looking for `stats`, which the inventory never wrote, so the denominator was only whatever the agent typed). G1 now compares `production_files_read` to that production count.
+
+## [4.50.0] — 2026-10-08
+
+### Added — 100% inventory coverage before “scan complete”
+
+- **`references/coverage-complete-gate.md`** — G1–G7 checklist; forbidden “scan complete” phrases until gates pass; no P0-only handoff; clarifies inventory 100% vs “zero vulnerabilities.”
+- **`scripts/check_coverage_gate.py`** — exits non-zero until session memory counters match inventory (`files_read`, `configs_read`, `http_modules_walked`, `status: complete`).
+
+### Changed
+
+- **`SKILL.md`** — Phase D requires gate script; usage prompts updated; final HTML only after gate passes.
+- **`exploration-first.md`**, **`large-repo-runner.md`**, **`scan-attestation-summary.md`**, **`report-output-spec.md`** — aligned with v4.50 gate.
+
+## [4.49.0] — 2026-10-08
+
+### Changed — do not skip code files
+
+- `enumerate_inventory.py` writes `must_read_files` (every first-party code file, tests included), `huge_file_ranges` (read every line range), and `secret_files_metadata_only` (name and type, do not open). File lists are no longer truncated.
+- A review is not `complete` while any must-read path is unread. Naming a code file in the Residual Register does not replace reading it. Residual is only a pause when the context window is full.
+
+## [4.47.0] — 2026-10-08
+
+### Changed — single agent, no parallel workers
+
+- Removed shard workers again. Do not use the Task tool or `parallel-shard-review.md`. Ignore `inventory.json` `parallel`.
+- A large repo is still finished in one session: `large-repo-runner.md` now says keep walking the next route file. Do not stop after one module and wait for CONTINUE. CONTINUE is only when the context window is actually full. The HTML report is written when Residual is empty, or when the user says stop.
+- Kept from 4.45: REACH-ADJ-01, route-exposure severity, huge-file `read_ranges` (a reading list for this agent), test configs excluded from the production config list.
+
+## [4.48.0] — 2026-10-08
+
+### Removed — dead / contradictory instructions
+
+- **parallel-shard-review.md**, **agent-execution.md**, **model-proof-operating-contract.md** reduced to deprecation pointers; canonical contract is `SKILL.md` only.
+- **SKILL.md** — dropped duplicate “read agent-execution” / parallel-ignore noise; removed worker-row wording; trimmed stale version bullets.
+- **enumerate_inventory.py** — stdout no longer says `PARALLEL recommended` or prints shard waves; `skill_version` 4.48.0.
+- **README.md** aligned with single-agent + no SCA.
+
+## [4.46.0] — 2026-10-08
+
+### Removed — SCA / dependency CVE mode
+
+- **No optional SCA mode.** Do not run `npm audit`, OSV, SBOM, KEV, or container CVE scanners as part of this skill — even when the user asks.
+- Reports: no `## Software Composition Analysis (SCA)` section and no `SCA-NNN` IDs. Attestation line: dependency/CVE analysis is out of skill scope.
+- Deprecated reference files (do not load): `sca-dependency-audit.md`, `osv-sca-scan.md`, `maven-sca-scan.md`, `sbom-export.md`, `kev-prioritization.md`, `cve-exploitability.md`, `container-image-scan.md` (stub or skip list in `SKILL.md`).
+- Updated: `SKILL.md`, `report-output-spec.md`, `scan-attestation-summary.md`, `agent-execution.md`.
+
+## [4.45.0] — 2026-10-07
+
+### Changed — finish large repos, fewer false positives, exposure-based severity
+
+- Restored parallel shard workers for `parallel_recommended` repos. `large-repo-runner.md` (one route file per turn, then stop) is only the fallback when the Task tool cannot be used. A partial HTML report is not a finished scan.
+- Workers still return candidates only. The coordinator must apply **REACH-ADJ-01** before promoting one: the sink is unreachable when an earlier middleware returns or calls `next(status)` on every attacker input; dead code after `return` is not a finding; `pipeline.exec` / `.exec(callback)` are not command execution; a second route with the same path is not "never reached" until `next()` semantics are read.
+- **Route exposure** in `severity-calibration.md`: external, internal-named-but-proxied, internal-gated, non-prod-only, loopback, needs-network-position. A path containing `/internal` is not Internal exposure until a gate that runs before the handler is cited. Non-prod-only and network-position bugs are Medium max. Production credentials in source stay High under the LEAK cap.
+- `enumerate_inventory.py`: files over 4,000 lines are sliced into `read_ranges`; test-tree configs are not listed as production configs; an existing `scan-session-memory.md` gets its `skill_version` refreshed.
+
+## [4.44.0] — 2026-10-07
+
+### Changed — single agent only
+
+- **Removed subagent / parallel shard execution** from the active contract. Do not use Task workers, explore agents, or `parallel-shard-review.md` workers.
+- Large repos: **`large-repo-runner.md`** only — config batches of 8, **one HTTP module per turn**, `scan-session-memory.md`, CONTINUE. Same agent performs every Read, flow walk, AUTH, G0–G5, and the report.
+- `parallel-shard-review.md` replaced with a deprecation stub; `inventory.json` `parallel` block is metadata only (ignore for routing).
+- Updated: `exploration-first.md`, `large-repo-runner.md`, `weak-model-parity.md`, `agent-execution.md`, `report-scan-matrices-agent.md`, `large-repo-playbook.md`.
+
+## [4.42.0] — 2026-10-07
+
+### Changed — faster, fewer duplicate reads
+
+- `SKILL.md` description cut from ~2.4k to ~460 chars (paid in every chat that lists skills).
+- Quick start is phase-gated: A explore/find, B adjudicate, C DAST, D report. References load only in their phase instead of a 22-file up-front list (~half of ~58k tokens avoided).
+- One AUTH walk, one config/secrets read, one sink-pattern source (lang packs). Single deduplicated Reference index; review sequence rewritten as 12 steps that each run once; duplicate Forbidden-table header removed.
+- `patterns.md`, `sast_scan_manifest.md`, `injection-deep-scan.md`, `extended-category-scans.md`: banner — superseded by lang packs for covered languages; never run on the same file as a pack.
+- `vuln-class-matrix.md` marked human-only (never loaded during a scan).
+
+### Added — parallel shard workers
+
+- `references/parallel-shard-review.md`: coordinator vs worker ownership, coordinator loop, worker card, budgets. Workers return CANDIDATES / LEADS / KILLED only; the coordinator owns flow walk, AUTH/IDOR/logic/races, cross-shard flows, G0–G5, severity, dedupe and the report.
+- `enumerate_inventory.py` shard planner (`--max-workers N`, default 4): every production file in exactly one shard; packs split by directory (400KB / 80 files); waves; `shared_context_files` (auth/middleware/guards/entrypoints); `unassigned_files`; `parallel_recommended` only for ≥500 files, ≥3 production packs or ~100k LOC.
+- Routing: HTML and template-dir files follow their module's server engine (Thymeleaf→java, Jinja→python, EJS→node); key/cert/keystore/ini/credential files and CI/build configs (`CMakeLists.txt`, `.npmrc`, `settings.xml`, `.github/`…) go to the config shard by name, never opened by the planner.
+- Worker card rules: final message must contain all tables in full; every read scoped to the scan root.
+- Subagent model policy: Composer first, then Grok; `inherit` only when neither is available (logged in Residual). Never chosen for quality reasons, never a guessed slug.
+
+### Benchmarks
+
+- `logic-flows/` (new, cross-file logic): baseline 7/7, parallel with forced worst-case split 7/7; 6/6 safe rejected both ways. LV2/LV4 surfaced by workers only as leads and promoted by the coordinator.
+- `lang-classes/`: parallel 20/20, 0 FP (corpus v2 makes V16/V19 reachable).
+- `lang-context/`: parallel 11/11 + C1, 12/12 safe/decoys rejected.
+
+## [4.41.0] — 2026-10-07
+
+### Added — every vulnerability class language-aware
+
+- 35 canonical classes **L01–L35** (XSS, SSTI, code/SQL/NoSQL/command/LDAP-XPath/CRLF injection, SSRF, traversal, upload, deserialization, XML, mass assignment, AuthN, JWT/OAuth/SAML, AuthZ, CSRF, CORS, headers/cookies, redirect, crypto, randomness, TLS, secrets, errors, logging/PII, DoS, races, business logic, memory/unsafe/FFI, supply chain, GraphQL/WS/gRPC, reflection, language pitfalls) defined in `lang-packs/README.md`.
+- Every pack has a `## Class coverage index`: one row per class with the vulnerable form, safe equivalent and FP trap for that language, or `N/A — reason`.
+- New packs: `scala.md` (Play/Twirl, Slick, Doobie, Spark, Akka), `elixir.md` (Phoenix/LiveView, Ecto, atoms, `binary_to_term`), `shell.md` (bash/sh/zsh/PowerShell), `mobile-native.md` (Swift/ObjC, Android Kotlin/Java, Flutter, React Native), `other-languages.md` (Perl, Lua/OpenResty, Groovy/Grails, Solidity).
+- `scripts/check_lang_packs.py`: fails if any pack misses an ID or has a thin row; `--write-matrix` regenerates `lang-packs/vuln-class-matrix.md` (per-class table across all packs).
+- Additional scoped hint `rg` lines in the existing 11 packs for LDAP/XPath, unsafe/FFI, locks, reflection, GraphQL/WS/gRPC and build-script supply chain.
+
+### Changed
+
+- `enumerate_inventory.py` 4.41.0: detects Scala, Elixir (+ templates), Erlang, shell/PowerShell, Perl, Lua, Groovy/GSP, Solidity, ObjC++; `build.sbt` / `mix.exs` / `pubspec.yaml` frameworks; mobile manifests activate `mobile-native.md` plus `mobile-sast-audit.md`.
+
+### Validated
+
+- Workspace benchmark `test/security-skill-eval/lang-classes/` (Go, Rust, C++, Python, Java, Node, shell; 20 vulns, 8 safe twins, 5 language decoys): blind run 20/20 found, 0 false positives.
+
+## [4.40.0] — 2026-10-07
+
+### Added — language-aware review
+
+- `references/lang-packs/README.md` router: stack detection, file→pack mapping, **G0 language-context gate**, cross-language boundary tracing, scoped hint `rg` rules.
+- 11 packs (`javascript-node`, `frontend-browser`, `python`, `java-kotlin`, `go`, `php`, `dotnet`, `ruby`, `rust`, `c-cpp`, `iac-ci`). Each lists framework sources and, per class, **vulnerable sink | safe equivalent | FP trap**, for example: EJS `<%-` vs `<%=`; Jinja2 `Environment()` autoescape off by default; JSP `${}` unescaped vs `<c:out>`; Thymeleaf `th:utext` vs `th:text`; Go `text/template` vs `html/template`; Razor `Html.Raw`; EF `FromSqlRaw` vs `FromSqlInterpolated`; Go/Rust `regex` linear-time (no ReDoS).
+- `references/taxonomy-master-checklist.md`: 30-category rollup mapped to pack sections and default register status.
+
+### Changed
+
+- `scripts/enumerate_inventory.py`: emits `languages`, `frameworks` (from package.json / requirements / pom / gradle / go.mod / composer / Gemfile / csproj / Cargo), `lang_packs`, CI, compose, Terraform, K8s, Ansible, mobile, and schema files. Walks `.github/`. Detects Node configs (`config-*.js`, `configs/` dirs) and route dirs (`routes/`, `controllers/`, `urls.py`, `views.py`). Ansible `.j2` maps to IaC, not Python. Packs triggered only from test/docs/fixture dirs are flagged `test_fixtures_only`. Refreshes the memory `## Language packs` section.
+- `SKILL.md`: `0lang` quick-start, G0 gate row, `−1lang` step, 2b.1 now uses active lang packs only.
+- `extended-category-scans.md` §19: points to lang-packs as canonical.
+
+## [4.39.0] — 2026-10-06
+
+### Changed — reader HTML report
+
+HTML export is limited to **Contents**, scan facts (repo, branch, agent, files, LOC, date), Executive Summary with **severity and OWASP pie charts + tables**, **standards/coverage**, a **findings table**, then **Detailed Findings**. Impact is **prose**, not a CIA table (legacy tables are flattened). Attestation, residual register, matrices, appendices, and remediation-priority lists stay in markdown only.
+
+## [4.38.1] — 2026-10-06
+
+### Changed — multi-instance HTTP findings must list Affected endpoints
+
+When the same root cause hits more than one call site, **`### Affected endpoints`** (method, path, auth today, **Instance**) sits next to **`### Instances`**. Ticket/Jira consumers copy both tables into the issue description.
+
+## [4.38.0] — 2026-10-06
+
+### Added — large-repo runner (finish a monorepo across turns)
+
+One chat cannot deep-trace every service. The skill now **queues** the tree instead of stopping after P0.
+
+- **`scripts/enumerate_inventory.py`** — allowed inventory (paths only) → `.security-review/inventory.json` + memory skeleton
+- **`large-repo-runner.md`** — config batches of 8, up to 4 HTTP modules/turn (parent + 3 explore subagents), **CONTINUE LARGE-REPO** every turn, `status: complete` only when Residual empty
+- **`--strict`** — `Checks executed: 109` while AUTH-walked < enumerated **fails**, even if Residual is named
+- Playbook stop-condition no longer treats “P0 done” as complete
+
+User prompt: `Follow large-repo-runner.md. Say CONTINUE for the next batch.`
+
+## [4.37.0] — 2026-10-06
+
+### Added — senior researcher: static **and** logical issues
+
+Pattern catalogs miss IDOR, workflow skip, mass assignment, races, tenant mix-up, and trusted client fields. Agents must **read handlers** and ask abuse questions.
+
+- **`senior-researcher.md`** — principal-researcher standing prompt; static table; LOG-01…15 logic abuses for **every** app; AI reasoning rules; Researcher Discovery + abuse-case PoCs
+- **`exploration-first.md`**, **`SKILL.md`**, **`business-logic-abuse-checklist.md`** — logic hunt is mandatory; BUS-01…10 remains extra for commerce
+- Session / weak-model: after opening a module, apply LOG-* to its routes; unread sensitive ops are Residual
+
+User prompt includes: `Find static defects AND logical abuse (IDOR, workflow skip, mass assignment, race).`
+
+## [4.36.0] — 2026-10-06
+
+### Changed — exploration-first (stop scanning by regex catalog)
+
+Large-repo reviews were finishing a 109-check `rg` pack (or a 5-app P0 slice) and missing unquoted `.properties` secrets and whole modules.
+
+- **`exploration-first.md`** — standing prompt: map the repo, **Read** configs/routes, hunt issues as a human reviewer. Pattern files are optional hints. Zero `rg` hits is not coverage.
+- **`SKILL.md` / `agent-execution.md` / `model-proof-operating-contract.md`** — explore-then-hint; subagents may return `path:line` only; parent owns G1–G5 and the report.
+- **`weak-model-parity.md`** — one HTTP module per turn still; `rg` pack is backup after Read.
+- **`large-repo-playbook.md`** — configs/secrets are P0 Read; no top-15 sampling as the secret review.
+- **`scan-session-memory.md`** — `configs_read` vs enumerated; unread configs are Residual.
+- **`scan-scope-metrics.md`** — count `*.properties` and `.env*`.
+- **`secrets-patterns.md`** — second-pass hints; unquoted Java properties must be found by Read.
+
+User prompt: `Follow references/exploration-first.md. Read configs and routes; do not treat regex catalogs as coverage.`
+
 ## [4.35.3] — 2026-09-29
 
 ### Changed — finding narrative and slimmer HTML

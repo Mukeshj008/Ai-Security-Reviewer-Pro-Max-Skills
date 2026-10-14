@@ -1,87 +1,88 @@
-# Weak-model parity (Mythos-class AUTH hunt without a frontier model)
+# Weak-model loop (finish every module this session)
 
-**Purpose:** a **small** model finds the **same AUTH/fail-open/glob classes** a top model finds — by **running `rg` and filling Residual**, not by “being clever.”
+**Purpose:** keep a small model from claiming “done” after five P0 apps. Quality is **reading that module**, not finishing a regex pack.
 
-**When:** **Always** on large repos. **Always** if the user asked for a cheaper/faster model. Optional on a 1-service toy app.
+**When:** large repos, cheap/fast models. Optional on a 1-service toy app.
 
-**Do not** load the full `SKILL.md` sequence first. This card + session memory + one stack audit (`express-auth-audit.md` **or** `per-method-auth-audit.md` Step 3b) is the loop.
+**First** follow `exploration-first.md`: **Read whole-tree configs/secrets once**, then take one HTTP module.
 
-Quality is **not** 109 rows. Quality is: **every HTTP module AUTH-walked or named Residual**, every probe **hit** is Finding / Tentative / Appendix A with `file:line`.
+Do **not** load the full 109-check sequence first. This card + session memory + reading the module’s filters and routes is the loop.
+
+Quality is: **every HTTP module AUTH-walked or named Residual**, every real issue in that module is Finding / Tentative / Appendix A with `file:line`. Zero `rg` hits is not a pass.
 
 ---
 
 ## Why small models miss (do not repeat)
 
-| Failure | What a top model did | Forced substitute |
-|---------|----------------------|-------------------|
-| Finish 5 P0 apps, claim 109 | Walked IMS/OD/CST/GTFS/`TestSSO` | One module per turn; Residual list is the queue |
-| Hunt secrets, skip route table | Glob `app.all` vs later `app.post` | `express-auth-audit.md` block **verbatim** in **that module path** |
-| Skip Java | Empty `SecurityFilterChain` `rg` | Step 3b one AUTH + instances |
-| “Config has a token” | Empty header → default secret | AUTH-ADJ-04 — keep AUTH |
-| Outbound HMAC on client | Unauth inbound `/callback` | Inbound verify only is G3 |
-| `200 []` = BOLA | Token-bind / empty body | IDOR-ADJ-01 / AUTH-ADJ-02 |
+| Failure | What to do instead |
+|---------|---------------------|
+| Finish 5 P0 apps, claim 109, or stop and ask the user to continue | Walk every remaining HTTP module in this session; Residual is not a user prompt |
+| Hunt only via `secrets-patterns.md` `rg` | **Read** `.properties` / yml / `.env` (unquoted values count) |
+| Skip route table | **Read** middleware then every route file in **that** directory |
+| Skip Java | **Read** filter chain / interceptors; empty `SecurityFilterChain` → Step 3b |
+| “Config has a token” | Empty header → default secret is AUTH (AUTH-ADJ-04) |
+| `200 []` = BOLA | Token-bind / empty body → IDOR-ADJ-01 |
 
 ---
 
-## Loop (one HTTP module per turn)
+## Loop (every HTTP module, this session)
 
-1. `Read` `.security-review/scan-session-memory.md`. If missing: enumerate HTTP dirs **once**, write memory, stop if context is already large.
-2. Take **`next_http_module` only**. Set `working_directory` / `rg` path to **that directory**.
-3. Run **Parity `rg` pack** below (Node and/or Java as present in **that dir**).
-4. Every hit → ledger. `Read` ±15 lines. G1–G5. No silent drop.
-5. Rewrite memory: move module to `walked_list` or keep Residual with reason.
-6. **Stop.** Do not start the next module in the same turn if findings need writing. Flush report increment + memory.
+1. `Read` `.security-review/scan-session-memory.md`. If missing: enumerate HTTP dirs **once**, **Read configs**, write memory.
+2. Take **`next_http_module`**, then the next, until none remain.
+3. **Explore that directory:** list files, Read security/middleware, Read controllers/routes, Read local application*.properties. For each sensitive operation apply **`senior-researcher.md` LOG-01…15** (IDOR, extra JSON fields, skip-state, webhook).
+4. Optional: run **Backup `rg` pack** below after the routes are open.
+5. Every issue → ledger. `Read` ±15 lines. G1–G5. No silent drop.
+6. Rewrite memory. **Start the next module immediately.** Do not stop to ask the user to continue. Write the report after the last module.
 
-**Forbidden:** whole-repo `rg` after inventory exists. **Forbidden:** writing the final report while Residual names modules you have not AUTH-probed.
+`large-repo-runner.md` is the same rule for large repos: finish in this session. There is no CONTINUE handoff.
 
 ---
 
-## Parity `rg` pack (copy; scope = current module)
+## Backup `rg` pack (optional; scope = current module)
 
-Node (if `package.json` / `*.js` routes in module):
+Use only after you have Read the module. Copy if you are stuck:
+
+Node:
 
 ```bash
 rg -n "app\.all\(|router\.all\(|next\(\s*['\"]route['\"]\s*\)|TestSSO|TestWallet|skipAuth|X-Forwarded-Host|x-forwarded-host" --glob '*.{js,ts}'
 rg -n "restricted\s*:|function restricted|/webhook|/callback" --glob '*.{js,ts}'
-rg -n "if\s*\(.*==\s*['\"]['\"]|token\s*==\s*\"\"|access_token" --glob '*auth*.{js,ts}'
-rg -n "onboard-admin|registerAdmin|/automation/" --glob '*.{js,ts}'
 ```
 
-Then run the **full** block in `express-auth-audit.md` inside the same directory (do not skip because “already did a short pack”).
-
-Java (if `pom.xml` / `*.java` in module):
+Java:
 
 ```bash
 rg -n "SecurityFilterChain|permitAll|@RestController|@PreAuthorize" --glob '*.{java,kt}'
-rg -n "access_token|App_access_token|if\s*\(.*isEmpty|token\s*==\s*null" --glob '*.{java,kt}'
-rg -n "IsAuthorisedRequest|onboard|automation" --glob '*.{java,kt}'
+rg -n "password\s*[:=]|secret\s*[:=]|client-secret|vault\.secret" --glob '*.{java,kt,properties,yml,yaml}'
 ```
 
-If `@RestController` hits and `SecurityFilterChain` is empty in **this module** → `per-method-auth-audit.md` Step 3b (one AUTH, **not** default Critical).
+Then Read hits. If `@RestController` exists and there is no `SecurityFilterChain` in **this module** → `per-method-auth-audit.md` Step 3b.
 
 ---
 
-## Hard stops (treat as skill violation)
+## Hard stops (skill violation)
 
 - User report with `Checks executed: 109` and Residual `none` while memory `walked` < `enumerated`
 - Appendix A without control `file:line` or AUTH-ADJ / IDOR-ADJ id
-- Merging “no Spring Security” into Critical without Ingress/public bind cite
-- Skipping `*-admin*`, `*-panel*`, `gtfs*`, `notify*`, `ims*`, `order-details*` because they are not P0
+- Skipping `*-admin*`, `*-panel*`, `gtfs*`, `notify*` because they are not P0
+- LEAK/SECRET PASS while `configs_read` < enumerated config files
 
 ---
 
-## After AUTH walk of a module (quality floor)
+## After AUTH walk of a module
 
-Deep injection/SSRF can wait (**Residual: injection not traced**). AUTH probes **cannot** wait.
+Deep injection/SSRF can wait (**Residual: injection not traced**). AUTH and **local config secrets** cannot wait.
 
-Then read only: `severity-calibration.md` (before severity), `finding-instances.md` (same root cause), `precision-false-positive-adjudication.md` (before dropping AUTH/IDOR).
+Then: `severity-calibration.md`, `finding-instances.md`, `precision-false-positive-adjudication.md`.
 
 ---
 
-## User prompt (paste when using a small model)
+## User prompt (paste)
 
 ```text
-Follow ~/.cursor/skills/ai-security-reviewer/references/weak-model-parity.md
+Follow ~/.cursor/skills/ai-security-reviewer/references/exploration-first.md
+Then references/senior-researcher.md and references/weak-model-parity.md
 Resume .security-review/scan-session-memory.md
-One HTTP module this turn. Do not re-enumerate. Do not claim 109.
+Read unread configs first. Walk every HTTP module this session. Hunt static AND logic.
+Write the report before you stop. Do not ask the user to continue.
 ```

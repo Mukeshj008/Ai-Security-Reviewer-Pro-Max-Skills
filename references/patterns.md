@@ -1,5 +1,7 @@
 # Security Detection Patterns Reference
 
+> **v4.42:** language sinks here are superseded by `lang-packs/<pack>.md`. Use this file only for files whose language has no active pack, and for secret patterns. Never run both on the same file.
+
 Quick reference for static pattern detection used by the AI Security Reviewer.
 
 ## Hardcoded Secrets (40+ Patterns)

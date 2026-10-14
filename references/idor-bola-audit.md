@@ -1,14 +1,14 @@
 # IDOR / BOLA Systematic Audit (additive)
 
-**When:** Any API with object IDs (`userId`, `orderId`, `accountId`, path `{id}`, query params). Run after route auth audit (Phase 6) and before final report.
+**When:** Any API that references an object (`userId`, `orderId`, `accountId`, path `{id}`, UUID, slug, username/email/phone, PNR, invoice/order/account number, filename/key, token, composite key, GraphQL global ID, or query/body reference). Run after route auth audit (Phase 6) and before final report.
 
-**Does not replace:** `extended-category-scans.md` §4.3, `route_auth_audit.md`, or single-parameter curl in `curl-dast-fallback.md` — **extends** them.
+**Does not replace:** `authorization-privilege-escalation-audit.md`, `extended-category-scans.md` §4.3, `route_auth_audit.md`, or single-parameter curl in `curl-dast-fallback.md` — **extends** them.
 
 ---
 
 ## Step 1 — Object reference map
 
-Enumerate endpoints that read/write resources by ID:
+Enumerate endpoints that read/write resources by any direct or indirect reference. Do not search only for variable names ending in `id`; domain identifiers such as `pnr`, `slug`, `email`, `accountNumber`, `orderNo`, object keys, and composite route/body fields are equally authorization-sensitive.
 
 ```bash
 rg -n "@(Get|Post|Put|Patch|Delete)Mapping|@(RequestParam|PathVariable).*[Ii]d" \
@@ -19,8 +19,8 @@ rg -n "router\.(get|post|put|patch|delete).*[:/].*id|req\.(params|query)\.(user|
 
 Build a table (internal or Appendix C supplement):
 
-| Method | Path | ID param | Auth middleware | Ownership check in handler? | Data sensitivity (PII/PHI/PFI/None) |
-|--------|------|----------|-----------------|-------------------------------|------------------------------------|
+| Method | Path | Object reference(s) | Auth middleware | Ownership/tenant check at data operation? | Data sensitivity (PII/PHI/PFI/None) |
+|--------|------|---------------------|-----------------|-------------------------------------------|------------------------------------|
 | GET | /v1/orders/{id} | path | JWT | ? | PII + PFI |
 
 Flag **missing ownership validation** (SAST-OG-12) for manual trace.
@@ -90,6 +90,8 @@ If only one session available: document **Not Verified (single session)** and re
 | **Horizontal** | User A → User B's object ID |
 | **Vertical** | User → admin-only path (`/admin`, `/internal`, `role=admin` param) |
 | **Mass assignment** | POST body adds `role`, `isAdmin`, `customer_id` — see extended §4 |
+
+Horizontal and vertical checks are separate completion requirements. Run the full vertical/BFLA matrix and `PRIV-ADJ-01` from `authorization-privilege-escalation-audit.md`; a clean IDOR result does not prove admin functions are protected.
 
 ---
 

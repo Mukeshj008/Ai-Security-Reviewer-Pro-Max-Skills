@@ -1,5 +1,7 @@
 # Extended Category Scans (Supplemental `rg` Probes)
 
+> **v4.42:** language-specific probes are superseded by `lang-packs/`. Use only for classes and languages no active pack covers.
+
 Run **after** core manifests (`sast_scan_manifest.md`, `injection-deep-scan.md`, etc.) for taxonomy rows marked **Partial** in `vulnerability-taxonomy-coverage.md`.
 
 **Rules:** Same as agent-execution — you run each `rg`; on hits → `graphify path` → G1–G5 → VULN-NNN if TRUE POSITIVE.
@@ -493,6 +495,8 @@ rg -n "pip install.*--index-url|extra-index-url|trusted-host" --glob "{requireme
 ---
 
 ## §19 Framework-specific stacks
+
+> **v4.40:** the canonical per-language rules are `lang-packs/<pack>.md` (router: `lang-packs/README.md`). Use this section only for stacks without a pack (§19.7 mobile, Elixir, Scala, Apex) or as extra hints for an **active** pack. Never run a subsection for a language the inventory did not detect.
 
 Detect stack from manifests, then run applicable subsection only.
 

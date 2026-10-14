@@ -1,6 +1,6 @@
 # Scan Matrices & AI Agent Attribution (MANDATORY)
 
-Every `security_report.md` must document **which matrices were executed** and **which AI agent/backend performed each scan layer**. No subagents for analysis — one Cursor session agent is the primary scanner.
+Every `security_report.md` must document **which matrices were executed** and **which AI agent/backend performed each scan layer**. One session agent performs every layer. No shard workers.
 
 **Report contract:** `report-output-spec.md` (v4.14)
 
@@ -17,7 +17,7 @@ Every `security_report.md` must document **which matrices were executed** and **
 **AI Validation Agent:** [Same as Scan Agent unless user specified otherwise]
 **Graph Backend:** Cursor native AI (`/graphify .`) OR tree-sitter AST-only (`graphify extract`) OR `rg + manual trace (graphify not installed)`
 **DAST Backend:** Burp MCP (`user-burp`) | curl (terminal — Burp MCP not present) | Not run (no host in code)
-**Method:** agent-native SAST · OSV SCA · DAST · ARCH (no scan scripts · no subagents)
+**Method:** agent-native SAST · DAST · ARCH (no scan scripts · single agent) · SCA only when explicitly requested
 ```
 
 **Rules:**

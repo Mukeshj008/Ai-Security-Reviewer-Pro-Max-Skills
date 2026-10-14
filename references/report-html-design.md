@@ -112,12 +112,13 @@ Executive Summary **Scan Metrics** table (markdown only — parsed by `parse_exe
 
 ## Anti-patterns (do not use)
 
-- Mermaid / Chart.js / pie charts in security reports
+- Mermaid / Chart.js libraries (use CSS conic-gradient pies in Executive Summary)
 - Emoji icons
 - Separate duplicate summary + hardening tables
 - Bare filenames without repo path in Source/Sink columns
 - Duplicate metadata block below hero
 - **Repeating Files/LOC/Checks/SCA in scope bar + KPI grid + coverage strip + markdown table** (fixed v4.10)
+- **CIA impact tables in HTML** — render impact as sentences (v4.39)
 
 ## Accessibility
 

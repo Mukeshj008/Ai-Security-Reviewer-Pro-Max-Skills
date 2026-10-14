@@ -18,7 +18,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Checks defined** | 109 (SCA/CVE/DEPS rows N/A in code-only mode) |
+| **Checks defined** | 109 (CVE/DEPS taxonomy rows N/A — not in skill scope, v4.46) |
 | **Checks executed** | N (must equal MX-COV Executed) |
 | **PASS** | X |
 | **FINDING** | Y (linked finding IDs) |
@@ -30,7 +30,10 @@
 | **HTTP findings with Burp PoC crafted** | N / N (must equal HTTP AUTH+VULN count) |
 | **Deep-link audit** | Completed (`deeplink-audit.md`) \| N/A (no mobile/deeplink surfaces) — never silent skip when triggers match |
 | **Mobile SAST (static)** | Completed (`mobile-sast-audit.md`) \| N/A (no mobile code) — ATS/exported IPC/storage reviewed; Frida/MITM Residual |
-| **Precision adjudication (v4.35+)** | All `*-ADJ-*` including IDOR-ADJ-01 / AUTH-ADJ-02/03/**04** / EXPLOIT-ADJ-01; SSRF-ADJ-01: N (M excluded **G3**); empty-200 BOLA claims excluded or Tentative |
+| **Precision adjudication (v4.35+)** | All `*-ADJ-*` including IDOR-ADJ-01 / PRIV-ADJ-01 / XSS-ADJ-01 / XXE-ADJ-01 / XML-ADJ-01 / AUTH-ADJ-02/03/**04** / EXPLOIT-ADJ-01; SSRF-ADJ-01: N (M excluded **G3**); empty-200 BOLA claims excluded or Tentative |
+| **Authorization / privilege escalation** | Completed (`authorization-privilege-escalation-audit.md`): horizontal, vertical, cross-tenant, privileged-field candidates all dispositioned \| N/A (no authenticated/privileged surface) |
+| **XML security audit** | Completed (`xml-security-audit.md`): XXE/entity, structural XML, XPath/XSLT, signature wrapping candidates dispositioned \| N/A (no XML/SOAP/SAML surface) |
+| **AI Validate precision pass (v4.53+)** | `ai-validate-precision-pass.md`: *C* candidates; *F* findings; *K* FP → Appendix A only; *R* tentative/NMR (&lt;5% of *C*) |
 | **Actuator sensitive endpoints audit** | Completed (`actuator-sensitive-endpoints-audit.md`) \| N/A (no Spring/management endpoints) — sensitive-only reporting; health/info probe-safe |
 | **Attestation** | Applicable checks on **walked** HTTP modules + researcher pass; G1–G5 on every finding. Do **not** claim 109 executed unless `### HTTP module walk` Y==X or Residual lists every skipped HTTP module. |
 
@@ -52,7 +55,7 @@
 | Internal log | agent session + layer toggle below |
 | Attestation | 109 checks + researcher pass; G1–G5 on all findings |
 
-**Finding-linked check IDs (sample):** SAST-OG-11 → VULN-001; IAC-ACTUATOR → IAC-001; VULN-003 → Researcher (interceptor exclude-mapping); SCA/CVE/DEPS → N/A (code-only mode).
+**Finding-linked check IDs (sample):** SAST-OG-11 → VULN-001; IAC-ACTUATOR → IAC-001; VULN-003 → Researcher (interceptor exclude-mapping); CVE/DEPS → N/A (not in skill scope).
 ```
 
 ---
@@ -65,7 +68,9 @@
 - [ ] Logged in **Appendix F** Phase 1 (SAST manifests) = PASS
 - [ ] **AUTH coverage gate:** Appendix D endpoint rows == sum of AUTH instance counts; checklist AUTH rows == distinct AUTH finding IDs; multi-instance findings include `### Instances` with per-instance Source/Sink (`finding-instances.md`)
 - [ ] **No duplicate finding IDs** for the same CWE + root cause (secrets, TLS trust-all, CORS, Vault tokens, etc. → instances)
-- [ ] **Precision adjudication:** SSRF/LDAP plus **IDOR-ADJ-01** (no Confirmed BOLA from empty body / token-bind); AUTH-ADJ-02/03/**04**; EXPLOIT-ADJ-01 (`precision-false-positive-adjudication.md` v4.35+)
+- [ ] **Precision adjudication:** SSRF/LDAP plus **IDOR-ADJ-01**, **PRIV-ADJ-01**, **XSS-ADJ-01**, **XXE-ADJ-01**, **XML-ADJ-01**; AUTH-ADJ-02/03/**04**; EXPLOIT-ADJ-01 (`precision-false-positive-adjudication.md`)
+- [ ] **Authorization / privilege escalation:** authenticated apps have a completed principal/role/permission matrix covering horizontal, vertical, cross-tenant, and privileged-field paths
+- [ ] **XML security:** when XML/SOAP/SAML triggers exist, `xml-security-audit.md` is completed; `FEATURE_SECURE_PROCESSING` alone is not accepted as complete XXE mitigation
 - [ ] **HTTP module walk (v4.35):** table below present; `enumerated == walked` OR Residual names every skipped HTTP module; never `Checks executed: 109` after a partial slice
 - [ ] **Session memory (v4.35.1, large repo):** `.security-review/scan-session-memory.md` exists and matches the HTTP module walk table
 - [ ] **Mobile SAST (static)** completed or N/A justified (`mobile-sast-audit.md`) — exported components, ATS, on-device storage
@@ -78,6 +83,21 @@
 | HTTP modules AUTH-walked | M |
 | Residual (AUTH not walked) | none \| `mod-a, mod-b` |
 ```
+
+### Inventory coverage (v4.50 — mandatory)
+
+```markdown
+### Inventory coverage
+| Metric | Read / walked | Enumerated | Gate |
+|--------|----------------|------------|------|
+| Code files (`must_read_files`) | R | M | R == M |
+| Config profiles | K | C | K == C |
+| HTTP modules (AUTH + logic) | H | N | H == N |
+| `check_coverage_gate.py` | — | — | exit 0 |
+```
+
+- **`Review status: complete`** only when all Gate cells pass and the script exits 0.
+- If any row is short: **`Review status: in_progress`** — do not say “scan complete” in chat or Executive Summary.
 
 `--strict` fails if the report claims `Checks executed: 109` and this table is missing, or `M < N` with Residual `none` / empty.
 

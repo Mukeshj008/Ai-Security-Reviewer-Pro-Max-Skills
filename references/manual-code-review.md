@@ -6,7 +6,7 @@
 
 This reference **supplements** (does not replace) graphify recon, SAST manifests, route auth audit, Burp MCP / curl DAST, and the 109-check matrix. Every automated or pattern hit must still pass the gates below before becoming a FINDING.
 
-**v4.17 — Security researcher mandate:** The 109 checks are a **minimum coverage floor**. You **must** also perform an independent researcher review (`SKILL.md` § Security researcher layer) and report validated issues even when no check ID applies. Researcher findings use the same G1–G5 bar and normal VULN/AUTH/IAC/LEAK IDs.
+**v4.37 — Static + logic:** Follow `senior-researcher.md` on every opened module. Logical bugs (IDOR, skip-state, mass assignment) are first-class, same G1–G5 bar. The 109 checks remain hints.
 
 **v4.35 — Express + fail-open + Spring-no-filter:** Run `express-auth-audit.md` when Node HTTP exists. Empty header → config token is AUTH-ADJ-04. A Spring module with no `SecurityFilterChain` is one AUTH + instances, High unless Ingress is cited — not default Critical.
 
@@ -97,7 +97,8 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 - Missing authorization / role validation on sensitive handlers
 - IDOR / BOLA (access object by changing ID without ownership check)
-- Privilege escalation (role parameter, admin routes without panel auth)
+- Horizontal privilege escalation / cross-tenant access (object reference without ownership/tenant scope) — `idor-bola-audit.md`
+- Vertical privilege escalation / BFLA (low-role caller reaches admin/support/finance/config actions; role parameter or mass assignment) — `authorization-privilege-escalation-audit.md` + `PRIV-ADJ-01`
 - Mass assignment, missing ownership validation, forced browsing
 
 **Taxonomy:** `vulnerability-taxonomy-coverage.md` §4  
@@ -194,7 +195,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 ## Pre-Report Verification Gates (MANDATORY)
 
-**Before** assigning VULN-NNN, AUTH-NNN, IAC-NNN, or LEAK-NNN, answer all five gates. If any gate fails → **FALSE POSITIVE** → Appendix A, not Detailed Findings. In explicit SCA mode, use `SCA-NNN` per `sca-dependency-audit.md`; do not turn advisory-only dependency issues into VULN findings.
+**Before** assigning VULN-NNN, AUTH-NNN, IAC-NNN, or LEAK-NNN, run **`ai-validate-precision-pass.md`** (per call site, stored-taint before FP, exploitability alignment), then answer all five gates below. If any gate fails → **FALSE POSITIVE** → **Appendix A only**, never Detailed Findings. In explicit SCA mode, use `SCA-NNN` per `sca-dependency-audit.md`; do not turn advisory-only dependency issues into VULN findings.
 
 | Gate | Question | PASS criterion |
 |------|----------|----------------|
@@ -219,6 +220,9 @@ These **override** pattern severity and live `200` excitement. Cite `file:line` 
 | Empty auth header replaced with **config token** / skip-if-unset | **keep AUTH** AUTH-ADJ-04 | "Not a bug — service has App_access_token" |
 | Dummy token **rejected** by SSO or next hop never uses the ID | **G4** EXPLOIT-ADJ-01 | "Invoice IDOR, dummy SSO accepted" |
 | SSRF/LDAP from sink name only | **G3** SSRF-ADJ-01 / LDAP-ADJ-01 | Pattern-only VULN |
+| Authentication exists but action-level role/permission was not checked | **G3** PRIV-ADJ-01 | “Any logged-in user is authorized” |
+| XML parser has `FEATURE_SECURE_PROCESSING` only | **G3** XXE-ADJ-01 | “Secure processing proves XXE is impossible” |
+| DOMPurify/encoder exists somewhere, but sink context/config is unverified | **G3** XSS-ADJ-01 | Blanket sanitizer exclusion |
 
 **Still a finding (do not Appendix-A):** missing auth on a **data or privileged** handler (even if today's probe returned `[]`) → **AUTH** Firm, not Confirmed BOLA. `200 []` proves the route ran **without** a session; it does **not** prove cross-user data.
 
@@ -305,6 +309,9 @@ The following exclusion reasons are **not allowed** because past reviews used th
 | "`.path()` with user input is safe like pathSegment" | **Forbidden.** `.path(userInput)` injects slashes/`..` — not an SSRF authority bypass but not a safe dynamic segment; do not Appendix A on SSRF authority grounds alone if `.path()` used |
 | "200 empty JSON = Confirmed IDOR/BOLA" | **Forbidden.** Apply **IDOR-ADJ-01** + **AUTH-ADJ-02**. Empty body → AUTH (if no session) and/or Tentative IDOR, never Confirmed data-exfil. |
 | "Query/header `userId` present = IDOR" | Trace whether that ID is the **repository key**. Token-bound response → Appendix A **G3** (IDOR-ADJ-01). |
+| "The endpoint requires login, so privilege escalation is impossible" | Authentication is not authorization. Run `authorization-privilege-escalation-audit.md`; prove the exact action-level role/permission and tenant/owner checks (`PRIV-ADJ-01`). |
+| "DOMPurify / sanitizer is present" | Run `XSS-ADJ-01`: verify sanitizer config/version, exact browser context, dangerous URI policy, and no mutation/reparse after sanitization. |
+| "`FEATURE_SECURE_PROCESSING` prevents XXE" | Run `xml-security-audit.md`: verify complete parser-specific DTD/entity/external-access hardening on the exact parser instance. |
 | "Missing Spring Security = every route is Critical IDOR" | One AUTH finding with instances; IDOR only where object ID is used unsafely. Health/status → AUTH-ADJ-03. **Severity High max** unless Ingress/public bind cited (`per-method-auth-audit.md` Step 3b). |
 | "Empty access_token is OK because config has App_access_token" | AUTH-ADJ-04 — that **is** fail-open AUTH |
 

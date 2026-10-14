@@ -6,6 +6,8 @@
 
 This reference supplements `route_auth_audit.md` with method-level granularity for **annotation-based frameworks** (Spring, Spring Security, Quarkus, ASP.NET, NestJS, FastAPI dependencies).
 
+**Authorization is separate from authentication:** after classifying authentication, run `authorization-privilege-escalation-audit.md` for every authenticated application. Every sensitive method needs an expected role/permission, an action-level enforcement location, and owner/tenant disposition. “Authenticated” alone does not protect admin functionality.
+
 ---
 
 ## Step 1 — Inventory every endpoint method (not file)
@@ -21,8 +23,8 @@ rg -n -B 6 '@(Get|Post|Put|Delete|Patch|Request)Mapping' --type java \
 Build a worksheet (one row per **method**):
 
 ```
-| Controller file | Method name | HTTP method | Path | Auth annotations on method |
-|-----------------|-------------|-------------|------|---------------------------|
+| Controller file | Method name | HTTP method | Path | Auth annotations on method | Required role/permission | Authorization enforcement |
+|-----------------|-------------|-------------|------|----------------------------|--------------------------|---------------------------|
 | SignInOTPController.java | signinValidateOtp | POST | /signin/validateOtp | (none) |
 | SignInOTPController.java | v4SigninValidateOtpSv1 | POST | /signin/validateOtp/sv1 | @ClientPermission |
 | ... | ... | ... | ... | ... |
@@ -76,6 +78,8 @@ For each row in the worksheet, mark `Auth status` as one of:
 | `V1`/`V2`/`V3` variant unannotated, `V4_SV1` annotated | Highly suspicious — typical refactor leftover. **Report v1/v2/v3** as AUTH candidates |
 | `*_INTERNAL`, `*Intenal`, `internal*` paths | Report as AUTH candidate **and** an architectural risk: internal-only routes mounted on the same servlet as public routes |
 | Method named `forceX`, `adminX`, `resetX`, `flushX`, `reloadX` without annotation | High-risk admin operation — **High AUTH** (Critical only if Step 2 Critical gates in `severity-calibration.md` all pass, including cited Public/Internal exposure) |
+| Method authenticates any user but lacks the required role/permission check | **Vertical privilege escalation/BFLA candidate** — apply `PRIV-ADJ-01`; do not mark protected merely because auth exists |
+| Request body/query/header can set `role`, `permissions`, `isAdmin`, `tenantId`, `ownerId`, approval state, or limits | Trace mass assignment and principal override before closing authorization |
 
 ---
 
@@ -160,12 +164,29 @@ When Spring Security uses global `.anyRequest().permitAll()`, emit **one** AUTH 
 | Gateway-only (verified with manifest) | C |
 | Inline soft check (tentative) | D |
 | Unauthenticated | U  ← every entry covered by an AUTH finding **instance** |
+| Authenticated but missing/weak action authorization (BFLA) | V ← every entry covered by a VULN/AUTH finding or Appendix A `PRIV-ADJ-01` |
 | Distinct AUTH findings | F  ← checklist row count |
 | `A + B + C + D + U` must equal `N` | (check) |
 | `sum(instances across F) == U` | (v4.28 instance gate) |
+| Privileged methods enumerated / adjudicated | `P / P` required |
 ```
 
 If `A + B + C + D + U != N`, the audit is incomplete → `--strict` failure.
+
+---
+
+## Severity when filing AUTH findings (v4.54)
+
+After marking a method **Unauthenticated (U)** in the worksheet, assign severity using `severity-calibration.md`:
+
+| Method pattern | AUTH severity default |
+|----------------|----------------------|
+| `/internal/*`, mesh-only, loopback, or **internal-gated** edge with no app auth | **Medium** |
+| Inbound **webhook** / callback (no valid signature/HMAC/token check) | **Medium** |
+| **Cron** / scheduler / worker HTTP activation without auth | **Medium** |
+| Internet-facing **external** API with no auth | Normal matrix (may be High/Critical) |
+
+Tag `### Severity Rationale` with *v4.54 internal/webhook/cron missing-auth* when the Medium default applies.
 
 ---
 

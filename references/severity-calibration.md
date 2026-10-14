@@ -55,7 +55,24 @@ Align with **Exploitable** + G4, but rate trigger ease:
 | **Local** | `127.0.0.1` bind, developer `docker compose` only, not in production deploy path |
 | **None** | Not deployed; test/mock code only |
 
-**Evidence required:** cite Dockerfile, compose, Ingress, README deploy instructions, or `[TARGET_HOST]` assumption in Assumptions.
+**Evidence required:** cite Dockerfile, compose, Ingress, nginx/gateway config, or an auth middleware that runs before the handler. A path string is not evidence.
+
+### Route exposure — decide this before Step 3 (v4.45)
+
+Score **Exposure from how the route is reached**, not from the word in the path. Record the class in `### Severity Rationale`.
+
+| Class | What you must have read | Exposure | Severity effect |
+|-------|-------------------------|----------|-----------------|
+| **external** | Edge config proxies this prefix with no `auth_basic`, `allow`/`deny`, or mTLS (for example `location /api/` → app). Or there is no edge config in the repo and the route itself has no auth middleware. | **Public** | High is allowed when Impact is High |
+| **internal-named-but-proxied** | The path contains `/internal`, `/admin`, `/ops`, or `/seller`, but the only edge config forwards the parent prefix with no ACL. | **Public** | Do not downgrade because of the path name |
+| **internal-gated** | Basic auth, mTLS, API key, or an IP allowlist is in the file and runs **before** the handler. | **Internal** | High max. Medium when the gate is real and the missing check is a second factor |
+| **non-prod-only** | The handler returns 404 or skips the action unless a staging/preprod flag is set, and that flag is false in production config. | **Internal** | **Medium max** |
+| **loopback** | Binds `127.0.0.1` and no proxy location points at it. | **Local** | **Medium max** (Step 1) |
+| **needs-network-position** | TLS verification off, or a secret only useful to someone already on the network or in the log store. | not Public | **Medium max**. High only when the same bug also takes a user-controlled URL (SSRF) or the secret is a production credential in the repo (LEAK cap) |
+
+Unknown deployment ACLs stay in the Residual Register. They do not lower a **Public** rating and they do not raise a **Local** one.
+
+**Same bug, different exposure:** if one instance is external and another is internal-gated, severity follows the worst instance. Say which instance that is.
 
 ### 4. Complexity (C) — attacker effort beyond the PoC
 
@@ -81,8 +98,35 @@ Align with **Exploitable** + G4, but rate trigger ease:
 | **Exploitable: Hardening** | **High** max (usually Medium) |
 | **Exploitable: No** | Do not report — Appendix A |
 | **Hardcoded credentials** (`LEAK-NNN`, `SAST-SECRET-01…12`, `SAST-OG-10`) | **Critical forbidden** — see **§ Hardcoded credentials severity cap** below |
+| **Missing authentication** (`AUTH-NNN`) on **internal** route, **webhook**, or **cron/worker** trigger — see **§ Internal / webhook / cron missing-auth (v4.54)** | **Medium** default; **High/Critical forbidden** on that finding unless a **separate** public external route shares the same root cause (severity follows worst **external** instance) |
+| **Quantum-only / HNDL / PQC migration** (no classical break today) — see **`quantum-crypto-out-of-scope.md`** | **Do not report** — Residual / Appendix A only |
 
 **Forbidden cap:** `Not Verified`, `no Burp/curl`, `user declined curl`, `401 at gateway on probe`, `WAF blocked`, `no target host in code` — **none of these may lower severity**. They belong in **Verification Status** / **DAST Status** / **Confidence** only.
+
+### Internal / webhook / cron missing-auth (MANDATORY — v4.54)
+
+Apply when the finding is **missing or broken authentication** (no session/JWT/API key, fail-open verify, trust of unsigned body) on any of:
+
+| Surface | How to recognize | Default severity |
+|---------|------------------|------------------|
+| **Internal route** | Path or gateway class **internal-gated**, **loopback**, **non-prod-only**; service mesh / cluster-only bind; `/internal`, `/admin` behind mTLS or IP allowlist with **no app-level auth** | **Medium** |
+| **Webhook** | Inbound HTTP callback (`/webhook`, `/hooks`, Stripe/GitHub-style receivers, `@PostMapping("/webhooks/...")`) without HMAC/signature/token verification, or verify always passes | **Medium** |
+| **Cron / worker / scheduler HTTP** | `@Scheduled`, Quartz/cron activation URL, queue consumer admin API, K8s `CronJob` wget/curl to app, Lambda/Step Functions HTTP trigger without auth | **Medium** |
+
+**Rules:**
+
+1. **Assign Medium** as the default severity for the AUTH finding on that surface (record in `### Severity Rationale`: *v4.54 internal/webhook/cron missing-auth default*).
+2. **Do not assign High or Critical** for missing auth **only** on these surfaces — even when Impact narrative mentions pipeline or payment hooks. Split issues: unsigned webhook body → Medium AUTH; injection/RCE on same handler → separate `VULN-NNN` at normal severity.
+3. **Exception — external public API:** If the **same** missing-auth pattern affects an **external** route (internet-facing, no edge gate), severity for that **instance** follows Steps 2–3 (may be High/Critical). Use `### Instances` when one controller mixes internal and public paths.
+4. Document Exposure class in Rationale (`internal-gated`, `webhook`, `cron/worker`).
+
+**See also:** `per-method-auth-audit.md`, `async-second-order-audit.md`, `express-auth-audit.md`.
+
+### Post-quantum / harvest-now crypto (OUT OF SCOPE — v4.56)
+
+**Do not create findings** for quantum-only, HNDL, or PQC-readiness issues. Full rules: **`quantum-crypto-out-of-scope.md`**.
+
+**Classical crypto** (MD5/SHA-1 passwords, weak TLS versions, `none` JWT, hardcoded keys, misuse) — use the normal matrix above; may be High/Critical when Impact and Exposure warrant.
 
 ### Hardcoded credentials severity cap (MANDATORY — LEAK / SAST-SECRET)
 
@@ -128,7 +172,9 @@ Assign **Critical** only when **every** row passes:
 
 ### Step 3 — High
 
-Assign **High** when Impact is **High or Severe** and Exploitability is **Practical or Trivial**, Exposure is **Public or Internal**, and Step 1 caps do not apply.
+Assign **High** when Impact is **High or Severe** and Exploitability is **Practical or Trivial**, Exposure is **Public or Internal**, the route class is **external**, **internal-named-but-proxied**, or **internal-gated**, and Step 1 caps do not apply.
+
+Do not assign High for **non-prod-only**, **loopback**, or **needs-network-position** (those are Medium max). A committed production credential stays High under the LEAK cap even when exploit needs repo access.
 
 Common cases (including when **Not Verified**):
 - Fail-open auth on state-changing webhook + Public exposure + Firm code proof
@@ -240,6 +286,8 @@ confidence=..., verification_status=..., dast_status=..., rationale=one line
 | Medium because Not Verified | Conflates DAST with severity | Calibrate four factors; Not Verified → Verification Status only |
 | High/Critical only after Burp | Severity ≠ live proof | Firm static proof can justify High |
 | Critical because "missing auth" | Ignores impact/exposure | Complete Severity Rationale |
+| High/Critical for webhook/cron/internal missing auth only | v4.54 default is **Medium** | Medium + cite internal/webhook/cron table |
+| Any finding for “RSA-2048 needs PQC someday” | Quantum-only risk | **Out of scope** → Appendix A / Residual only; separate classical issues |
 | Critical for hardcoded AWS/DB/JWT in config | LEAK cap forbids Critical | **High** (prod) or **Medium** (local/staging); cite cap in Rationale |
 | Severity = Confidence | Independent dimensions | Firm + Not Verified + High is valid |
 | Downgrade because 401 on curl | Gateway may block probe; code may still be vulnerable | Not Verified + severity from code |
@@ -252,26 +300,33 @@ confidence=..., verification_status=..., dast_status=..., rationale=one line
 - [ ] `### Severity Rationale` present with four factors + Severity row
 - [ ] Title `[SEVERITY]` matches Rationale + Checklist + Classification
 - [ ] **No** severity chosen because of Not Verified / skipped curl / no host
-- [ ] Step 1 caps honored (Tentative, Local, Hardening, **hardcoded-credentials**)
+- [ ] Step 1 caps honored (Tentative, Local, Hardening, **hardcoded-credentials**, **internal/webhook/cron AUTH**); **quantum-only crypto excluded**
 - [ ] No **LEAK-NNN** / SAST-SECRET finding labeled **Critical**
 - [ ] Verification Status / DAST Status populated separately from Severity
 
 ---
 
-## Worked example (webhook fail-open — code-only, Not Verified)
+## Worked example (unsigned inbound webhook — v4.54)
 
 | Factor | Rating |
 |--------|--------|
-| Impact | High (pipeline/agent control) |
-| Exploitability | Practical (omit signature header) |
-| Exposure | Public (Dockerfile `0.0.0.0:8765`) |
-| Complexity | Low |
-| Confidence | Firm |
-| Verification status | Not Verified (no target host in code) |
+| Issue | `AUTH-NNN` — POST `/webhooks/deploy` accepts body with no HMAC/signature check |
+| Surface | **Webhook** (inbound callback) |
+| Impact | High (could trigger deploy) if exploited |
+| Exposure | Public URL |
 
-**Wrong:** Medium because Not Verified  
-**Wrong:** Critical because "auth bypass" pattern alone  
-**Correct:** **High** — Step 3 (High impact + Practical + Public + Low complexity). DAST stays Not Verified; does not reduce severity.
+**Wrong:** **High/Critical** because impact mentions pipeline control — v4.54 caps missing webhook auth at **Medium** default.  
+**Wrong:** Medium because Not Verified — DAST does not set severity.  
+**Correct:** **Medium** — missing authentication on webhook; cite v4.54 table. If the handler also has **command injection**, file a separate **VULN-NNN** at normal severity.
+
+## Worked example (cron HTTP trigger without auth — v4.54)
+
+| Factor | Rating |
+|--------|--------|
+| Issue | `AUTH-NNN` — `GET /internal/cron/run-backup` callable without token |
+| Surface | **Internal route** + **cron** activation |
+
+**Correct:** **Medium** — internal/cron missing-auth default. Exposure **Internal** supports the cap.
 
 ---
 

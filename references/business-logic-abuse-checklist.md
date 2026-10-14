@@ -1,8 +1,10 @@
-# Business Logic & Abuse-Case Checklist (additive — fintech / commerce)
+# Business Logic & Abuse-Case Checklist (additive)
 
-**When:** E-commerce, payments, wallet, loyalty, catalog, storefront, marketplace repos. Run in **Phase −1** context + **Phase 9** manual validation.
+**When:** **Every** review considers logic via `senior-researcher.md` LOG-01…15.
 
-**Does not replace** G1–G5 or SAST manifests — adds structured manual review where patterns fail.
+**Also run this BUS matrix** when the repo is e-commerce, payments, wallet, loyalty, catalog, storefront, or marketplace.
+
+**Does not replace** G1–G5 or `senior-researcher.md` — adds money-specific abuse where generic LOG-* is not enough.
 
 ---
 

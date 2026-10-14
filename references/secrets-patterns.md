@@ -1,8 +1,12 @@
-# Hardcoded Secrets — Full Pattern Catalog (SAST-SECRET)
+# Hardcoded Secrets — optional hint catalog (SAST-SECRET)
 
-Run **every** section with `rg` on `[SRC]`. Exclude `node_modules`, `test`, `tests`, `*.md`, `*.example` unless reviewing examples.
+**Primary method:** `exploration-first.md` — **Read** every `application*.{yml,properties}`, `.env*`, vault files, pem. Unquoted Java `password=secret` **counts**. Do not skip this pass because regex returned 0.
 
-**Never report:** `process.env.*`, `YOUR_*_HERE`, `changeme`, `xxx`, test fixtures in `tests/` only.
+The `rg` blocks below are a **second pass if you have spare context**. They miss unquoted `.properties` keys such as `secret.risk.secret=` — that is why Read comes first.
+
+Run **every** section with `rg` on `[SRC]` only as a hint. Exclude `node_modules`. Do **not** auto-exclude `scripts/` or `src/test/resources` if values look live — Finding or Residual.
+
+**Never report:** `process.env.*`, `YOUR_*_HERE`, `changeme`, `xxx`, obvious dummy fixtures.
 
 ---
 
@@ -143,9 +147,19 @@ rg -n "\"private_key\"\s*:\s*\"-----BEGIN" [SRC]
 
 ---
 
+## SAST-SECRET-13 — Unquoted Java / Spring properties (hint)
+
+Quoted-only regexes miss these. Prefer **Read** of the file. If using `rg`:
+
+```bash
+rg -n "(?i)(password|secret|secret[_-]?id|api[_-]?key|token|client[_-]?secret)\s*[=:]\s*[^$#{\"'\s][^\s#]+" --glob '*.{properties,yml,yaml,env,conf,ini}'
+```
+
+Skip `${...}`, empty, `changeme`.
+
 ## Reporting
 
-- Map findings to **SAST-OG-10** / **SAST-SECRET-01…12**.
+- Map findings to **SAST-OG-10** / **SAST-SECRET-01…13**.
 - **Mandatory:** Set **Secret Type** label per **`secret-type-labels.md`** (e.g. HashiCorp Vault token, GitHub PAT, AWS Access Key ID, RabbitMQ password, MapMyIndia API key, Strapi token, JWT signing secret).
 - Include in `### Classification`: `Secret Type`, `Service / Vendor`, `Credential Role`.
 - Severity: **`severity-calibration.md` hardcoded-credentials cap** — **never Critical**. **High** max for production-path secrets (live API keys, prod JDBC passwords, Vault tokens in prod profile); **Medium** for local/dev/staging-only or narrow exposure; **Low**/Appendix A for obvious test dummies per Never report rules.

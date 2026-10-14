@@ -25,6 +25,17 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 
 ---
 
+## Review status (v4.50 — title block)
+
+| Value | When |
+|-------|------|
+| `Review status: complete` | **Only** after `check_coverage_gate.py` exits 0 and `scan-session-memory.md` has `status: complete` |
+| `Review status: in_progress` | Any unread `must_read_files`, unwalked HTTP module, or unread config; partial reports; user `stop and ship partial` |
+
+Agents must **not** use Executive Summary language implying a finished full-repo review while `in_progress`. See **`coverage-complete-gate.md`**.
+
+---
+
 ## User-facing report (mandatory sections)
 
 | Order | Section | Reference |
@@ -34,17 +45,27 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | 3 | Vulnerability Coverage Overview (files, LOC, layer summary — **not** 109-row matrix) | `vulnerability-coverage-overview.md` |
 | 4 | Scan Agent & Backend Attribution | `report-scan-matrices-agent.md` |
 | 5 | Scan Matrices Executed (MX-VERIFY, MX-COV, MX-F) | `report-scan-matrices-agent.md` |
-| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit` blocks when their triggers fire; **`### Deep Link Audit` / `### Mobile SAST Audit (static)` when mobile/deeplink triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`, **`deeplink-audit.md`**, **`mobile-sast-audit.md`** |
+| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit`, and `### Authorization / Privilege Escalation Audit` for authenticated apps; `### XML Security Audit` when XML/SOAP/SAML exists; `### Deep Link Audit` / `### Mobile SAST Audit (static)` when mobile/deeplink triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`, `authorization-privilege-escalation-audit.md`, `xml-security-audit.md`, **`deeplink-audit.md`**, **`mobile-sast-audit.md`** |
 | 6b | **Completeness & Residual Risk Register** (OWASP/API/CWE/ASVS/LLM verdicts; nothing silently missed) | `standards-coverage-map.md` |
 | 7 | **Top Structural Risks** (3 bullets max, linked to finding IDs) | below |
 | 8 | **Security Verification Checklist** (findings table w/ **Confidence** + **Discovery** + collapsible scan-layer toggle) | `report-findings-verification-register.md`, `finding-confidence-validation.md` |
 | 9 | Detailed Findings (incl. **`### Severity Rationale`**) | `finding-templates.md`, `severity-calibration.md` |
 | 10 | Remediation Priority | — |
-| 11 | Appendix A — False Positives Filtered | — |
+| 11 | Appendix A — False Positives Filtered | `ai-validate-precision-pass.md` — **all** FP candidates; ≥3-sentence reason with gate/ADJ cite; **never** duplicate as Detailed Findings |
 | 12 | Appendix B — Scan Coverage (languages/frameworks) | — |
 | 13 | Appendix C — Burp/curl Testing Notes | `curl-dast-fallback.md` |
 | 14 | Appendix D — Unauthenticated Endpoint Inventory | `route_auth_audit.md` |
 | 15 | Appendix F — Phase Execution Log | `agent-execution.md` |
+
+### Detailed finding narrative gate (v4.55)
+
+Every Detailed Finding must be useful to an engineer without relying on the checklist row:
+
+- **Description:** 3–6 sentences covering actor, input/route, missing control, source→sink behavior, result, and preconditions.
+- **Impact Assessment:** 2–5 sentences naming the exact data/action/resource and applicable business harm.
+- **Remediation:** exact repository fix location, secure replacement pattern, coverage of every instance, and a regression verification step.
+
+Generic CWE definitions, title restatements, severity-only impact, and one-line advice such as “sanitize input” or “add authentication” are report defects. `generate_html_report.py --strict` must reject them.
 
 ---
 
@@ -56,8 +77,7 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | **Business Logic Review Summary** | Commerce/fintech/payments | `business-logic-abuse-checklist.md` |
 | **Delta Since Last Review** | Prior report in repo | `baseline-delta-report.md` |
 | **Git History Secrets (summary)** | `.git` present | `git-history-secrets-scan.md` |
-| **Software Composition Analysis (SCA)** | Only when explicit SCA mode was requested and completed |
-| **Container Image Scan (summary)** | Dockerfile/K8s — **IaC misconfig from source only** by default; image scanner only with explicit approval |
+| **Container Image Scan (summary)** | Dockerfile/K8s — **IaC misconfig from source only**; image CVE scanners are out of scope (v4.46) |
 
 ---
 
@@ -70,18 +90,20 @@ The `--strict` HTML pass emits a stderr Recommendation when given an input that 
 | Appendix I (platform checklist) | Agent attestation + `platform-coverage-checklist.md` |
 | Duplicate AUTH + VULN rows for same route/root cause | Dedup rules below |
 
-HTML export (`generate_html_report.py`, v4.35.3) **omits process and duplicate sections**. Keep them in the markdown for the agent; they do not belong in the reader HTML:
+HTML export (`generate_html_report.py`, v4.39) is a **reader report**. Markdown may still hold agent internals; HTML only includes:
 
-| Omitted from HTML | Why |
-|-------------------|-----|
-| Scan Agent & Backend Attribution, Scan Matrices Executed | Scanner metadata, not a finding |
-| Vulnerability Coverage Overview | Repeats Executive Summary counts |
-| Security Verification Checklist (and legacy register names) | Same IDs, severity, source, and sink as Detailed Findings |
-| Collapsible "109 internal checks" toggle | Internal matrix |
-| Appendix B (languages), C (DAST notes), D (endpoint inventory), F (phase log) | Appendix D repeats **Affected endpoints** / Instances; B/C/F are workflow |
-| Appendix E, G, I | Already suppressed |
+| Order | HTML section |
+|-------|----------------|
+| 1 | Contents |
+| 2 | Scan facts — repository, branch, scan agent, files scanned, lines scanned, report date |
+| 3 | Executive Summary — severity pie + table, OWASP category pie + table |
+| 4 | Standards and coverage — taxonomies followed and issue types examined |
+| 5 | Findings table |
+| 6 | Detailed Findings (impact as **prose**, not a CIA table) |
 
-HTML **keeps:** Executive Summary, Scan Attestation (including HTTP module walk and Residual), Completeness & Residual Risk Register, Top Structural Risks, Detailed Findings, Remediation Priority, Appendix A (filtered false positives).
+Omitted from HTML: Scan Agent/Matrices, Vulnerability Coverage Overview, Scan Attestation, Residual Register (summarized under Standards), Top Structural Risks, Verification Checklist (replaced by Findings table), SCA, Remediation Priority, Appendices A–F.
+
+HTML **keeps:** the sections in the table above. Impact CIA tables in markdown are converted to sentences.
 
 ---
 
@@ -137,6 +159,20 @@ Do **not** emit full STRIDE / trust-boundary appendix.
 
 ---
 
+## Appendix A — false positives (v4.53)
+
+Every candidate adjudicated as **False Positive** per `ai-validate-precision-pass.md` **must** appear here, not in Detailed Findings or the Security Verification Checklist as an open issue.
+
+| Column | Content |
+|--------|---------|
+| Candidate | Short label + `file:line` or route |
+| Reason | ≥3 sentences: what was read, control or ADJ rule (`SSRF-ADJ-01`, G3 cite), why not exploitable |
+| Exploitability | **Not Exploitable** |
+
+Stored-taint FPs must note `injection_order: stored` and cite writer + ingest control.
+
+---
+
 ## G2 reachability (graphify vs manual)
 
 | Graph exists | Required |
@@ -154,11 +190,9 @@ Never report from `rg` pattern match alone.
 
 ---
 
-## SCA section
+## Dependency / CVE coverage (v4.46 — no SCA)
 
-Default code-only mode: do **not** include `## Software Composition Analysis (SCA)` or advisory-only SCA findings. In **Scan Attestation Summary**, note: *Third-party dependency scanning disabled (code-only mode).*
-
-Explicit SCA mode: include `## Software Composition Analysis (SCA)` and use `SCA-NNN` IDs per `sca-dependency-audit.md`. Keep SCA findings separate from VULN/AUTH/IAC/LEAK findings.
+Never include `## Software Composition Analysis (SCA)` or `SCA-NNN` findings. In **Scan Attestation Summary**, note: *Third-party dependency/CVE analysis is out of scope for this skill.* Mark OWASP A06 / API10 / ASVS V15 rows in the Residual Register as **not in skill scope**.
 
 ---
 
@@ -172,6 +206,6 @@ python ~/.cursor/skills/ai-security-reviewer/scripts/generate_html_report.py "${
 
 Use `--strict` before handoff to fail on missing Classification Source/Sink, field inconsistencies, or missing `### Assumptions` / `### Remediation` on findings.
 
-**`--strict` recommendations (stderr only, export still succeeds):** missing `## Scan Attestation Summary`, missing risk score method line, missing v4.19 audit blocks (`### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit`) when their triggers fire (multi-module repo / configs present / annotation-based framework).
+**`--strict` recommendations (stderr only, export still succeeds):** missing `## Scan Attestation Summary`, missing risk score method line, missing audit blocks (`### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit`, `### Authorization / Privilege Escalation Audit`, and triggered `### XML Security Audit`).
 
 Deliver **both** `.md` and `.html`.

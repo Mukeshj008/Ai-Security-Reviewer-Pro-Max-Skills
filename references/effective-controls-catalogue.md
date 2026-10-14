@@ -39,9 +39,11 @@ Two questions, per candidate:
 | Effective | NOT effective |
 |-----------|---------------|
 | Framework auto-escaping in **HTML text context**: React `{value}`, Angular interpolation, Vue `{{ }}`, Thymeleaf `th:text`, Jinja2 autoescape on, ERB `<%= %>` with Rails, Go `html/template` | `th:utext`, `\|safe`, `raw()`, `dangerouslySetInnerHTML`, `v-html`, `innerHTML`, `bypassSecurityTrustHtml`, Go `text/template` for HTML |
-| DOMPurify / OWASP Java Encoder **for the matching context** | HTML-escaping a value used inside a **JS string, URL, or attribute** — wrong-context escaping is a finding |
+| DOMPurify / OWASP Java Encoder **for the matching context**, with sanitizer version/config and post-sanitize use verified | Blanket “DOMPurify is used”; permissive `ADD_TAGS`/`ADD_ATTR`, dangerous URI schemes, stale sanitizer behavior, or sanitize-then-mutate/reparse |
 | `textContent` / `setAttribute` on non-URL attrs | `href`/`src` from user input without scheme allowlist (`javascript:`) |
 | Response is non-HTML **and** `X-Content-Type-Options: nosniff` (see §2) | JSON response without nosniff reflected into a browser-rendered context |
+
+**Mandatory adjudication:** apply **XSS-ADJ-01** in `precision-false-positive-adjudication.md`. Establish the browser context (HTML text, attribute, URL, JavaScript, CSS, or DOM), then verify the control matches that context. Stored content must be traced from its write path to every browser-rendering sink; sanitization at one sink does not protect another.
 
 ### Path traversal / arbitrary file access (CWE-22)
 
@@ -81,14 +83,20 @@ Two questions, per candidate:
 | Effective (→ Appendix A with citation) | NOT effective (→ keep finding) |
 |----------------------------------------|--------------------------------|
 | `factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)` | **Unmarshalling into a typed DTO / JAXB class** — binding constrains object mapping, **not** the parser's entity resolution |
-| `XMLConstants.FEATURE_SECURE_PROCESSING` = true, or `ACCESS_EXTERNAL_DTD`/`ACCESS_EXTERNAL_SCHEMA` = `""` | Schema/XSD validation alone |
+| Parser-specific complete hardening: DOCTYPE disabled **or** external general+parameter entities disabled, external DTD/schema access empty where supported, XInclude/entity expansion disabled, plus resource limits | `XMLConstants.FEATURE_SECURE_PROCESSING=true` **alone** — resource limits do not reliably disable every external-resolution path across parser/factory implementations |
 | `XMLInputFactory.SUPPORT_DTD` = false; `IS_SUPPORTING_EXTERNAL_ENTITIES` = false | A well-formedness or `startsWith("<")` pre-check |
 | JAXB fed from a **hardened** `XMLStreamReader`/`SAXSource` you constructed | `Unmarshaller.unmarshal(Reader/String/InputStream)` — JAXB builds a **default, entity-resolving** parser |
 | Parser library that is secure-by-default **in the pinned version** — cite it | "The XML comes from our partner/bank, so it's trusted" when the channel is not authenticated |
 
 **Trust-boundary rule:** a third-party **response** body is attacker-controlled whenever the transport is unauthenticated — trust-all `TrustStrategy`, `NoopHostnameVerifier`, cleartext HTTP, or a compromisable proxy. Verify the client's TLS configuration before calling a response "trusted"; if TLS validation is disabled anywhere on that client, treat every parsed response field as attacker-controlled and chain the two findings (`attack-chain-narrative.md`).
 
-**Anti-pattern to reject explicitly:** "typed unmarshal, so XXE is residual/low". Type safety and entity expansion are orthogonal. Downgrade only with cited **parser-level** hardening.
+**Anti-patterns to reject explicitly:** "typed unmarshal, so XXE is residual/low" and "`FEATURE_SECURE_PROCESSING` is set, therefore XXE is impossible." Type safety, resource limiting, external resolution, and entity expansion are separate controls. Downgrade only with cited **parser-instance hardening** per `xml-security-audit.md`.
+
+### XML structural injection (CWE-91)
+
+**Effective:** fixed element/attribute names with DOM/builder text APIs; schema-backed serializers with no raw-fragment escape hatch; context-correct XML text/attribute escaping; XPath variables; allowlisted dynamic names.
+
+**Not effective:** string/template concatenation into XML markup; escaping `<` only; regex blocklists; attacker-controlled tag/attribute/namespace names; raw XML fragments; string-built XPath/XSLT. Apply **XML-ADJ-01** in `xml-security-audit.md`.
 
 ### CSRF (CWE-352)
 

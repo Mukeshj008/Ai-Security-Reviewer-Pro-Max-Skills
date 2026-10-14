@@ -61,6 +61,13 @@ Common second-order sinks:
 - DAST may only confirm the write/activation step; execution proof may come from logs, queue messages, job status, timing, or code trace.
 - If live execution is unsafe, report as Firm/Tentative with explicit assumptions and Burp/curl request for the storage step.
 
+## Missing auth on cron / worker / webhook (severity — v4.54)
+
+When reporting **AUTH-NNN** for unauthenticated **cron activation URLs**, **scheduler HTTP triggers**, **queue consumer admin endpoints**, or **inbound webhooks** (no signature/HMAC):
+
+- Default severity **Medium** per `severity-calibration.md` § Internal / webhook / cron missing-auth.
+- Do not rate **High/Critical** for auth-only on these surfaces; chain RCE/injection as separate `VULN-NNN`.
+
 ## Report Requirements
 
 Add to Data Flow Trace:

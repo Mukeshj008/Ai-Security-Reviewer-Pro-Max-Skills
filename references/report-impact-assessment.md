@@ -1,28 +1,25 @@
 # Impact Assessment (MANDATORY per finding)
 
-Every **Detailed Finding** must include `### Impact Assessment` with a **CIA + Business** table. Generic one-liners are **invalid** — they produce weak HTML and fail the completion gate.
+Every **Detailed Finding** must include `### Impact Assessment` as **short paragraphs**, not a CIA table. Name the data or action that is harmed.
 
 ---
 
-## Required table (exact columns)
+## Required shape
 
 ```markdown
 ### Impact Assessment
 
-| Impact Category | Level | Description |
-|-----------------|-------|-------------|
-| Confidentiality | HIGH / MEDIUM / LOW / NONE | What data or secrets can be exposed — name the asset |
-| Integrity | HIGH / MEDIUM / LOW / NONE | What can be modified, injected, or poisoned |
-| Availability | HIGH / MEDIUM / LOW / NONE | DoS, shutdown, resource exhaustion |
-| Authentication | HIGH / MEDIUM / LOW / NONE | Auth bypass, session abuse, token replay |
-| Business Impact | SEVERE / HIGH / MEDIUM / LOW | Concrete outcome for this app (PII, payments, ops) |
+An unauthenticated caller who can reach `/support/leads/details` can read full lead KYC records (name, PAN, documents). The same perimeter gap on POST `/webhooks/digio/callback` lets an attacker forge onboarding state. Business impact is privacy breach plus fraudulent onboarding if the ALB deny is missing.
 ```
 
 **Rules:**
-1. **Level** must be one of: `HIGH`, `MEDIUM`, `LOW`, `NONE`, or `SEVERE` (Business Impact only).
-2. **Description** must name **this finding's** asset, route, or config — not a category template.
-3. Fill **every row**; use `NONE` with a one-line reason when not applicable.
-4. Do **not** duplicate the Classification table or Master Register row here.
+1. Write **2–5 sentences** (or one sentence per harm). Do **not** use a Confidentiality / Integrity / Availability / Business table.
+2. Name **this finding's** asset, route, or config — not a category template.
+3. Cover confidentiality, integrity, availability, and business harm in the prose when they apply; skip dimensions that are none.
+4. Do **not** duplicate the Classification table.
+5. **Multi-instance (N ≥ 2):** use **`#### Instance N`** under `### Impact Assessment` with **2–3 sentences each** naming that instance's data/action harm (`per-instance-narrative.md`). One generic paragraph for all instances is not sufficient.
+
+The HTML generator converts a leftover CIA table into sentences, but new reports must be written as prose.
 
 ---
 
@@ -119,9 +116,9 @@ Every **Detailed Finding** must include `### Impact Assessment` with a **CIA + B
 
 For each finding ID:
 
-1. `### Impact Assessment` table present (5 rows minimum).
+1. `### Impact Assessment` present as prose (not a CIA table).
 2. No generic fallback phrases (see `report-finding-field-consistency.md`).
-3. Highest Impact **Level** should align with **Severity Rationale → Impact** row (Critical/High finding should not be all LOW/NONE without Step 1 cap noted in Severity Rationale).
+3. Highest harm in the prose should align with **Severity Rationale → Impact** (Critical/High finding should not describe only LOW/NONE harm without a cap noted in Severity Rationale).
 4. **`### Severity Rationale`** present per `severity-calibration.md`.
 
 ```bash
@@ -136,4 +133,4 @@ IMP=$(rg -c "^### Impact Assessment" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 
 ## HTML note
 
-The generator renders `### Impact Assessment` as the **Impact** panel. It does **not** synthesize CIA tables — missing sections show a placeholder. Write the full table in markdown.
+The generator renders `### Impact Assessment` as the **Impact** panel in **prose**. CIA tables in older markdown are flattened to sentences. Write paragraphs in new reports.

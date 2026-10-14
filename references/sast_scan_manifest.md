@@ -1,4 +1,6 @@
-# SAST Scan Manifest (MANDATORY)
+# SAST Scan Manifest (hint catalog)
+
+> **v4.42:** optional hints. For any file covered by an active lang pack, use the pack's L01–L35 rows instead; run sections here only for uncovered languages or classes the packs do not list. Never run both passes on the same file.
 
 **You (the agent)** run each section's `rg` commands below — do **not** use `run_sast_scan.sh`.  
 Taxonomy aligned with [OpenGrep `vulnerability_class`](opengrep-vulnerability-index.md) names.

@@ -28,7 +28,8 @@ This is **not** Cursor product “Memories.” It is a file the agent **Reads fi
 1. If `.security-review/scan-session-memory.md` exists:
    - **Do not** re-run whole-repo `find` / Step 1 inventory unless **stale** (below).
    - Resume at **`next_http_module`**.
-   - Re-run AUTH `rg` **only** on Residual modules + modules in `git diff` vs `git_head`.
+   - If `configs_read` < enumerated configs, **Read remaining configs first** (do not skip because “secrets-patterns already run”).
+   - Re-open AUTH only on Residual modules + modules in `git diff` vs `git_head`.
 2. If the file is **missing:** run full enumeration, then **create** the file immediately (even before first finding).
 3. Load skill references as usual; memory **does not** replace G1–G5 or `express-auth-audit.md`.
 
@@ -67,7 +68,7 @@ Keep the file **under ~200 lines**. Prune old candidate rows; keep Residual name
 
 ```markdown
 # Scan session memory
-skill_version: 4.35.2
+skill_version: 4.38.0
 status: in_progress   # in_progress | complete
 git_head: <short SHA or unknown>
 updated_at: <ISO-8601>
@@ -77,6 +78,15 @@ report_slug: <repo from derive_report_name.py>
 - Mode: code-only
 - Include: <dirs or all>
 - Exclude: node_modules, vendor, dist, test/fixtures
+
+## Configs / secrets (Read, not regex)
+enumerated: M
+read: K
+residual_unread: path-a, path-b
+
+## Logic walk (senior-researcher LOG-01…15)
+walked: module-a
+residual_ops: module-b export, module-c webhook
 
 ## HTTP module walk
 enumerated: N
@@ -93,10 +103,9 @@ walked_list:
 | apps/services/foo | yes | yes | glob app.all → AUTH-00x |
 | apps/services/bar | yes | no | Residual |
 
-## Manifests already run (names only)
-- sast_scan_manifest (P0 modules only)
+## Manifests already run (names only — optional hints)
+- exploration-first (configs Read K/M)
 - express-auth-audit (walked_list only)
-- secrets-patterns (whole repo)  # whole-repo once is OK to record
 
 ## Findings issued (IDs only + one line)
 - AUTH-001: foo app.all glob vs /v1/refresh
@@ -117,6 +126,7 @@ walked_list:
 - [ ] Read `.security-review/scan-session-memory.md`
 - [ ] Compare `git_head` / skill_version (stale rules)
 - [ ] Continue `next_http_module` — do **not** restart P0 from scratch
+- [ ] If configs unread, Read them before AUTH
 - [ ] Merge new findings into existing `<repo>_security_report.md` (same IDs; never reuse IDs for a different issue)
 - [ ] Rewrite memory after the next module
 - [ ] Attestation `### HTTP module walk` must match this file’s enumerated / walked / residual

@@ -11,25 +11,28 @@ Every **Detailed Findings** entry (VULN, AUTH, CVE, IAC, LEAK) **must** include 
 | `### Classification` | Yes | **Severity**, **AI Verdict**, **Exploitable**, Type, CWE, OWASP, **Source (full path)**, **Sink (full path)** — primary/worst instance when multi-instance |
 | `### Instances` | **Yes when N>1** | Per-instance Source + Sink — see **`finding-instances.md`**. Forbidden to emit duplicate finding IDs for the same root cause. |
 | `### Location & Data Flow` or `### Location Summary` | Yes | Full repo-relative paths with line numbers |
-| `### Description` | Yes | Checkmarx-style natural language (see SKILL.md) |
+| `### Description` | Yes | **3–6 issue-specific sentences**: actor, entry point/input, missing control, source→sink behavior, exploit result, preconditions |
 | **`### Assumptions`** | **Yes (v4.15)** | G5 gate — table or bullets; see `finding-templates.md` |
 | **`### Vulnerable Code Snippet`** | **Yes** | Real code from repo — source + sink lines; see `report-vulnerable-code-dataflow.md` |
 | **`### Data Flow Trace`** | **Yes** | Full source → sink ASCII box + simplified flow; not optional for taint findings |
 | `### Burp Suite PoC` or `### Live Verification` | Yes for HTTP | **AUTH-NNN:** PoC **mandatory even when Not Verified**; write `Burp PoC: N/A — [reason]` only for non-HTTP |
 | `Secret Type` in Classification | Yes for secrets | Per `secret-type-labels.md` — e.g. GitHub PAT, AWS key, RabbitMQ password |
-| `### Impact Assessment` | Yes | **CIA + Business table** — per `report-impact-assessment.md`; no generic one-liners |
-| **`### Remediation`** | **Yes — never omit** | See templates below |
+| `### Impact Assessment` | Yes | **2–5 issue-specific prose sentences** naming exact assets/actions and applicable CIA/business harm; no generic one-liners or CIA table |
+| **`### Remediation`** | **Yes — never omit** | Repo-specific fix location + secure pattern + all-instance coverage + regression verification; see templates below |
 
 **Completion gate (Phase 4):** Before `generate_html_report.py`, grep the report:
 
 ```bash
 MD="${MD:-$(python3 ~/.cursor/skills/ai-security-reviewer/scripts/derive_report_name.py)_security_report.md}"
 FINDINGS=$(rg -c "^## \[(CRITICAL|HIGH|MEDIUM|LOW)\]" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+DESC=$(rg -c "^### Description" "$MD" | awk -F: '{s+=$2} END {print s+0}')
+IMP=$(rg -c "^### Impact Assessment" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 REM=$(rg -c "^### Remediation" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 VC=$(rg -c "^### Vulnerable Code Snippet" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 DF=$(rg -c "^### Data Flow Trace" "$MD" | awk -F: '{s+=$2} END {print s+0}')
 AS=$(rg -c "^### Assumptions" "$MD" | awk -F: '{s+=$2} END {print s+0}')
-# FINDINGS must equal REM, VC, DF, and AS
+# FINDINGS must equal DESC, IMP, REM, VC, DF, and AS.
+# Counts prove presence only; generate_html_report.py --strict enforces narrative quality.
 # Exploitable enum check — see report-finding-field-consistency.md
 rg "^\| \*\*Exploitable\*\*" "$MD" | rg -v "\| Yes \||\| No \||\| Hardening \|"
 ```
@@ -52,7 +55,7 @@ One row per finding — see **`references/report-findings-verification-register.
 
 ### Code / route findings (VULN, most AUTH)
 
-**Minimum:** prose fix + **BEFORE** / **AFTER** code snippets.
+**Minimum:** name the exact fix location; explain the primary control; provide **BEFORE** / **AFTER** code or an equally precise repository-specific change; cover every instance; and name at least one regression test.
 
 ```markdown
 ### Remediation
@@ -74,6 +77,10 @@ One row per finding — see **`references/report-findings-verification-register.
 
 1. Add `user.checkLoginStatus` to route chain
 2. Allowlist outbound hosts in shared helper
+
+#### Verification
+
+Add an integration test that submits the prior payload and asserts rejection before the sink executes.
 ```
 
 ### SCA dependency (SCA-NNN in explicit SCA section)
@@ -125,7 +132,7 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 
 ### When remediation is in prose only
 
-Do **not** bury fix advice in Description or table rows. Move it under **`### Remediation`** even if one paragraph.
+Do **not** bury fix advice in Description or table rows. Move it under **`### Remediation`**. Prose-only remediation still must name the exact file/component, secure behavior, all affected instances, and regression verification.
 
 ---
 
@@ -139,6 +146,9 @@ Do **not** bury fix advice in Description or table rows. Move it under **`### Re
 | Placeholder data flow | `[Full stack trace as shown above]` | Paste actual ASCII trace from SKILL.md |
 | Missing ### header | `Build URLs server-side...` as plain paragraph | Prefix `### Remediation` |
 | AUTH block without Remediation | AUTH-002 metrics section ends after Impact | Add Remediation with nginx/middleware fix |
+| Generic Description | “This endpoint is vulnerable to IDOR.” | Name actor A/B, route/object ID, missing ownership condition, and resulting cross-tenant read/write |
+| Generic Impact | “This could lead to data loss.” | Name the records/fields/actions and concrete business consequence |
+| Generic Remediation | “Validate input and add authentication.” | Name file/helper, exact validation/auth condition, secure code pattern, and regression test |
 
 ---
 

@@ -1,6 +1,6 @@
 # Precision False-Positive Adjudication (MANDATORY — Stage 2)
 
-**Purpose:** cut systematic false positives from pattern-only hits **without** silently dropping real bugs. Run **after** Stage 1 candidate generation, **before** assigning a VULN ID.
+**Purpose:** cut systematic false positives from pattern-only hits **without** silently dropping real bugs. Run **after** Stage 1 candidate generation, **before** assigning a VULN ID. **Final promote/demote:** `ai-validate-precision-pass.md` — FP never in Detailed Findings.
 
 **Rule:** A hit on an HTTP client sink or a method named `.search()` is **never** sufficient alone for a finding. Apply the class-specific gate below and cite evidence in Appendix A or in `### Assumptions`.
 
@@ -152,6 +152,26 @@ Do not report SQLi when:
 
 **Keep finding:** `createNativeQuery("... "+ user)`, `@Query` with string concat, MyBatis `${}` (not `#{}`).
 
+**Semantic distinction:** a parameterized `LIKE`, `ILIKE`, Sequelize `Op.like`, or ORM contains/search predicate remains bound SQL. Attacker-controlled `%` / `_` may broaden search semantics or create an authorization/data-volume issue, but it is **not SQL injection** unless input changes SQL syntax or an identifier/operator/raw fragment. Dynamic column/table/order names require a fixed allowlist because bind parameters cannot represent identifiers.
+
+---
+
+## XSS-ADJ-01 — Browser context and sanitizer validation (CWE-79)
+
+**Mandatory when:** reflected, stored, or DOM XSS is a candidate.
+
+1. Identify the final browser interpretation context: HTML text, quoted/unquoted attribute, URL, JavaScript string/code, CSS, SVG/MathML, or `srcdoc`.
+2. Prove attacker control, including second-order data loaded from DB/cache/API.
+3. Verify the response/render path is browser-interpreted; JSON with the right content type is not XSS by itself.
+4. Verify encoding/sanitization is correct for that exact context.
+5. For DOMPurify or another sanitizer, inspect configuration, dangerous URI handling, custom hooks/allowlists, pinned version behavior, and whether code mutates or reparses sanitized output.
+
+**Appendix A (G0/G3):** framework auto-escaping or a matching encoder protects the exact sink; cite template/config and sink. `textContent` with attacker text is safe.
+
+**Keep finding:** raw HTML APIs (`dangerouslySetInnerHTML`, `v-html`, `{@html}`, `innerHTML`, unescaped template tags) with unsanitized taint; bypass APIs (`bypassSecurityTrust*`, `|safe`, `mark_safe`); wrong-context encoding; user-controlled `javascript:` URL; sanitize-then-mutate/reparse.
+
+**Stored XSS rule:** do not exclude because the current HTTP request is clean. Trace the write source and every later rendering sink. If write ownership or downstream renderer is unread, mark Tentative.
+
 ---
 
 ## DESER-ADJ-01 — JSON to typed DTO
@@ -168,7 +188,36 @@ Do not report SQLi when:
 
 **Mandatory when:** XML parse / JAXB candidates.
 
-See `effective-controls-catalogue.md` §1 XXE — typed unmarshal is **not** a control. Do not use DESER-ADJ-01 reasoning for XML.
+See `xml-security-audit.md` and `effective-controls-catalogue.md` §1 XXE — typed unmarshal is **not** a control. Do not use DESER-ADJ-01 reasoning for XML. `FEATURE_SECURE_PROCESSING=true` alone is also not sufficient proof; verify the exact parser instance disables DTD/external entities/external DTD or schema access as applicable.
+
+---
+
+## XML-ADJ-01 — Structural XML injection (CWE-91)
+
+**Mandatory when:** code constructs XML, XPath, XSLT, SOAP, SAML, SVG, or XML-DSig input from dynamic values.
+
+- Text passed to `createTextNode`, `setTextContent`, or a serializer field with fixed schema/name is normally escaped → Appendix A G3.
+- Attacker data concatenated/interpolated into markup, raw fragments, element/attribute names, namespace declarations, CDATA/comment boundaries, XPath, or XSLT remains a candidate.
+- Prove the attacker can change document structure or downstream selection/meaning. Malformed XML that is rejected is not injection unless an availability impact is separately established.
+- For signed XML, verify the node consumed is the same unique node whose signature was validated; duplicate-ID/signature wrapping is an auth finding.
+
+Full workflow: `xml-security-audit.md`.
+
+---
+
+## PRIV-ADJ-01 — Vertical privilege escalation / BFLA (CWE-862/863)
+
+**Mandatory when:** an authenticated user reaches admin/internal/support/finance/configuration/approval actions, or request data contains role/permission/tenant/owner fields.
+
+1. Name the caller's lowest role and the role/permission required by the action.
+2. Trace the verified principal to the action-level policy/guard.
+3. Verify the check executes **before** every privileged side effect.
+4. Confirm role/tenant/owner values cannot be replaced through body/query/header/JWT decode or mass assignment.
+5. UI hiding, route naming, documentation, peer-method guards, and uncited gateway claims are not controls.
+
+**Finding:** low role can invoke the privileged operation, mutate privileged fields, cross tenant, or trigger an admin worker without an effective action-level check.
+
+**Appendix A (G3):** exact action guard/policy proves required permission and principal-derived tenant/role; cite the path. Full systematic audit: `authorization-privilege-escalation-audit.md`.
 
 ---
 
@@ -313,6 +362,19 @@ Row 5 is a **keep-finding** reminder: unused dummy-token **parameter** that is n
 
 - [ ] Every SAST-OG-26 hit has documented **authority analysis** (who controls host/scheme/port).
 - [ ] Every SAST-OG-18 hit has **LDAP sink confirmation in file or callee chain** or LDAP-ADJ-01 exclusion.
-- [ ] **INJ/DESER/LOG/AUTH/XXE-ADJ-*** and **IDOR-ADJ-01 / AUTH-ADJ-02 / AUTH-ADJ-03 / AUTH-ADJ-04 / EXPLOIT-ADJ-01 / CORS-ADJ-01** applied when matching candidates exist.
+- [ ] **INJ/XSS/DESER/LOG/AUTH/XXE/XML/PRIV-ADJ-*** and **IDOR-ADJ-01 / AUTH-ADJ-02 / AUTH-ADJ-03 / AUTH-ADJ-04 / EXPLOIT-ADJ-01 / CORS-ADJ-01** applied when matching candidates exist.
 - [ ] Same safe `buildUrl()` / base-URL helper merged into one finding with instances, not N duplicate VULN IDs.
 - [ ] Builder not traced → **Tentative**, not Appendix A.
+
+---
+
+## REACH-ADJ-01 — the sink must be reachable (v4.45)
+
+A dangerous line is not a finding if attacker input never arrives there.
+
+1. Read the route chain from the first middleware to the sink.
+2. If an earlier middleware `return`s, calls `next(status)` into an error responder, or rejects every attacker-controlled input before the sink, the hit is **Appendix A**. Cite that middleware `file:line`.
+3. Code after `return` in the same function is dead. Do not report it.
+4. Namesake APIs are not the class: Redis `pipeline.exec` and `query.exec(callback)` are not command execution.
+5. Do not drop a second route with the same path as "never reached" until you have read this framework's `next()`. `next()` with no argument can fall through; `next('route')` skips to the next match on purpose.
+6. A worker table is a candidate. Promote it only after this gate. Otherwise Tentative, with the unread hop named.

@@ -9,9 +9,12 @@ Accuracy controls for **maximizing true positives while controlling false positi
 | Stage | Role | Tool |
 |-------|------|------|
 | **1. Candidate generation (wide net)** | Find *every* plausible candidate — favor recall | `rg` manifests + `graphify` + researcher pass |
-| **2. Adjudication (precision)** | Confirm/reject each candidate with context | `Read` ±context + G1–G5 + CWE micro-rubric + DAST |
+| **2. Adjudication (precision)** | Confirm/reject each candidate with context | `Read` ±context + G1–G5 + CWE micro-rubric + **`ai-validate-precision-pass.md`** |
+| **2b. Promote** | Only TP with proof → Detailed Findings | FP → **Appendix A only**; exploitability aligned to verdict |
 
-**Never** let Stage 2 reasoning prevent Stage 1 from *listing* a candidate. Recall happens first; precision is applied per-candidate, with evidence.
+**Never** let Stage 2 reasoning prevent Stage 1 from *listing* a candidate. Recall happens first; precision is applied **per call site** (file+line or method+path), with evidence.
+
+**False positives never appear in Detailed Findings.** A rejected candidate must be in **Appendix A** with a named gate/ADJ reason (≥3 sentences) or remain **Tentative** with explicit gaps — see `ai-validate-precision-pass.md`.
 
 ---
 

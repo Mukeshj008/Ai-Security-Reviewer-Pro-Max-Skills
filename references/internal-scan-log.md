@@ -34,12 +34,12 @@ After completing checks, aggregate:
 | SAST (SECRET) | 11 | X | X | X | — |
 | SAST (INJ) | 5 | X | X | X | — |
 | SAST (EXT) | 7 | X | X | X | — |
-| CVE reachability | 14 | — | — | 14 | **N/A — code-only mode (v4.16+)** |
+| CVE reachability | 14 | — | — | 14 | **N/A — not in skill scope (v4.46+)** |
 | IaC (source) | 21 | X | X | X | — |
 | ARCH | 7 | X | X | 0 | internal — no Appendix G |
 | DAST | 3 | X | X | X | — |
 | GRAPH | 3 | X | X | X | — |
-| DEPS + SCA (OSV) | 6 | — | — | 6 | **N/A — code-only mode (v4.16+)** |
+| DEPS + SCA (OSV) | 6 | — | — | 6 | **N/A — not in skill scope (v4.46+)** |
 | **Total** | **109** | X | X | 20+ | MX-COV reconciles; SCA/CVE/DEPS = Residual |
 
 </details>
@@ -56,8 +56,8 @@ For each check ID from `report-coverage-matrix.md`:
 | Field | Value |
 |-------|-------|
 | Check ID | e.g. SAST-OG-06 |
-| Status | PASS / FINDING / N/A / SKIP / FAIL (SCA/CVE/DEPS = N/A in code-only mode) |
-| Finding Ref | VULN-001, AUTH-002, IAC-001, LEAK-001, or — (**no CVE-/SCA- IDs in code-only mode**) |
+| Status | PASS / FINDING / N/A / SKIP / FAIL (CVE/DEPS = N/A — not in skill scope) |
+| Finding Ref | VULN-001, AUTH-002, IAC-001, LEAK-001, or — (**no CVE-/SCA- IDs**) |
 | Confidence | Confirmed / Firm / Tentative (`finding-confidence-validation.md`) |
 | Discovery | Checklist / Researcher |
 | Match Count | N hits from rg |

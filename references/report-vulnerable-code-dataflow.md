@@ -38,6 +38,8 @@ Copy **verbatim** from the codebase after `Read` at reported lines. Include file
 - No placeholders like `...` unless eliding unrelated middle lines
 - Max ~40 lines; elide with `// ...` only for non-taint code
 
+**Multi-instance (N ≥ 2):** under `### Vulnerable Code Snippet`, use **`#### Instance N — file:line`** per row in the Instances table; optional **`#### Shared root cause`** for one common middleware/config line. Do not document only instance 1.
+
 ---
 
 ## Data Flow Trace template

@@ -1,4 +1,4 @@
-# Finding Templates (v4.35.3)
+# Finding Templates (v4.55)
 
 Full Checkmarx-style formats for VULN, AUTH, CVE, IAC, and secrets. Referenced from `SKILL.md` — do not duplicate in the skill body.
 
@@ -11,12 +11,48 @@ Write for a reader who will **fix** the issue. Do not restate the title in one s
 | **Title** | Root cause + component (`Book service REST APIs have no Spring Security`) | A single-path nickname when several routes share the cause (`Unauthenticated Guava cache clear` while `/ttl` and `/bus/service/enable` are the same bug) |
 | **Description** | Who can call it, which control is missing or wrong, what the code does next, what the attacker gets | "This endpoint is unauthenticated" with no path, file, or effect |
 | **Affected endpoints** | Every HTTP route for this finding (see below) | Only the first path when Instances lists more |
-| **Impact** | Concrete effect (bookings created, config reloaded, partner key skipped, env leaked) | Only the words High/Severe with no object |
+| **Impact** | Concrete effect in sentences (what data or action is harmed) | CIA table; only the words High/Severe with no object |
 | **Remediation** | The change in this repo (middleware, `SecurityFilterChain` matcher, remove `next('route')`, verify HMAC) | "Add authentication" with no location |
+
+**Multi-instance (N ≥ 2 in `### Instances`):** each of Description (after a short shared opener), Vulnerable Code, Impact, and Remediation must include **`#### Instance N`** subsections with path/file-specific content — full templates in **`per-instance-narrative.md`**. `--strict` HTML export validates instance heading counts.
+
+## Detailed narrative quality gate (v4.55 — mandatory)
+
+Presence of a heading is not enough. Each finding must contain complete, issue-specific prose:
+
+### Description
+
+Write **3–6 sentences** that answer all of:
+
+1. **Who** can trigger the issue (anonymous caller, authenticated user, tenant user, internal service, webhook sender, local operator).
+2. **Where and how** input enters (HTTP method/path, parameter/header/body field, file upload, config value, queue message, scheduled trigger).
+3. **Which control is absent or ineffective**, including why nearby middleware, validation, encoding, ownership checks, or gateway rules do not stop this path.
+4. **How data/control flows to the sink** and what the sink does.
+5. **What the attacker obtains or changes**, plus material preconditions.
+
+Do not write a title restatement, a CWE definition, or generic text reusable across findings.
+
+### Impact Assessment
+
+Write **2–5 sentences** naming the concrete asset and harm. Identify the affected data fields, account/tenant boundary, privileged action, infrastructure resource, or business workflow. Explain confidentiality, integrity, availability, and business impact only where applicable. A severity word, “RCE,” “data exposure,” or generic CIA table alone is invalid.
+
+### Remediation
+
+Provide an implementation-ready plan containing all of:
+
+1. **Primary fix location:** exact repository file/component/helper/middleware to change.
+2. **Secure pattern:** the replacement API, authorization condition, allowlist, encoding boundary, transaction, signature verification, or configuration stanza; include AFTER code/config when useful.
+3. **Coverage:** all instances/routes and shared root cause addressed, not only the example endpoint.
+4. **Verification:** a regression/unit/integration/security test that fails before and passes after the fix.
+5. **Defense in depth:** optional secondary safeguards clearly separated from the primary fix.
+
+Forbidden remediation-only text: “validate input,” “sanitize,” “add auth,” “encrypt data,” “use best practices,” “upgrade,” or “fix configuration” without a precise implementation location and verification step.
 
 ### Affected endpoints (mandatory when the issue is HTTP)
 
-Place **after Description**, before Vulnerable Code. One row per method+path. Same root cause stays **one finding**; this table is the list (do not open a second AUTH ID per row).
+Place **after Instances**, before Vulnerable Code. One row per method+path. Same root cause stays **one finding**; this table is the list (do not open a second AUTH ID per row).
+
+Finding section order in HTML/Jira: **Description → Instances → Vulnerable endpoints → Burp requests → Vulnerable code → Impact → Remediation**.
 
 ```markdown
 ### Affected endpoints
@@ -29,7 +65,35 @@ Place **after Description**, before Vulnerable Code. One row per method+path. Sa
 
 Non-HTTP findings (LEAK, Dockerfile, TLS on outbound client): one line `N/A — not an HTTP route` plus the file path. Do not invent a URL.
 
-Burp PoC stays **one** raw request for the highest-impact row. Do not paste a full request per row unless the bodies differ in a way that changes the bug.
+When **Instances > 1**, this table is copied into the Jira ticket description next to Vulnerable Instances. The **Instance** column is mandatory so each path maps to the Instances table. Do not list only the first path.
+
+**Burp Suite PoC (mandatory for HTTP):** one raw HTTP/1.1 request **for every Affected endpoints row**. Label each with instance + method + path. Use `[TARGET_HOST]` when the host is not in code. Do not stop at the highest-impact row.
+
+~~~~markdown
+### Burp Suite PoC
+
+#### Instance 1 — POST /api/v1/imsBook
+
+```http
+POST /api/v1/imsBook HTTP/1.1
+Host: [TARGET_HOST]
+Content-Type: application/json
+Connection: close
+
+{}
+```
+
+#### Instance 2 — POST /api/v1/merchantCancel
+
+```http
+POST /api/v1/merchantCancel HTTP/1.1
+Host: [TARGET_HOST]
+Content-Type: application/json
+Connection: close
+
+{}
+```
+~~~~
 
 ## Vulnerability Description Format (MANDATORY)
 
@@ -293,13 +357,7 @@ See **`references/burp_poc_templates.md`** for class-specific templates (SQLi, X
 
 ### Impact Assessment
 
-| Impact Category    | Level  | Description                                       |
-|--------------------|--------|---------------------------------------------------|
-| Confidentiality    | HIGH   | Attacker can read any data from the database      |
-| Integrity          | HIGH   | Attacker can modify or delete any records         |
-| Availability       | HIGH   | Attacker can drop tables or corrupt database      |
-| Authentication     | HIGH   | Complete authentication bypass possible           |
-| Business Impact    | SEVERE | Data breach, regulatory fines, reputation damage  |
+An attacker who can send SQL through the unsanitized parameter can read, change, or delete database rows, including credentials and customer records. That is a confidentiality and integrity breach with likely regulatory and reputational harm. Availability is at risk if the attacker drops tables or floods expensive queries.
 
 ### AI Validation Details
 
@@ -578,11 +636,7 @@ Connection: close
 
 ### Impact Assessment
 
-| Impact Category    | Level  | Description                                       |
-|--------------------|--------|---------------------------------------------------|
-| Confidentiality    | HIGH   | Order/PII readable without login                  |
-| Integrity          | MEDIUM | Depends on endpoint (read vs state-change)        |
-| Authentication     | HIGH   | No SSO required at application layer              |
+Unauthenticated callers can read order and PII fields that neighboring routes protect with SSO. Integrity risk depends on whether the route is read-only or mutates state. Business impact is account-level data exposure and possible fraud on write endpoints.
 
 ### Remediation
 

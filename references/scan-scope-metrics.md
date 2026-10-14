@@ -17,7 +17,7 @@ Mandatory counts for every **`security_report.md`** Executive Summary. Full cove
 Application source and config that security checks target:
 
 - Source: `*.js`, `*.jsx`, `*.ts`, `*.tsx`, `*.vue`, `*.html`, `*.css`, `*.scss`, `*.java`, `*.kt`, `*.py`, `*.go`, `*.rb`, `*.php`, `*.cs`
-- Config/IaC: `*.xml`, `*.yaml`, `*.yml`, `*.json`, `Dockerfile*`, `*.tf`, `*.hcl`, `*.conf`
+- Config/IaC: `*.xml`, `*.yaml`, `*.yml`, `*.json`, `*.properties`, `.env*`, `Dockerfile*`, `*.tf`, `*.hcl`, `*.conf`
 
 ### Exclude
 
@@ -36,7 +36,8 @@ PRUNE='\( -path ./node_modules -o -path ./.git -o -path ./vendor -o -path ./dist
 EXT='\( -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" -o -name "*.vue" \
   -o -name "*.html" -o -name "*.css" -o -name "*.scss" \
   -o -name "*.java" -o -name "*.kt" -o -name "*.py" -o -name "*.go" -o -name "*.rb" -o -name "*.php" -o -name "*.cs" \
-  -o -name "*.xml" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" \
+  -o -name "*.xml" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.properties" \
+  -o -name ".env" -o -name ".env.*" \
   -o -name "Dockerfile" -o -name "Dockerfile.*" -o -name "*.tf" -o -name "*.hcl" \)'
 
 # Files analyzed
