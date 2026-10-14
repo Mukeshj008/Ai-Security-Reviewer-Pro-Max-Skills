@@ -6,6 +6,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [4.57.0] — 2026-10-14
 
+### Changed — public docs
+
+- **`README.md`** and **`docs/index.html`** updated to v4.57.0 (coverage gate, batch read loop, single-agent contract).
+- **`references/lang-packs/javascript-node.md`** — generic `example.com` CORS regex example (no employer-specific domain).
+
 ### Added — XML injection and privilege-escalation completeness
 
 - **`references/xml-security-audit.md`** — mandatory parser-instance XXE/entity-expansion audit plus structural XML/XPath/XSLT injection and XML signature-wrapping checks; runs even when a language pack is active.

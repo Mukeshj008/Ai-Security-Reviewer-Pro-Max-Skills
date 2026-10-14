@@ -111,7 +111,7 @@ TLS: `rejectUnauthorized: false`, `NODE_TLS_REJECT_UNAUTHORIZED=0`, `https.Agent
 ## CSRF / CORS / headers / cookies
 
 - `cors({ origin: true, credentials: true })` or manual `Access-Control-Allow-Origin: req.headers.origin` + `Allow-Credentials: true` → origin reflection with credentials.
-- Regex origin checks: `/paytm\.com/` matches `evilpaytm.com` and `paytm.com.evil.io` — require anchored `^https://([a-z0-9-]+\.)?paytm\.com$`.
+- Regex origin checks: `/example\.com/` matches `evilexample.com` and `example.com.evil.io` — require anchored `^https://([a-z0-9-]+\.)?example\.com$`.
 - `csurf` (deprecated) or no CSRF on cookie-authenticated state-changing routes. Header-token APIs (Authorization / custom header) are not CSRF-prone unless cookies also authenticate.
 - No `helmet()` (or equivalent at nginx/CDN — verify before reporting; G3).
 - `res.cookie(name, val)` without `httpOnly`, `secure`, `sameSite` for session/auth cookies.
