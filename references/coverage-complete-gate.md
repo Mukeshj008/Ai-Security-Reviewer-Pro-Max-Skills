@@ -41,7 +41,7 @@ Forbidden until then (in chat, report title, Executive Summary, or HTML hero):
 |---|------|----------------|
 | G1 | **Every code file** | `files-read.log` contains every `must_read_files` path, tests included. The gate diffs the log. Typing `files_read: 333` does not pass. |
 | G2 | **Configs** | `configs_read == configs_enumerated` (every profile in inventory config list **Read** once) |
-| G3 | **HTTP modules + authorization** | `http_modules_walked == http_modules_enumerated` (per `per-method-auth-audit.md` + logic walk per module); authenticated apps have a completed horizontal/vertical authorization matrix (`idor-bola-audit.md` + `authorization-privilege-escalation-audit.md`) |
+| G3 | **HTTP modules + authorization** | `http_modules_walked == http_modules_enumerated`. When the logical lane is active, this includes `per-method-auth-audit.md`, logic walk per module, and the horizontal/vertical authorization matrix (`idor-bola-audit.md` + `authorization-privilege-escalation-audit.md`). When static-only, it includes route-table/module coverage for handler-local missing auth without forcing logical audits |
 | G4 | **Ledger** | No candidate rows in `pending` (each → Finding, Tentative, or Appendix A with reason). Every **False Positive** is Appendix A only — zero FP rows in Detailed Findings (`ai-validate-precision-pass.md`) |
 | G4b | **Precision pass** | Every Detailed Finding has adjudication verdict **True Positive** (or Hardening) with source, sink, and data flow; FP candidates counted in Scan Attestation precision line |
 | G5 | **Taxonomy** | Completeness & Residual Risk Register published; only SCA/CVE rows may be “not in skill scope”; XML/SOAP/SAML surfaces have `XXE-ADJ-01` + `XML-ADJ-01` disposition |

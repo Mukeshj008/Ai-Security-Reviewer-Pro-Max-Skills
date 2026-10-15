@@ -53,7 +53,7 @@ Then: `derive_report_name.py`. If memory already exists and is not stale, **skip
 
 ### B. HTTP + logic batch
 
-Take `next_http_module` and **Read** it end-to-end: middleware, routes, handlers. Apply `weak-model-parity.md`, `senior-researcher.md` LOG-01…15, REACH-ADJ-01, and route exposure. Then take the next module. **No subagents.** A huge file's `read_ranges` in the inventory are line ranges **you** read, in order, until the file is done.
+Take `next_http_module` and **Read** it end-to-end: middleware, routes, handlers. Apply `weak-model-parity.md`, then the active lane(s) from `scan-modes.md`: static sinks only when the static lane is active, and `senior-researcher.md` LOG-01…15 / effective route reasoning only when the logical lane is active. Then take the next module. **No subagents.** A huge file's `read_ranges` in the inventory are line ranges **you** read, in order, until the file is done.
 
 ### C. Memory (after each module, not a place to stop)
 
@@ -96,7 +96,7 @@ Reading the file is not optional. A deep trace you could not finish is named in 
 The user should not have to prompt again. First chat is the whole review:
 
 ```text
-Follow exploration-first.md, senior-researcher.md, and large-repo-runner.md.
+Follow exploration-first.md, scan-modes.md, and large-repo-runner.md.
 Run enumerate_inventory.py. Read every config. Walk every HTTP module and every
 production file. Write the report in this session. Do not ask the user to continue.
 ```

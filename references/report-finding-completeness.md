@@ -83,9 +83,9 @@ One row per finding — see **`references/report-findings-verification-register.
 Add an integration test that submits the prior payload and asserts rejection before the sink executes.
 ```
 
-### SCA dependency (SCA-NNN in explicit SCA section)
+### Dependency / SCA advisory
 
-Must appear in **`## Software Composition Analysis (SCA)`** summary table **and** include full snippet + trace + upgrade remediation. Unreachable OSV/npm hits → **SCA Packages Filtered Out** table only — not a FINDING.
+Dependency-CVE/SCA findings are out of scope for this skill. Do not add an SCA section or `SCA-NNN` finding. Advisory-only dependency issues belong in the Residual register; first-party vulnerable usage with a normal source-to-sink trace may be reported as VULN.
 
 ### AUTH-only (missing middleware)
 
@@ -120,13 +120,12 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 ```
 ```
 
-### SCA (SCA-NNN, explicit SCA mode only)
+### Dependency upgrade note
 
 ```markdown
 ### Remediation
 
-1. Upgrade `package@fixed_version`
-2. `npm ci` and regenerate lockfile
+Dependency upgrades are advisory-only unless tied to first-party vulnerable usage. Use a dedicated SCA scanner for package CVEs.
 3. Re-run CVE reachability checks
 ```
 

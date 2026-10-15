@@ -71,7 +71,7 @@ rg "Exploitable.*\|" "$MD" | rg -v "\| Yes \||\| No \||\| Hardening \|"
 | TRUE POSITIVE (hardening gap) | Hardening |
 | FALSE POSITIVE / FILTERED | Do not appear in Register (Appendix A only) |
 
-**SCA-NNN:** In explicit SCA mode, use `Reachability` and `Confidence`; do not mix SCA rows into VULN/AUTH/IAC/LEAK exploitability unless first-party vulnerable usage is proven.
+**Dependency/SCA advisory:** out of scope for this skill. Do not add `SCA-NNN`; only first-party vulnerable usage with normal source-to-sink evidence can appear as VULN/AUTH/IAC/LEAK.
 
 ---
 

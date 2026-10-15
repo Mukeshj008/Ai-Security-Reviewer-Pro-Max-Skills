@@ -18,24 +18,24 @@
 
 | Field | Value |
 |-------|-------|
-| **Checks defined** | 109 (CVE/DEPS taxonomy rows N/A — not in skill scope, v4.46) |
+| **Checks defined** | Active lane set from `scan-modes.md` (`109` only when both lanes ran; CVE/DEPS taxonomy rows N/A — not in skill scope, v4.46) |
 | **Checks executed** | N (must equal MX-COV Executed) |
 | **PASS** | X |
 | **FINDING** | Y (linked finding IDs) |
 | **N/A** | Z (stack not present — list layers) |
 | **SKIP/FAIL** | 0 at handoff (or explain in Notes) |
 | **Internal log** | session notes / `.security-review/internal-scan-log.md` / layer toggle; **walk resume:** `.security-review/scan-session-memory.md` |
-| **Researcher-discovered findings** | N (validated outside 109 matrix; `Discovery: Researcher`) |
+| **Researcher-discovered findings** | N (logical lane only; validated outside 109 matrix; `Discovery: Researcher`) \| N/A — logical lane not selected |
 | **DAST backend** | Burp MCP \| curl (user approved) \| None — Burp PoC only (user declined / no host) |
 | **HTTP findings with Burp PoC crafted** | N / N (must equal HTTP AUTH+VULN count) |
-| **Deep-link audit** | Completed (`deeplink-audit.md`) \| N/A (no mobile/deeplink surfaces) — never silent skip when triggers match |
-| **Mobile SAST (static)** | Completed (`mobile-sast-audit.md`) \| N/A (no mobile code) — ATS/exported IPC/storage reviewed; Frida/MITM Residual |
+| **Deep-link audit** | Completed (`deeplink-audit.md`) \| N/A (no mobile/deeplink surfaces or logical lane not selected) — never silent skip when active-lane triggers match |
+| **Mobile SAST (static)** | Completed (`mobile-sast-audit.md`) \| N/A (no mobile code or static lane not selected) — ATS/exported IPC/storage reviewed; Frida/MITM Residual |
 | **Precision adjudication (v4.35+)** | All `*-ADJ-*` including IDOR-ADJ-01 / PRIV-ADJ-01 / XSS-ADJ-01 / XXE-ADJ-01 / XML-ADJ-01 / AUTH-ADJ-02/03/**04** / EXPLOIT-ADJ-01; SSRF-ADJ-01: N (M excluded **G3**); empty-200 BOLA claims excluded or Tentative |
-| **Authorization / privilege escalation** | Completed (`authorization-privilege-escalation-audit.md`): horizontal, vertical, cross-tenant, privileged-field candidates all dispositioned \| N/A (no authenticated/privileged surface) |
+| **Authorization / privilege escalation** | Completed (`authorization-privilege-escalation-audit.md`): horizontal, vertical, cross-tenant, privileged-field candidates all dispositioned \| N/A (no authenticated/privileged surface or logical lane not selected) |
 | **XML security audit** | Completed (`xml-security-audit.md`): XXE/entity, structural XML, XPath/XSLT, signature wrapping candidates dispositioned \| N/A (no XML/SOAP/SAML surface) |
 | **AI Validate precision pass (v4.53+)** | `ai-validate-precision-pass.md`: *C* candidates; *F* findings; *K* FP → Appendix A only; *R* tentative/NMR (&lt;5% of *C*) |
 | **Actuator sensitive endpoints audit** | Completed (`actuator-sensitive-endpoints-audit.md`) \| N/A (no Spring/management endpoints) — sensitive-only reporting; health/info probe-safe |
-| **Attestation** | Applicable checks on **walked** HTTP modules + researcher pass; G1–G5 on every finding. Do **not** claim 109 executed unless `### HTTP module walk` Y==X or Residual lists every skipped HTTP module. |
+| **Attestation** | Applicable active-lane checks on **walked** HTTP modules; researcher pass only when logical lane is active; G1–G5 on every finding. Do **not** claim 109 executed unless both lanes ran and `### HTTP module walk` Y==X or Residual lists every skipped HTTP module. |
 
 ### Example
 
@@ -62,18 +62,18 @@
 
 ## Completion gate
 
-- [ ] `Checks executed` matches **MX-COV** row in Scan Matrices Executed
+- [ ] `Checks executed` matches **MX-COV** row in Scan Matrices Executed for the active lane(s); do not report `109` for static-only or logical-only mode
 - [ ] Every FINDING links to a check ID **or** `Discovery: Researcher` with G1–G5 notes
 - [ ] No `PENDING` in internal scan log
 - [ ] Logged in **Appendix F** Phase 1 (SAST manifests) = PASS
 - [ ] **AUTH coverage gate:** Appendix D endpoint rows == sum of AUTH instance counts; checklist AUTH rows == distinct AUTH finding IDs; multi-instance findings include `### Instances` with per-instance Source/Sink (`finding-instances.md`)
 - [ ] **No duplicate finding IDs** for the same CWE + root cause (secrets, TLS trust-all, CORS, Vault tokens, etc. → instances)
 - [ ] **Precision adjudication:** SSRF/LDAP plus **IDOR-ADJ-01**, **PRIV-ADJ-01**, **XSS-ADJ-01**, **XXE-ADJ-01**, **XML-ADJ-01**; AUTH-ADJ-02/03/**04**; EXPLOIT-ADJ-01 (`precision-false-positive-adjudication.md`)
-- [ ] **Authorization / privilege escalation:** authenticated apps have a completed principal/role/permission matrix covering horizontal, vertical, cross-tenant, and privileged-field paths
+- [ ] **Authorization / privilege escalation:** when the logical lane is active, authenticated apps have a completed principal/role/permission matrix covering horizontal, vertical, cross-tenant, and privileged-field paths
 - [ ] **XML security:** when XML/SOAP/SAML triggers exist, `xml-security-audit.md` is completed; `FEATURE_SECURE_PROCESSING` alone is not accepted as complete XXE mitigation
 - [ ] **HTTP module walk (v4.35):** table below present; `enumerated == walked` OR Residual names every skipped HTTP module; never `Checks executed: 109` after a partial slice
 - [ ] **Session memory (v4.35.1, large repo):** `.security-review/scan-session-memory.md` exists and matches the HTTP module walk table
-- [ ] **Mobile SAST (static)** completed or N/A justified (`mobile-sast-audit.md`) — exported components, ATS, on-device storage
+- [ ] **Mobile SAST (static)** completed or N/A justified (`mobile-sast-audit.md`) — exported components, ATS, on-device storage; N/A when static lane not selected
 
 ### HTTP module walk (v4.35 — mandatory when 2+ HTTP modules)
 

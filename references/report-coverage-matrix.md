@@ -143,7 +143,7 @@ See `maven-sca-scan.md` — run when `pom.xml` or `build.gradle(.kts)` present. 
 | SCA-MAVEN-04 | Java import reachability | rg + graphify | `maven-sca-scan.md` §4 |
 | SCA-MAVEN-05 | Vulnerable API exploitability | rg + graphify path | `maven-sca-scan.md` §5 |
 
-**N/A** entire block when no Java build manifests. Counts roll into **MX-SCA** package total with npm/RubyGems.
+**N/A** entire block. Dependency/CVE SCA is out of scope for this skill and belongs in the Residual register or a dedicated SCA scanner.
 
 ### E.7 Graphify recon
 

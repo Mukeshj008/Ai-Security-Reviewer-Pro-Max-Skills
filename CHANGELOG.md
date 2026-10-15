@@ -4,6 +4,31 @@ All notable changes to **AI Security Reviewer Pro Max Skills** are documented he
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.59.0] — 2026-10-15
+
+### Added — AppSec specialist operating frame
+
+- **`references/appsec-specialist-operating-mode.md`** — senior AppSec / security-researcher reasoning frame: asset and actor mapping, trust-boundary notes, attacker stories, lane discipline, evidence discipline, and coverage discipline.
+- **`SKILL.md`** now loads the AppSec operating frame before code exploration without replacing G0-G5, AI Validate, candidate ledger closure, or coverage gates.
+
+### Changed — researcher prompt and gate alignment
+
+- **`references/senior-researcher.md`** now pushes the model to reason from product assets, actors, trust boundaries, state transitions, and concrete exploit stories before promotion.
+- **`references/coverage-complete-gate.md`** keeps full inventory coverage mandatory while making the HTTP/auth gate respect static-only vs logical/both lanes.
+
+## [4.58.0] — 2026-10-15
+
+### Added — static and logical scan lanes
+
+- **`references/scan-modes.md`** — mode switch. No mode, `both`, and `full` run both lanes. `static` and `logical` / `scanner_gaps` run one lane. One file walk; each call site is adjudicated once and published in one lane.
+- **`references/scanner-static.md`** — conventional SAST publication (direct sinks, secrets, weak crypto, handler-local missing auth, single-file config).
+- **`references/scanner-blind-spots.md`** — logical lane (`logical`, alias `scanner_gaps`).
+
+### Changed — lane routing cleanup
+
+- **`SKILL.md`**, **`exploration-first.md`**, **`senior-researcher.md`**, **`weak-model-parity.md`**, **`large-repo-runner.md`**, **`standards-coverage-map.md`**, **`report-output-spec.md`**, **`scan-attestation-summary.md`**, and **`manual-code-review.md`** now defer publication scope to `scan-modes.md`.
+- Static-only mode no longer loads logical audits; logical-only mode no longer publishes direct static sinks; both mode routes each call site to exactly one lane.
+
 ## [4.57.0] — 2026-10-14
 
 ### Changed — public docs

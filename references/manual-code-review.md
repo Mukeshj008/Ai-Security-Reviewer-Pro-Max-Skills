@@ -6,7 +6,7 @@
 
 This reference **supplements** (does not replace) graphify recon, SAST manifests, route auth audit, Burp MCP / curl DAST, and the 109-check matrix. Every automated or pattern hit must still pass the gates below before becoming a FINDING.
 
-**v4.37 — Static + logic:** Follow `senior-researcher.md` on every opened module. Logical bugs (IDOR, skip-state, mass assignment) are first-class, same G1–G5 bar. The 109 checks remain hints.
+**v4.58 — Lane routed:** Follow `scan-modes.md`. Static findings use `scanner-static.md`; logical bugs (IDOR, skip-state, mass assignment, control bypasses) use `senior-researcher.md` / `scanner-blind-spots.md` only when that lane is active. The 109 checks remain hints.
 
 **v4.35 — Express + fail-open + Spring-no-filter:** Run `express-auth-audit.md` when Node HTTP exists. Empty header → config token is AUTH-ADJ-04. A Spring module with no `SecurityFilterChain` is one AUTH + instances, High unless Ingress is cited — not default Critical.
 
@@ -181,7 +181,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 ### Cloud / IaC / supply chain
 
 - Public buckets, excessive IAM, K8s/Docker misconfigs (`iac-misconfig-scan.md`)
-- Dependency advisories, dependency confusion, unsafe package sources (`sca-dependency-audit.md` only in explicit SCA mode; otherwise residual)
+- Dependency advisories, dependency confusion, and unsafe package sources are out of scope for this skill; mark as Residual, not findings
 
 **Taxonomy:** `vulnerability-taxonomy-coverage.md` §17–§18
 
@@ -195,7 +195,7 @@ Use this checklist **in addition to** SAST manifests. Prioritize categories that
 
 ## Pre-Report Verification Gates (MANDATORY)
 
-**Before** assigning VULN-NNN, AUTH-NNN, IAC-NNN, or LEAK-NNN, run **`ai-validate-precision-pass.md`** (per call site, stored-taint before FP, exploitability alignment), then answer all five gates below. If any gate fails → **FALSE POSITIVE** → **Appendix A only**, never Detailed Findings. In explicit SCA mode, use `SCA-NNN` per `sca-dependency-audit.md`; do not turn advisory-only dependency issues into VULN findings.
+**Before** assigning VULN-NNN, AUTH-NNN, IAC-NNN, or LEAK-NNN, run **`ai-validate-precision-pass.md`** (per call site, stored-taint before FP, exploitability alignment), then answer all five gates below. If any gate fails → **FALSE POSITIVE** → **Appendix A only**, never Detailed Findings. Dependency/SCA findings are out of scope for this skill; never assign `SCA-NNN` or turn advisory-only dependency issues into VULN findings.
 
 | Gate | Question | PASS criterion |
 |------|----------|----------------|
@@ -325,7 +325,7 @@ When in doubt → **do not move to Appendix A.** Keep as Tentative in Detailed F
 2. **Severity = f(Impact, Exploitability, Exposure, Complexity)** — use `severity-calibration.md`; not pattern severity alone. The shorthand **impact × exploitability × exposure** is retained but **Complexity** and **Step 1 caps** are explicit in the calibration doc.
 3. **Compensating controls** — document gateway auth, WAF, network segmentation; adjust status/severity per AUTH rules and calibration downgrades **only when verified**.
 4. **Test/dev code** — exclude unless deployed to production paths.
-5. **Dependency advisories** — default code-only mode marks SCA residual. Explicit SCA mode uses `SCA-NNN`; promote to VULN only when there is first-party vulnerable usage with a normal source→sink trace.
+5. **Dependency advisories** — SCA is out of scope. Mark advisory-only dependency issues Residual; only first-party vulnerable usage with a normal source→sink trace may become a VULN finding.
 6. **Prefer staging hosts** for Burp/curl; never localhost; **ask user before curl**.
 7. **Evidence in report** — paste real source/sink code under **`### Vulnerable Code Snippet`**; never report without a documented data flow.
 

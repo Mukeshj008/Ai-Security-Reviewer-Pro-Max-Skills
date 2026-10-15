@@ -10,8 +10,10 @@ This is the **completeness backbone** of the skill. The 109-check matrix is *imp
 
 ## How to use (mandatory each review)
 
-1. **Sweep** every row of every taxonomy table below against the target code.
-2. For each row decide: **Covered** (checklist/researcher finding or PASS with evidence), **N/A** (stack/feature absent — justify), or **Residual** (cannot verify in this mode/environment — register it).
+First read `scan-modes.md`. Sweep only the active lane(s). A class that belongs only to a lane that was not selected is not PASS and is not silently skipped; mark it `N/A — other scan lane not selected`.
+
+1. **Sweep** every row of every taxonomy table below that belongs to the active lane(s) against the target code.
+2. For each active row decide: **Covered** (checklist/researcher finding or PASS with evidence), **N/A** (stack/feature absent or other scan lane not selected — justify), or **Residual** (cannot verify in this mode/environment — register it).
 3. Publish the **Completeness & Residual Risk Register** (template at end) in the report so the reader sees exactly what was and was not verifiable.
 4. Any **Residual** row that is high-impact must be called out in **Top Structural Risks**.
 

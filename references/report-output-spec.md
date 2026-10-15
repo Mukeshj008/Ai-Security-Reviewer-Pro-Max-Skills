@@ -45,7 +45,7 @@ Agents must **not** use Executive Summary language implying a finished full-repo
 | 3 | Vulnerability Coverage Overview (files, LOC, layer summary — **not** 109-row matrix) | `vulnerability-coverage-overview.md` |
 | 4 | Scan Agent & Backend Attribution | `report-scan-matrices-agent.md` |
 | 5 | Scan Matrices Executed (MX-VERIFY, MX-COV, MX-F) | `report-scan-matrices-agent.md` |
-| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration`, `### Config / Profile Audit`, `### Per-Method Auth Audit`, and `### Authorization / Privilege Escalation Audit` for authenticated apps; `### XML Security Audit` when XML/SOAP/SAML exists; `### Deep Link Audit` / `### Mobile SAST Audit (static)` when mobile/deeplink triggers fire**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`, `authorization-privilege-escalation-audit.md`, `xml-security-audit.md`, **`deeplink-audit.md`**, **`mobile-sast-audit.md`** |
+| 6 | **Scan Attestation Summary** (short accountability; note code-only/SCA mode; **must include `### Module & Profile Enumeration` and `### Config / Profile Audit`; include `### Per-Method Auth Audit` and `### Authorization / Privilege Escalation Audit` only when the logical lane is active for authenticated apps; include `### XML Security Audit`, `### Deep Link Audit`, and `### Mobile SAST Audit (static)` only when the active lane and repo triggers require them**) | `scan-attestation-summary.md`, `multi-module-enumeration.md`, `multi-profile-config-audit.md`, `per-method-auth-audit.md`, `authorization-privilege-escalation-audit.md`, `xml-security-audit.md`, **`deeplink-audit.md`**, **`mobile-sast-audit.md`** |
 | 6b | **Completeness & Residual Risk Register** (OWASP/API/CWE/ASVS/LLM verdicts; nothing silently missed) | `standards-coverage-map.md` |
 | 7 | **Top Structural Risks** (3 bullets max, linked to finding IDs) | below |
 | 8 | **Security Verification Checklist** (findings table w/ **Confidence** + **Discovery** + collapsible scan-layer toggle) | `report-findings-verification-register.md`, `finding-confidence-validation.md` |
@@ -55,7 +55,7 @@ Agents must **not** use Executive Summary language implying a finished full-repo
 | 12 | Appendix B — Scan Coverage (languages/frameworks) | — |
 | 13 | Appendix C — Burp/curl Testing Notes | `curl-dast-fallback.md` |
 | 14 | Appendix D — Unauthenticated Endpoint Inventory | `route_auth_audit.md` |
-| 15 | Appendix F — Phase Execution Log | `agent-execution.md` |
+| 15 | Appendix F — Phase Execution Log | `SKILL.md`, `scan-modes.md` |
 
 ### Detailed finding narrative gate (v4.55)
 

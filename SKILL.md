@@ -18,21 +18,33 @@ description: >-
 
 # AI Security Reviewer
 
-**Version 4.57.0** — **Single agent only.** Read every path in `must_read_files`, tests included. Speed is `scripts/next_read_batch.py`: one call prints the next unread files **in full** (about 120KB). Look at every file in that output, run `--ack`, then the next batch, in this same session, until it prints `BATCH_EMPTY`. **Do not open files one at a time. Do not skip tests. Never ask the user to say continue.** **Do not say “scan complete” until `check_coverage_gate.py` exits 0.** The gate diffs `.security-review/files-read.log` against every inventory path. No shard workers. History: `CHANGELOG.md`.
+**Version 4.59.0** — **Single agent only.** Read every path in `must_read_files`, tests included. Speed is `scripts/next_read_batch.py`: one call prints the next unread files **in full** (about 120KB). Look at every file in that output, run `--ack`, then the next batch, in this same session, until it prints `BATCH_EMPTY`. **Do not open files one at a time. Do not skip tests. Never ask the user to say continue.** **Do not say “scan complete” until `check_coverage_gate.py` exits 0.** The gate diffs `.security-review/files-read.log` against every inventory path. No shard workers. History: `CHANGELOG.md`.
 
 
 ## Quick start — load references by phase (token-efficient)
 
 Read a reference **when its phase starts**, once per session. Do not pre-read later phases. Never re-read a reference already in context.
 
+## Caller scan mode
+
+Read **`references/scan-modes.md`** before Phase A. It is the only mode switch.
+
+- **No mode named** (this skill is invoked directly) → **both** lanes: static SAST and the logical review.
+- **`static`** → `references/scanner-static.md` only.
+- **`logical`** or **`scanner_gaps`** → `references/scanner-blind-spots.md` only.
+- **`both`** or **`full`** → both lanes, one walk.
+
+The portal only passes the mode name. Load each lane’s audits once, adjudicate each call site once, and do not publish the same root cause in both lanes. `scan-modes.md` lists which Phase A files the active mode includes.
+
 **Phase A — explore & find (read before opening code):**
 
 1. `scripts/enumerate_inventory.py` — run once (skip if `.security-review/scan-session-memory.md` is fresh). Sole enumeration: files, LOC, modules, configs, HTTP files, language packs. `inventory.json` `parallel` / `read_ranges` are optional read hints for **you** — not worker routing.
-2. `references/exploration-first.md` — map + **Read** files; `rg` is a hint after Read. Zero hits ≠ coverage.
-3. `references/senior-researcher.md` — static defects **and** logic abuse (LOG-01…15) on every sensitive operation; runs continuously, not as a separate later pass.
-4. `references/lang-packs/README.md` + **only active packs** — the single source of language sinks (L01–L35 index: vulnerable | safe | FP trap). Apply **G0**. Packs flagged `test/fixture only` are not production attack surface. Never load `vuln-class-matrix.md` during a scan.
-5. If large (2+ HTTP modules / 15+ configs / >500 files) → `references/large-repo-runner.md` (finish every module this session; do not pause). Else → `references/weak-model-parity.md` (same rule: do not stop after one module).
-6. Conditional, when triggered: `express-auth-audit.md` (Express/Koa) · `async-second-order-audit.md` (queues/cron/workers) · `idor-bola-audit.md` (object references) · **`authorization-privilege-escalation-audit.md`** (every authenticated app: horizontal + vertical/BFLA) · `xml-security-audit.md` (any XML/SOAP/SAML parse or construction) · `business-logic-abuse-checklist.md` (payments/commerce) · `jwt-deep-test.md` · `protocol-scans-graphql-ws-grpc.md` · `mobile-sast-audit.md` + `deeplink-audit.md` (mobile) · `iac-misconfig-scan.md` (Docker/K8s/CI).
+2. `references/appsec-specialist-operating-mode.md` — set the senior AppSec / researcher mindset, threat model notes, lane discipline, and evidence discipline. This does **not** replace G0-G5, AI Validate, or coverage gates.
+3. `references/exploration-first.md` — map + **Read** files; `rg` is a hint after Read. Zero hits ≠ coverage.
+4. `references/senior-researcher.md` — load only when `scan-modes.md` includes the **logical** lane. LOG-01…15 run on sensitive operations and are not repeated later.
+5. `references/lang-packs/README.md` + **only active packs** — load only when `scan-modes.md` includes the **static** lane. The single source of language sinks (L01–L35 index: vulnerable | safe | FP trap). Apply **G0**. Packs flagged `test/fixture only` are not production attack surface. Never load `vuln-class-matrix.md` during a scan. In a **logical-only** review, do not publish from these rows.
+6. If large (2+ HTTP modules / 15+ configs / >500 files) → `references/large-repo-runner.md` (finish every module this session; do not pause). Else → `references/weak-model-parity.md` (same rule: do not stop after one module).
+7. Conditional, and only when `scan-modes.md` includes that lane: `express-auth-audit.md` (Express/Koa) · `async-second-order-audit.md` (queues/cron/workers) · `idor-bola-audit.md` (object references) · **`authorization-privilege-escalation-audit.md`** (every authenticated app: horizontal + vertical/BFLA) · `xml-security-audit.md` (any XML/SOAP/SAML parse or construction) · `business-logic-abuse-checklist.md` (payments/commerce) · `jwt-deep-test.md` · `protocol-scans-graphql-ws-grpc.md` · `mobile-sast-audit.md` + `deeplink-audit.md` (mobile) · `iac-misconfig-scan.md` (Docker/K8s/CI). Do not load a logical audit during a static-only review, or a static sink sweep during a logical-only review.
 
 **Phase B — adjudicate (read when the first candidate needs a verdict):** `ai-validate-precision-pass.md` (commit TP/FP per call site; stored-taint before FP; **no FP in Detailed Findings**) · `manual-code-review.md` (G0–G5) · `effective-controls-catalogue.md` (G3/G4 evidence) · `precision-false-positive-adjudication.md` (SSRF/LDAP/IDOR/unauth/fail-open) · `finding-confidence-validation.md` · `severity-calibration.md` (LEAK never Critical) · `finding-instances.md`.
 
@@ -80,7 +92,7 @@ DAST/curl where reachable → adjudication → residual register → strict repo
 
 No reviewer — human or AI — can guarantee it catches **every** vulnerability known to the world: it is undecidable in general, business-logic/design flaws need domain context, and **third-party dependency CVEs are out of scope** (use a dedicated composition scanner). This skill instead guarantees two achievable things:
 
-1. **Completeness of consideration** — every class in the authoritative taxonomies (`standards-coverage-map.md`) is examined.
+1. **Completeness of consideration** — every class in the active lane (`scan-modes.md`) is examined. Classes in a lane that was not selected are `N/A — other scan lane not selected` in the Completeness register.
 2. **No silent misses** — anything not verifiable in the current mode/environment is explicitly published in the **Completeness & Residual Risk Register**, not dropped.
 
 Do **not** claim "zero vulnerabilities" or that no bugs remain in the universe. **Do** claim **inventory coverage 100%** only when `check_coverage_gate.py` passes (`files-read.log` contains every `must_read_files` path). Until then, run the next batch. Do not stop to ask the user to continue. For anything not assessable (SCA/CVE, live DAST declined), use the **Residual Risk Register** — never silent PASS.
@@ -112,7 +124,7 @@ Do **not** claim "zero vulnerabilities" or that no bugs remain in the universe. 
 | **DAST** | **This agent (you)** | Burp MCP or **mandatory terminal `curl`** — AUTH + VULN + **IDOR dual-session** + **JWT probes** |
 | **IaC** | **This agent (you)** | `rg` + `Read` per `iac-misconfig-scan.md` — **source/config review only** (no image CVE scanners) |
 | **ARCH** | **This agent (you)** | Threat model (`security-architect.md`) → **Top 3 structural risks** + optional **attack chains** |
-| **RESEARCH** | **This agent (you)** | Senior security-researcher pass — issues **outside** the 109-check matrix; same G1–G5 validation |
+| **RESEARCH** | **This agent (you)** | Logical lane only — senior security-researcher pass for issues outside the static matrix; same G1–G5 validation |
 | **Report** | **This agent (you)** | `<repo>_security_report.md` + **`## Scan Attestation Summary`** → `generate_html_report.py --strict` |
 
 ### Scripts (no subagents)
@@ -125,19 +137,23 @@ Do **not** claim "zero vulnerabilities" or that no bugs remain in the universe. 
 
 | Phase | File | When / purpose |
 |-------|------|----------------|
+| A | `scan-modes.md` | Always, before Phase A — static, logical, or both. One walk, one lane per call site |
+| A | `scanner-static.md` | Static lane — conventional SAST publication |
+| A | `scanner-blind-spots.md` | Logical lane (`logical` / `scanner_gaps`) |
+| A | `appsec-specialist-operating-mode.md` | Always — senior AppSec/researcher mindset, threat model notes, lane discipline, evidence discipline |
 | A | `exploration-first.md` | Always — map + Read; patterns are hints |
-| A | `senior-researcher.md` | Always — static + LOG-01…15 logic abuse |
-| A | `lang-packs/README.md` + active `lang-packs/<pack>.md` | Always — the **only** language sink source (L01–L35 index). `vuln-class-matrix.md` = human reference, never load in a scan |
+| A | `senior-researcher.md` | Logical lane — LOG-01…15. In both, do not re-file a lang-pack sink as a researcher finding |
+| A | `lang-packs/README.md` + active `lang-packs/<pack>.md` | Static lane — the **only** language sink source (L01–L35 index). `vuln-class-matrix.md` = human reference, never load in a scan |
 | A | `large-repo-runner.md` · `large-repo-playbook.md` | Large repo — same session, every module, no workers |
 | A | `weak-model-parity.md` | Small model — AUTH after config Read |
 | A | `scan-session-memory.md` | Large repo / likely compact — resume, do not re-scan |
 | A | `multi-profile-config-audit.md` | Multi-profile configs — read EVERY profile (this **is** the config read; do it once) |
-| A | `per-method-auth-audit.md` (+ `express-auth-audit.md` for Express, `route_auth_audit.md` for route tables) | The **one** AUTH walk — one row per HTTP method |
-| A | `async-second-order-audit.md` | Queues, cron, workers, Lambda/Spark, stored filters |
-| A | `idor-bola-audit.md` · `authorization-privilege-escalation-audit.md` · `business-logic-abuse-checklist.md` · `jwt-deep-test.md` · `protocol-scans-graphql-ws-grpc.md` | Object references · horizontal/vertical privilege (BOLA/BFLA) · commerce/payments · JWT · GraphQL/WS/gRPC |
-| A | `xml-security-audit.md` | Any XML/SOAP/SAML parser or builder — XXE, entity expansion, structural XML/XPath/XSLT injection, signature wrapping |
-| A | `mobile-sast-audit.md` + `mobile-sast-manifest.md` · `deeplink-audit.md` | Mobile code · deep links / App Links |
-| A | `iac-misconfig-scan.md` · `secrets-patterns.md` · `secret-type-labels.md` · `git-history-secrets-scan.md` | Docker/K8s/CI · secrets (labels for LEAK) · `.git` history |
+| A | `per-method-auth-audit.md` (+ `express-auth-audit.md` for Express, `route_auth_audit.md` for route tables) | Logical lane — the **one** AUTH walk — one row per HTTP method. Static lane only records handler-local missing auth |
+| A | `async-second-order-audit.md` | Logical lane — queues, cron, workers, Lambda/Spark, stored filters |
+| A | `idor-bola-audit.md` · `authorization-privilege-escalation-audit.md` · `business-logic-abuse-checklist.md` · `jwt-deep-test.md` · `protocol-scans-graphql-ws-grpc.md` | Logical lane — object references · horizontal/vertical privilege (BOLA/BFLA) · commerce/payments · JWT · GraphQL/WS/gRPC |
+| A | `xml-security-audit.md` | Static lane for an unprotected parser; logical lane only for a bypass of a hardened parser. Run once |
+| A | `mobile-sast-audit.md` + `mobile-sast-manifest.md` · `deeplink-audit.md` | Manifest flag in one entry is static; correlation with a handler is logical |
+| A | `iac-misconfig-scan.md` · `secrets-patterns.md` · `secret-type-labels.md` · `git-history-secrets-scan.md` | Single-file rule or standalone secret is static; multi-file correlation is logical |
 | A | `security-architect.md` | Top 3 structural risks (+ `attack-chain-narrative.md` when ≥2 chainable) |
 | A (hint) | `additional_vulns.md` | SAST-EXT-01…07 (smuggling, JNDI, session fixation, ReDoS/zip-bomb) — classes not in packs |
 | A (hint) | `patterns.md`, `sast_scan_manifest.md`, `injection-deep-scan.md`, `extended-category-scans.md` | Legacy cross-language catalogs: **only** for files whose language has no active pack. Never run them on a file a pack covers |
@@ -191,11 +207,11 @@ Non-HTTP findings (`LEAK`, `IAC`) → `Burp PoC: N/A — not HTTP-exploitable`.
 
 ## Coverage completeness (mandatory — so no known class is missed)
 
-Run the full taxonomy sweep in **`standards-coverage-map.md`** every review. It maps the target against:
+Run the taxonomy sweep in **`standards-coverage-map.md`** for the **active lane(s)** selected by `scan-modes.md`. It maps the target against:
 
 - **OWASP Top 10 (2021)** · **OWASP API Security Top 10 (2023)** · **CWE Top 25 (2024)** · **OWASP ASVS 5.0 (2025, 17 chapters)** · **OWASP Top 10 for LLM Apps (2025)** when the target is an LLM/GenAI app.
 
-For each taxonomy row, assign **Covered** / **N/A (justified)** / **Residual (not assessable in this mode/env)**. Then publish the **`## Completeness & Residual Risk Register`** in the report — this is how the skill proves it did not *silently* miss anything. Mark dependency-CVE classes (OWASP A06, API10, ASVS V15, LLM03) as **Residual — not in skill scope**; never label an unassessed area "PASS".
+For each active-lane taxonomy row, assign **Covered** / **N/A (justified)** / **Residual (not assessable in this mode/env)**. Rows owned only by a lane that was not selected are **N/A — other scan lane not selected**. Then publish the **`## Completeness & Residual Risk Register`** in the report — this is how the skill proves it did not *silently* miss anything. Mark dependency-CVE classes (OWASP A06, API10, ASVS V15, LLM03) as **Residual — not in skill scope**; never label an unassessed area "PASS".
 
 ## Accuracy & confidence (mandatory — fewer false positives, zero silent drops)
 
@@ -210,12 +226,13 @@ Apply the two-stage model in **`finding-confidence-validation.md`** plus **`ai-v
 
 Add a **Confidence** column to the Security Verification Checklist.
 
-## Security researcher layer (mandatory — beyond 109 checks)
+## Security researcher layer (logical lane only — beyond static checks)
 
-The **109-check matrix is a hint list, not the scanner.** From the first file you open, follow **`senior-researcher.md`**: static defects **and** product abuse. Checklist rows may catch a class you forgot — they do not replace unread handlers.
+The **109-check matrix is a hint list, not the scanner.** When `scan-modes.md` includes the logical lane, follow **`senior-researcher.md`** for product abuse, ordering bugs, and cross-file logic flaws. Static defects that match a language-pack row stay in the static lane and are not re-filed here.
 
 ### When to use
 
+- Only when the logical lane is active
 - After configs/routes are opened and before final report
 - While reading controllers, interceptors, filters, config, and business flows
 - When architecture, domain, or framework patterns suggest risks not mapped to a check ID
@@ -261,7 +278,7 @@ Full methodology: **`references/manual-code-review.md`**.
 
 | Gate | Verify |
 |------|--------|
-| **G0** | **Language context** (`lang-packs/README.md` Step 3): sink is real in *this* language/framework; escaping default verified from config; content type matches the class; pattern came from this file's pack. Write `G0: <pack> — <rule>` in Assumptions |
+| **G0** | **Lane context**: for static findings, use `lang-packs/README.md` Step 3 to prove the sink is real in this language/framework. For logical findings, prove the business/auth/trust-boundary invariant from the relevant logical reference and concrete code path. Write the pack or lane reference in Assumptions |
 | **G1** | Attacker-controlled input or missing auth on reachable route? |
 | **G2** | **`graphify path` if graph exists; else manual trace ≥3 hops** |
 | **G3** | Effective protection? → Appendix A |
@@ -283,15 +300,20 @@ See **`report-output-spec.md`** — unchanged from v4.14.
 3. Configs/secrets  → Read EVERY config/profile/.env/vault/pem ONCE (multi-profile-config-audit.md rules).
                       LEAK candidates to ledger.
 4. Context brief    → framework, middleware order, auth mechanism, parsers, template/ORM facts (≤40 lines).
-5. AUTH walk (once) → per-method table for every route (per-method-auth-audit.md; express-auth-audit.md
-                      for Express; route_auth_audit.md rules). Replaces all separate AUTH passes.
-6. Flow walk        → every sensitive operation end-to-end (route → middleware → handler → model →
-                      queue/cron/webhook): IDOR/BOLA + vertical/BFLA privilege matrix, workflow skip, money/amount trust, mass assignment,
+5. AUTH walk (once) → only if the logical lane is active: per-method table for every route
+                      (per-method-auth-audit.md; express-auth-audit.md for Express; route_auth_audit.md rules).
+                      Static-only mode records handler-local missing auth from the route table and does not run
+                      the full effective-route walk.
+6. Flow walk        → only if the logical lane is active. Every sensitive operation end-to-end
+                      (route → middleware → handler → model → queue/cron/webhook): IDOR/BOLA + vertical/BFLA
+                      privilege matrix, workflow skip, money/amount trust, mass assignment,
                       races (check → await → write), idempotency, async/second-order. senior-researcher
-                      LOG-01…15 applied here — not repeated later.
-7. Sinks            → active lang packs only (L01–L35 rows, scoped rg after Read). XML surface additionally
-                      runs xml-security-audit.md even with an active pack. Legacy catalogs only for files with no active pack.
-8. IaC / mobile / protocol / git history → when inventory lists them (one pass each).
+                      LOG-01…15 applied here — not repeated later. Skip this step in static-only mode.
+7. Sinks            → only if the static lane is active. Active lang packs only (L01–L35 rows, scoped rg after Read).
+                      XML surface additionally runs xml-security-audit.md even with an active pack. Legacy catalogs
+                      only for files with no active pack. In logical-only mode, do not publish these direct sinks.
+8. IaC / mobile / protocol / git history → when inventory lists them and the active lane needs them
+                      (single-file static, multi-file/correlation logical). Run each applicable reference once.
 9. Adjudicate       → per call site: G0–G5, precision ADJ rules (including XSS/XXE/XML/IDOR/PRIV),
                       ai-validate-precision-pass (TP/FP);
                       FP → Appendix A only; TP → confidence + severity + instances. Ledger closes:

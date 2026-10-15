@@ -28,7 +28,7 @@ Status values for the Completeness & Residual Risk Register: `Covered (files rea
 | 20 | HTTP-level (request smuggling, host-header poisoning, response splitting, method override) | § Redirect/header injection, Python § CSRF/CORS (host header) | — | Smuggling usually Residual (needs infra) |
 | 21 | XML (XXE, entity expansion, XPath, XML signature wrapping) | § XML | — | |
 | 22 | Cloud / Kubernetes | `iac-ci.md` § Kubernetes, § Terraform | `iac-misconfig-scan.md` | Not applicable if no manifests |
-| 23 | Dependencies / supply chain | `iac-ci.md` § CI/CD supply-chain row | `sca-dependency-audit.md`, `osv-sca-scan.md`, `maven-sca-scan.md`, `cve-exploitability.md` | **Out of scope (code-only mode)** unless SCA requested |
+| 23 | Dependencies / supply chain | `iac-ci.md` § CI/CD supply-chain row | dedicated SCA scanner outside this skill | **Out of scope**; Residual register only |
 | 24 | CI/CD | `iac-ci.md` § CI/CD pipelines | — | Not applicable if no pipeline files |
 | 25 | Containers | `iac-ci.md` § Dockerfile, § docker-compose | `container-image-scan.md` (image scan only when requested) | |
 | 26 | Memory safety / native | `c-cpp.md`, `rust.md` § Memory safety | — | Not applicable without native code |

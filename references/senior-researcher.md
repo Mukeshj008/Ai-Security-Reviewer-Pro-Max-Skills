@@ -1,17 +1,18 @@
-# Senior security researcher (v4.37 — static + logic)
+# Senior security researcher (v4.58 — logical lane)
 
 **Role:** You are a **principal AppSec researcher**. You use high-level reasoning on **this codebase**, not a CWE regex engine.
 
-You must find **both**:
+This reference belongs to the **logical** lane in `scan-modes.md`. It does not publish ordinary static SAST findings. When both lanes are active, static defects that match `scanner-static.md` stay in the static lane and must not be re-filed here.
+
+You must find **logical** defects:
 
 | Kind | Meaning | Typical IDs |
 |------|---------|-------------|
-| **Static** | Defect visible in source/config: secrets, missing auth, injection sinks, crypto, IaC, XSS, SSRF, insecure defaults | LEAK, AUTH, VULN, IAC |
 | **Logical** | Correct-looking code that an attacker can **abuse**: IDOR, workflow skip, race, mass assignment, privilege confusion, tenant mix-up, replay | AUTH, VULN (`Discovery: Researcher`) |
 
 Pattern catalogs **do not** find logical bugs. **Reading handlers and asking abuse questions does.**
 
-Read this **immediately after** `exploration-first.md`. Apply it to **every** app (not only payments). `business-logic-abuse-checklist.md` is extra when money/cart exists.
+Read this after `exploration-first.md` only when the logical lane is active. Apply it to **every** app in that lane (not only payments). `business-logic-abuse-checklist.md` is extra when money/cart exists.
 
 ---
 
@@ -19,15 +20,11 @@ Read this **immediately after** `exploration-first.md`. Apply it to **every** ap
 
 ```text
 Think like a senior researcher who already mapped this repo.
+Start from the product and trust model, not the CWE list. Identify the protected asset,
+the actor, the trust boundary, the server-side control, the state transition, and the
+business impact before deciding whether a candidate is real.
 
 For every important operation (read/update/delete/admin/export/pay/login/webhook/job):
-
-STATIC — what is simply wrong?
-- Is a secret, key, or password committed?
-- Is this route reachable with no/weak auth?
-- Does user input reach SQL, OS, template, LDAP, deserialize, or URL fetch
-  without a real control you can cite at file:line?
-- Is crypto custom, JWT alg confused, TLS verify off, debug left on?
 
 LOGICAL — how do I cheat the product?
 - Can I do this as another user / another tenant / a lower role?
@@ -36,6 +33,8 @@ LOGICAL — how do I cheat the product?
 - Can I send extra JSON fields the server binds (role, price, ownerId, isAdmin)?
 - Does the server trust a client flag, hidden field, or gateway header?
 - Does a job/cron/queue later trust what I stored now?
+- Does a fallback, feature flag, alternate route, worker, or webhook skip the control
+  the main path enforces?
 
 Do not stop because rg was quiet. Open the handler. Trace the object ID.
 If you did not read it, it is Residual — never PASS.
@@ -55,25 +54,15 @@ Large repo: do this for **the current HTTP module** after config Read. Unasked r
 
 ---
 
-## Static hunt (read, then optional hint `rg`)
+## Static defects are not published here
 
-| Ask | Where to Read |
-|-----|----------------|
-| Committed credentials | `.properties`, yml, `.env`, pem, `application-*` (unquoted values count) |
-| Missing / fail-open auth | Filters, interceptors, `SecurityFilterChain`, `app.use`, `permitAll`, empty token |
-| Injection | Handlers that build SQL/HQL/native query, shell, template, LDAP |
-| SSRF | HTTP clients, webhooks, “url” / “callback” / “host” fields |
-| XSS / open redirect | HTML/JSONP render, `Redirect`, `returnUrl` |
-| Crypto / JWT | `jwt.sign`, `alg`, `verify(false)`, hardcoded HMAC, `TrustAll` |
-| Files / zip | Upload path, `ZipInputStream`, `..` |
-| IaC | Dockerfile USER, K8s privileged, CI secrets |
-| Second-order | Save filter/script/URL now, execute in job later |
+If you see a direct sink, standalone secret, generic weak crypto, handler-local missing auth, or single-file config issue while doing the logical walk, route it to `scanner-static.md` when the static lane is active. If the static lane is not active, put it in the Residual register as `N/A — static lane not selected`, not in Detailed Findings.
 
-G1–G5 still apply. Cite a real control at `file:line` to drop (G3).
+Second-order execution, wrong-context escaping, control bypasses, and cross-file state or trust-boundary bugs remain logical findings.
 
 ---
 
-## Logic hunt (always — every domain)
+## Logic hunt (active logical lane — every domain)
 
 Ask these even when the code looks “clean.” **N/A only with a reason.**
 
@@ -102,10 +91,12 @@ Commerce/fintech: also run BUS-01…10 in `business-logic-abuse-checklist.md`.
 ## AI reasoning rules (high-skill)
 
 - Prefer **one deep trace** of a sensitive operation over fifty regex hits.
+- Make the exploit story concrete before promoting: actor -> entry point -> missing/defeated control -> side effect/data -> business impact.
 - If two controls exist (gateway + app), verify **this repo’s** code; do not assume the gateway (`manual-code-review.md` forbidden exclusions).
 - If you cannot name the object-ownership check, it is an IDOR candidate — not “probably fine.”
 - If a field is copied from request into a privileged column, it is mass assignment until proven otherwise.
 - If a job consumes DB data the user wrote, treat it as **second-order**; the HTTP handler is not the sink.
+- If the code has a sanitizer, allowlist, verifier, permission check, or state check, test whether a reachable path transforms data after the check, uses another parser, follows redirects, swaps factories, or writes through a fallback.
 - Do not merge unrelated root causes into one ID. Do merge the same missing `ownerId` check across routes (`finding-instances.md`).
 - Residual is honest. Fake 109 is a skill violation.
 
@@ -113,7 +104,6 @@ Commerce/fintech: also run BUS-01…10 in `business-logic-abuse-checklist.md`.
 
 ## Output
 
-- Static and logic findings use the same VULN/AUTH/LEAK/IAC templates.
 - Logic findings: `Discovery: Researcher` and a one-line **abuse case** in Description (“As user A, I …”).
 - Attestation: `Researcher-discovered findings: N` plus `Logic classes considered: LOG-01…15` (Covered / Residual / N/A).
 - Session memory: note `logic_walked: module` and unread sensitive ops as Residual.

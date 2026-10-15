@@ -14,12 +14,15 @@ Explore this repository as a human AppSec reviewer would.
 1. Map the system: every module, HTTP API, worker/cron/queue, CLI, mobile app,
    Dockerfile/K8s, and every config/profile (.properties, yml, env, json, pem).
 2. Read the real files. Do not stop because a pattern list returned nothing.
-3. Secrets: open every config and credential-looking file and look with your eyes.
+3. Configs/secrets: open every config and credential-looking file and look with your eyes.
    Java/Spring `key=value` with NO quotes still counts. vault.secret.id,
    datasource passwords, JWT signing secrets, API keys, private keys — all of them.
-   Instance table must match what you actually saw, or Residual names unread files.
-4. Auth: read middleware/filters AND every route in the current module. Walk methods.
-5. Then hunt **logic** per `senior-researcher.md` LOG-01…15: IDOR, tenant mix-up,
+   Publish standalone secrets only when the static lane is active; otherwise mark them
+   `N/A — static lane not selected`. Instance table must match what you actually saw,
+   or Residual names unread files.
+4. Auth: read middleware/filters AND every route in the current module. Walk methods only
+   when the logical lane is active; static-only mode records handler-local missing auth.
+5. If the logical lane is active, hunt **logic** per `senior-researcher.md` LOG-01…15: IDOR, tenant mix-up,
    mass assignment, workflow skip, replay, race, client-trusted amounts/headers,
    webhook identity — by following the object and the state machine, not a CWE list.
 6. On a large repo, keep reading the next file in `production_must_read_files` in this same
@@ -32,7 +35,7 @@ Explore this repository as a human AppSec reviewer would.
 9. **v4.51 — Do not say “scan complete”** until `check_coverage_gate.py` exits 0 (`coverage-complete-gate.md`). P0 webhook/payment slices are order, not stop. Application modules (campaigns, UI, RBAC, channels, ads, AI) must be walked like everything else. Do not print CONTINUE LARGE-REPO.
 ```
 
-Copy the block into your working notes. Also follow **`senior-researcher.md`** (static + logical). Do not replace either with “run SAST-SECRET-01…12.”
+Copy the block into your working notes. Also follow **`scan-modes.md`**. Load **`senior-researcher.md`** only when the logical lane is active. Do not replace reading with “run SAST-SECRET-01…12.”
 
 ---
 
@@ -66,7 +69,7 @@ Before AUTH module walking:
 1. Enumerate **every** `application*.{yml,yaml,properties}`, `bootstrap*`, `.env*`, `appsettings*.json`, `*vault*`, `*.pem`, `*.p12` (exclude `node_modules`, `vendor`, `dist`, `target`).
 2. **Read** them. Unquoted `password=`, `secret=`, `token=`, `apiKey=`, `client-secret=` are in scope.
 3. Record in session memory: `configs_read: N / M` and unread names as Residual **LEAK/SECRET not read**.
-4. Same CWE-798 root cause → one LEAK with **instances**; instance count must not be a sample of hits you saw.
+4. Same CWE-798 root cause → one LEAK with **instances** when the static lane is active; otherwise record `N/A — static lane not selected`. Instance count must not be a sample of hits you saw.
 
 Scan-scope **must** count `*.properties` and `.env*` as analyzed files (`scan-scope-metrics.md`).
 

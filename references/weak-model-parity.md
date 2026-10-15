@@ -29,8 +29,10 @@ Quality is: **every HTTP module AUTH-walked or named Residual**, every real issu
 
 1. `Read` `.security-review/scan-session-memory.md`. If missing: enumerate HTTP dirs **once**, **Read configs**, write memory.
 2. Take **`next_http_module`**, then the next, until none remain.
-3. **Explore that directory:** list files, Read security/middleware, Read controllers/routes, Read local application*.properties. For each sensitive operation apply **`senior-researcher.md` LOG-01…15** (IDOR, extra JSON fields, skip-state, webhook).
-4. Optional: run **Backup `rg` pack** below after the routes are open.
+3. **Explore that directory:** list files, Read security/middleware, Read controllers/routes, Read local application*.properties.
+   - If the logical lane is active, apply **`senior-researcher.md` LOG-01…15** (IDOR, extra JSON fields, skip-state, webhook).
+   - If the static lane is active, route direct sinks/secrets/single-file config findings through `scanner-static.md`.
+4. Optional: run **Backup `rg` pack** below after the routes are open and only for the active lane.
 5. Every issue → ledger. `Read` ±15 lines. G1–G5. No silent drop.
 6. Rewrite memory. **Start the next module immediately.** Do not stop to ask the user to continue. Write the report after the last module.
 
@@ -56,7 +58,7 @@ rg -n "SecurityFilterChain|permitAll|@RestController|@PreAuthorize" --glob '*.{j
 rg -n "password\s*[:=]|secret\s*[:=]|client-secret|vault\.secret" --glob '*.{java,kt,properties,yml,yaml}'
 ```
 
-Then Read hits. If `@RestController` exists and there is no `SecurityFilterChain` in **this module** → `per-method-auth-audit.md` Step 3b.
+Then Read hits. If the logical lane is active and `@RestController` exists with no `SecurityFilterChain` in **this module** → `per-method-auth-audit.md` Step 3b. In static-only mode, record only handler-local missing auth.
 
 ---
 
@@ -71,7 +73,7 @@ Then Read hits. If `@RestController` exists and there is no `SecurityFilterChain
 
 ## After AUTH walk of a module
 
-Deep injection/SSRF can wait (**Residual: injection not traced**). AUTH and **local config secrets** cannot wait.
+Deep injection/SSRF can wait only when the static lane is active (**Residual: injection not traced**). In logical-only mode, direct injection is `N/A — static lane not selected`. AUTH route reasoning and local config secrets follow the active lane routing in `scan-modes.md`.
 
 Then: `severity-calibration.md`, `finding-instances.md`, `precision-false-positive-adjudication.md`.
 
@@ -81,8 +83,8 @@ Then: `severity-calibration.md`, `finding-instances.md`, `precision-false-positi
 
 ```text
 Follow ~/.cursor/skills/ai-security-reviewer/references/exploration-first.md
-Then references/senior-researcher.md and references/weak-model-parity.md
+Then references/scan-modes.md and references/weak-model-parity.md
 Resume .security-review/scan-session-memory.md
-Read unread configs first. Walk every HTTP module this session. Hunt static AND logic.
+Read unread configs first. Walk every HTTP module this session. Hunt only the active lane(s); both if no mode was named.
 Write the report before you stop. Do not ask the user to continue.
 ```

@@ -63,7 +63,7 @@ Add **`## Scan Agent & Backend Attribution`** after Executive Summary:
 |-----------|------|------|----------|------|---------|-------|
 | MX-VERIFY | Security Verification Checklist | K | K | — | K | User-facing |
 | MX-COV | Vulnerability coverage (internal) | 109 | X | — | — | Layer toggle |
-| MX-SCA | OSV packages | N | N | — | — | filtered |
+| MX-SCA | Dependency/CVE SCA | N/A | 0 | — | — | out of skill scope; use dedicated SCA scanner |
 | MX-F | Phase execution log | 14 | X | X | 0 | Appendix F |
 ```
 
@@ -71,7 +71,7 @@ Add **`## Scan Agent & Backend Attribution`** after Executive Summary:
 |-----------|--------|-----------------|
 | **MX-VERIFY** | `report-findings-verification-register.md` | Checklist row count = findings |
 | **MX-COV** | `internal-scan-log.md` | 109 checks — internal only |
-| **MX-SCA** | `osv-sca-scan.md` + `maven-sca-scan.md` | All prod packages OSV queried |
+| **MX-SCA** | N/A | Dependency/CVE SCA is out of skill scope; Residual register only |
 | **MX-F** | Phase log | Appendix F |
 | **MX-D** | `route_auth_audit.md` | Appendix D inventory |
 
